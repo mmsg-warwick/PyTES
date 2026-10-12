@@ -15,7 +15,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-plot = ["matplotlib"]
+# pybamm.dynamic_plot and QuickPlot sliders in notebooks need ipywidgets
+plot = ["matplotlib", "ipywidgets"]
 
 [dependency-groups]
 dev = [
@@ -23,12 +24,17 @@ dev = [
   "pytest>=8.0",
   "ruff>=0.6",
 ]
+# Running the example notebooks (also in VS Code)
+notebooks = [
+  "ipykernel",
+  "pytes[plot]",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pytes"]
 
 [tool.uv]
-default-groups = ["dev"]
+default-groups = ["dev", "notebooks"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

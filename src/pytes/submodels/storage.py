@@ -14,7 +14,7 @@ INITIAL_LIQUID_FRACTION = "Initial uniform liquid fraction"
 
 class StorageGeometry:
     """
-    Geometry of a storage region, as a storage submodel sees it.
+    Geometry of a storage region.
 
     The storage conducts heat along its primary spatial variable only. Its coordinate
     system (cartesian, cylindrical or spherical) is the geometry switch of DESIGN D5: the
@@ -45,10 +45,29 @@ class StorageGeometry:
         self.outer = "right" if inner == "left" else "left"
 
     @property
+    def primary_domain(self):
+        """The primary domain of the storage variables"""
+        return self.domains["primary"]
+
+    @property
+    def boundary_domain(self):
+        """The primary domain of quantities on the inner boundary (the secondary domain)"""
+        return self.domains["secondary"]
+
+    @property
     def volume(self):
         """Volume of the storage in the whole device [m3]"""
         ones = pybamm.FullBroadcast(1, broadcast_domains=self.domains)
         return self.integrate(ones)
+
+    def gradient_from_heat_flux(self, heat_flux, k):
+        """
+        Normal gradient condition for a heat flux ``heat_flux`` [W.m-2] into the storage
+        through the inner side, with conductivity ``k`` [W.m-1.K-1] there: ``-k dT/dn``
+        equals the flux, with ``n`` pointing into the storage.
+        """
+        gradient = -heat_flux / k
+        return gradient if self.inner == "left" else -gradient
 
 
 class EnthalpyStorage(BaseSubModel):
@@ -59,7 +78,9 @@ class EnthalpyStorage(BaseSubModel):
 
     - ``dH/dt = div(k(H) grad T)`` in the storage,
     - zero flux on the outer side (a symmetry plane),
-    - on the inner side, the condition the coupling imposes.
+    - on the inner side, either a heat flux into the storage, ``"<label> boundary heat
+      flux [W.m-2]"``, or a temperature, ``"<label> boundary temperature [K]"``, from a
+      coupling (``inner_condition``).
 
     The state list is ``[H]`` plus the material's internal states (none for the current
     materials, DESIGN D7).
@@ -75,6 +96,8 @@ class EnthalpyStorage(BaseSubModel):
     label : str, optional
         Name of the material in variable names (default "Phase-change material"), e.g.
         "<label> enthalpy [J.m-3]".
+    inner_condition : str, optional
+        "heat flux" (default) or "temperature".
     """
 
     assumptions = (
@@ -82,34 +105,32 @@ class EnthalpyStorage(BaseSubModel):
         "Heat flows along the primary spatial variable only.",
         "The volume change on melting is neglected.",
     )
-    requires = (INITIAL_TEMPERATURE, INITIAL_LIQUID_FRACTION)
 
-    def __init__(self, param, material, geometry, label="Phase-change material"):
-        super().__init__(param, name=f"{label} storage")
+    def __init__(
+        self,
+        param,
+        material,
+        geometry,
+        label="Phase-change material",
+        inner_condition="heat flux",
+    ):
+        if inner_condition not in ("heat flux", "temperature"):
+            raise ValueError(f"Inner condition '{inner_condition}' not recognised")
         self.material = material
-        self.geometry = geometry
+        self.storage_geometry = geometry
         self.label = label
+        self.inner_condition = inner_condition
         self.energy_variable = f"{label} thermal energy [J]"
-        self.provides = (
-            f"{label} enthalpy [J.m-3]",
-            f"{label} enthalpy rate of change [W.m-3]",
-            f"{label} temperature [K]",
-            f"{label} surface temperature [K]",
-            f"{label} surface enthalpy [J.m-3]",
-            "Liquid fraction",
-            "Phase",
-            "Average liquid fraction",
-            self.energy_variable,
-        )
+        super().__init__(param, name=f"{label} storage")
 
     @property
     def states(self):
         """The state variables: the enthalpy, then the material's internal states"""
         return [self.H, *self.internal_states]
 
-    def get_fundamental_variables(self):
+    def build(self):
         material = self.material
-        geometry = self.geometry
+        geometry = self.storage_geometry
         label = self.label
         H = pybamm.Variable(
             f"{label} enthalpy [J.m-3]",
@@ -123,16 +144,35 @@ class EnthalpyStorage(BaseSubModel):
         T = material.H2T(H, self.internal_states)
         self.T = T
         dHdt = pybamm.div(material.k(H, self.internal_states) * pybamm.grad(T))
-        self.dHdt = dHdt
+        H_surf = pybamm.boundary_value(H, geometry.inner)
+
+        self.rhs = {H: dHdt}
+        if self.inner_condition == "heat flux":
+            heat_flux = self.coupled(
+                f"{label} boundary heat flux [W.m-2]", geometry.boundary_domain
+            )
+            k_surf = material.k(H_surf, self.internal_states)
+            inner = (geometry.gradient_from_heat_flux(heat_flux, k_surf), "Neumann")
+        else:
+            T_b = self.coupled(
+                f"{label} boundary temperature [K]", geometry.boundary_domain
+            )
+            inner = (T_b, "Dirichlet")
+        self.boundary_conditions = {
+            T: {geometry.inner: inner, geometry.outer: (pybamm.Scalar(0), "Neumann")}
+        }
+        self.initial_conditions = {
+            H: material.equilibrium_enthalpy(
+                self.coupled(INITIAL_TEMPERATURE),
+                self.coupled(INITIAL_LIQUID_FRACTION),
+            )
+        }
 
         liquid_fraction = material.liquid_fraction(H, self.internal_states)
         H_low = material.equilibrium_enthalpy(self.param.T_low, 0)
         variables = {
             f"{label} enthalpy [J.m-3]": H,
             f"{label} enthalpy rate of change [W.m-3]": dHdt,
-            f"{label} surface enthalpy [J.m-3]": pybamm.boundary_value(
-                H, geometry.inner
-            ),
             "Liquid fraction": liquid_fraction,
             "Phase": liquid_fraction >= 0.5,
             # Weighted by the volume of this material (DESIGN D13)
@@ -141,7 +181,7 @@ class EnthalpyStorage(BaseSubModel):
             # Above the uniform state at the lower temperature limit
             self.energy_variable: geometry.integrate(H - H_low),
         }
-        return add_temperature_variables(
+        self.variables = add_temperature_variables(
             variables,
             {
                 f"{label} temperature [K]": T,
@@ -159,19 +199,8 @@ class EnthalpyStorage(BaseSubModel):
         """
         material = self.material
         H_low = material.equilibrium_enthalpy(self.param.T_low, 0)
-        return self.geometry.volume * (material.equilibrium_enthalpy(T, phi) - H_low)
-
-    def set_rhs(self, variables):
-        self.rhs[self.H] = self.dHdt
-
-    def set_boundary_conditions(self, variables):
-        self.boundary_conditions[self.T] = {
-            self.geometry.outer: (pybamm.Scalar(0), "Neumann")
-        }
-
-    def set_initial_conditions(self, variables):
-        self.initial_conditions[self.H] = self.material.equilibrium_enthalpy(
-            variables[INITIAL_TEMPERATURE], variables[INITIAL_LIQUID_FRACTION]
+        return self.storage_geometry.volume * (
+            material.equilibrium_enthalpy(T, phi) - H_low
         )
 
 
@@ -179,9 +208,10 @@ class SensibleConduction(BaseSubModel):
     """
     Conduction in a sensible material (such as a fin), with its temperature as the state.
 
-    ``rho c_p dT/dt = k div(grad T) + S``, with ``S`` a volumetric heat source from another
-    submodel ("<label> heat source [W.m-3]"), zero flux on the outer side, and on the inner
-    side the condition the coupling imposes.
+    ``rho c_p dT/dt = k div(grad T) + S``, with ``S`` a volumetric heat source
+    (``"<label> heat source [W.m-3]"``) and a heat flux into the inner side
+    (``"<label> boundary heat flux [W.m-2]"``), both from couplings, and zero flux on the
+    outer side.
 
     Parameters
     ----------
@@ -202,22 +232,16 @@ class SensibleConduction(BaseSubModel):
     )
 
     def __init__(self, param, material, geometry, label="Fin"):
-        super().__init__(param, name=f"{label} conduction")
         self.material = material
-        self.geometry = geometry
+        self.storage_geometry = geometry
         self.label = label
         self.energy_variable = f"{label} thermal energy [J]"
-        self.source_variable = f"{label} heat source [W.m-3]"
-        self.requires = (self.source_variable, INITIAL_TEMPERATURE)
-        self.provides = (
-            f"{label} temperature [K]",
-            f"{label} surface temperature [K]",
-            self.energy_variable,
-        )
+        super().__init__(param, name=f"{label} conduction")
 
-    def get_fundamental_variables(self):
+    def build(self):
         param = self.param
-        geometry = self.geometry
+        material = self.material
+        geometry = self.storage_geometry
         label = self.label
         T = pybamm.Variable(
             f"{label} temperature [K]",
@@ -226,11 +250,29 @@ class SensibleConduction(BaseSubModel):
             reference=param.temperature_reference,
         )
         self.T = T
-        rho_c_p = self.material.rho_c_p
-        variables = {
-            self.energy_variable: geometry.integrate(rho_c_p * (T - param.T_low))
+        source = self.coupled(f"{label} heat source [W.m-3]", geometry.primary_domain)
+        heat_flux = self.coupled(
+            f"{label} boundary heat flux [W.m-2]", geometry.boundary_domain
+        )
+        self.rhs = {
+            T: (material.k * pybamm.div(pybamm.grad(T)) + source) / material.rho_c_p
         }
-        return add_temperature_variables(
+        self.boundary_conditions = {
+            T: {
+                geometry.inner: (
+                    geometry.gradient_from_heat_flux(heat_flux, material.k),
+                    "Neumann",
+                ),
+                geometry.outer: (pybamm.Scalar(0), "Neumann"),
+            }
+        }
+        self.initial_conditions = {T: self.coupled(INITIAL_TEMPERATURE)}
+        variables = {
+            self.energy_variable: geometry.integrate(
+                material.rho_c_p * (T - param.T_low)
+            )
+        }
+        self.variables = add_temperature_variables(
             variables,
             {
                 f"{label} temperature [K]": T,
@@ -245,19 +287,8 @@ class SensibleConduction(BaseSubModel):
         Energy of this part in the whole device [J] at a uniform temperature ``T`` [K],
         above the uniform state at the lower temperature limit. ``phi`` is ignored.
         """
-        return self.geometry.volume * self.material.rho_c_p * (T - self.param.T_low)
-
-    def set_rhs(self, variables):
-        material = self.material
-        self.rhs[self.T] = (
-            material.k * pybamm.div(pybamm.grad(self.T))
-            + variables[self.source_variable]
-        ) / material.rho_c_p
-
-    def set_boundary_conditions(self, variables):
-        self.boundary_conditions[self.T] = {
-            self.geometry.outer: (pybamm.Scalar(0), "Neumann")
-        }
-
-    def set_initial_conditions(self, variables):
-        self.initial_conditions[self.T] = variables[INITIAL_TEMPERATURE]
+        return (
+            self.storage_geometry.volume
+            * self.material.rho_c_p
+            * (T - self.param.T_low)
+        )

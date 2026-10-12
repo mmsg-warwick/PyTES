@@ -20,9 +20,8 @@ from pytes.submodels.storage import INITIAL_LIQUID_FRACTION
 class Composition(pytes.BaseModel):
     """A model made of given submodels, for testing them in isolation"""
 
-    def __init__(self, make_submodels, geometry_variables):
+    def __init__(self, make_submodels):
         self._make_submodels = make_submodels
-        self._geometry_variables = geometry_variables
         super().__init__("Composition", operating_mode=None)
 
     def get_parameters(self):
@@ -37,17 +36,14 @@ class Composition(pytes.BaseModel):
 
 
 class Stub(BaseSubModel):
-    """Provides fixed variables"""
+    """Provides the variables returned by ``make(param, stub)``"""
 
-    def __init__(self, param, values, requires=(), name="stub"):
+    def __init__(self, param, make, name="stub"):
+        self.make = make
         super().__init__(param, name)
-        self.values = values
-        self.provides = tuple(values)
-        self.requires = tuple(requires)
 
-    def get_coupled_variables(self, variables):
-        variables.update(self.values(self.param) if callable(self.values) else {})
-        return variables
+    def build(self):
+        self.variables = self.make(self.param, self)
 
 
 z = pybamm.SpatialVariable("z", domains={"primary": "pipe"}, coord_sys="cartesian")
@@ -64,15 +60,19 @@ def fluid_submodel(param):
     )
 
 
-def stub(names, values):
-    class _Stub(BaseSubModel):
-        provides = tuple(names)
-
-        def get_coupled_variables(self, variables):
-            variables.update(values(self.param))
-            return variables
-
-    return _Stub
+def test_requires_and_provides_come_from_the_code():
+    model = pytes.SharpFrontModel()
+    fluid = model.submodels["fluid"]
+    assert set(fluid.requires) == {HEAT_GAIN, INITIAL_TEMPERATURE}
+    assert "Outlet temperature [K]" in fluid.provides
+    assert all(
+        isinstance(v, pybamm.CoupledVariable) for v in fluid.coupled_variables.values()
+    )
+    # Resolved when the model is built: the model itself has no coupled variables left
+    for equation in [*model.rhs.values(), *model.initial_conditions.values()]:
+        assert not any(
+            isinstance(node, pybamm.CoupledVariable) for node in equation.pre_order()
+        )
 
 
 def test_fluid_steady_state_with_uniform_heat_gain():
@@ -82,16 +82,16 @@ def test_fluid_steady_state_with_uniform_heat_gain():
     q = 50.0  # [W.m-1]
 
     def make(param):
-        Source = stub(
-            [HEAT_GAIN, INITIAL_TEMPERATURE],
-            lambda p: {
+        source = Stub(
+            param,
+            lambda p, s: {
                 HEAT_GAIN: pybamm.PrimaryBroadcast(q, "pipe"),
                 INITIAL_TEMPERATURE: p.T_in,
             },
         )
-        return {"fluid": fluid_submodel(param), "source": Source(param)}
+        return {"fluid": fluid_submodel(param), "source": source}
 
-    model = Composition(make, [z])
+    model = Composition(make)
     pv = model.default_parameter_values
     geometry = {"pipe": {z: {"min": 0, "max": model.param.Z}}}
     sim = pybamm.Simulation(
@@ -122,33 +122,21 @@ def test_insulated_storage_keeps_its_energy():
 
         geometry = StorageGeometry(y, integrate, lambda s: pybamm.Integral(s, y))
         storage = EnthalpyStorage(param, param.composite, geometry)
+        insulation = Stub(
+            param,
+            lambda p, s: {
+                "Phase-change material boundary heat flux [W.m-2]": (
+                    pybamm.PrimaryBroadcast(0, "pipe")
+                ),
+                INITIAL_TEMPERATURE: p.T_m,
+                INITIAL_LIQUID_FRACTION: pybamm.Scalar(0.4),
+                # Read by the base model's events (none in operating mode None)
+                "Outlet temperature [K]": p.T_m,
+            },
+        )
+        return {"storage": storage, "insulation": insulation}
 
-        class Insulation(BaseSubModel):
-            provides = (
-                INITIAL_TEMPERATURE,
-                INITIAL_LIQUID_FRACTION,
-                "Outlet temperature [K]",
-            )
-
-            def get_coupled_variables(self, variables):
-                variables.update(
-                    {
-                        INITIAL_TEMPERATURE: self.param.T_m,
-                        INITIAL_LIQUID_FRACTION: pybamm.Scalar(0.4),
-                        # Read by the base model's events (none in operating mode None)
-                        "Outlet temperature [K]": self.param.T_m,
-                    }
-                )
-                return variables
-
-            def set_boundary_conditions(self, variables):
-                self.boundary_conditions[storage.T] = {
-                    "left": (pybamm.Scalar(0), "Neumann")
-                }
-
-        return {"storage": storage, "insulation": Insulation(param)}
-
-    model = Composition(make, [y, z])
+    model = Composition(make)
     storage = model.submodels["storage"]
     assert storage.states == [storage.H]
     geometry = {
@@ -172,7 +160,7 @@ def test_insulated_storage_keeps_its_energy():
     assert phi[0] == pytest.approx(0.4, abs=1e-4)
 
 
-class BrokenSharpFront(pytes.SharpFrontModel):
+class AlteredSharpFront(pytes.SharpFrontModel):
     """Sharp-front model with its submodels altered by ``alter``"""
 
     def __init__(self, alter):
@@ -189,39 +177,32 @@ def test_missing_provider_is_detected():
         del submodels["coupling"]
 
     with pytest.raises(pytes.WiringError, match="which no submodel provides"):
-        BrokenSharpFront(alter)
+        AlteredSharpFront(alter)
 
 
 def test_duplicate_provider_is_detected():
     def alter(submodels, param):
-        Extra = stub([HEAT_GAIN], lambda p: {HEAT_GAIN: pybamm.Scalar(0)})
-        submodels["extra"] = Extra(param)
+        submodels["extra"] = Stub(param, lambda p, s: {HEAT_GAIN: pybamm.Scalar(0)})
 
     with pytest.raises(pytes.WiringError, match="provided by both"):
-        BrokenSharpFront(alter)
+        AlteredSharpFront(alter)
 
 
-def test_undeclared_read_is_detected():
-    class Sneaky(BaseSubModel):
-        provides = ("Sneaky variable",)
-
-        def get_coupled_variables(self, variables):
-            variables["Sneaky variable"] = 2 * variables["Power [W]"]
-            return variables
-
+def test_domain_mismatch_is_detected():
     def alter(submodels, param):
-        submodels["sneaky"] = Sneaky(param)
+        submodels["extra"] = Stub(
+            param,
+            lambda p, s: {"Twice the power [W]": 2 * s.coupled("Power [W]", "pipe")},
+        )
 
-    with pytest.raises(pytes.WiringError, match="without declaring it"):
-        BrokenSharpFront(alter)
+    with pytest.raises(pytes.WiringError, match="provides it on"):
+        AlteredSharpFront(alter)
 
 
-def test_declared_but_not_provided_is_detected():
-    class Liar(BaseSubModel):
-        provides = ("Promised variable",)
-
+def test_circular_dependency_is_detected():
     def alter(submodels, param):
-        submodels["liar"] = Liar(param)
+        submodels["a"] = Stub(param, lambda p, s: {"A [W]": s.coupled("B [W]")}, "a")
+        submodels["b"] = Stub(param, lambda p, s: {"B [W]": s.coupled("A [W]")}, "b")
 
-    with pytest.raises(pytes.WiringError, match="does not provide"):
-        BrokenSharpFront(alter)
+    with pytest.raises(pytes.WiringError, match="Circular dependency"):
+        AlteredSharpFront(alter)

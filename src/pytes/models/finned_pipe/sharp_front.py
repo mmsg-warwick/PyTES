@@ -59,7 +59,9 @@ class SharpFrontModel(BaseFinnedPipeModel):
         storage = EnthalpyStorage(param, param.composite, geometry)
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage
-        self.submodels["coupling"] = LedgerWallCoupling(param, param.fluid, storage)
+        self.submodels["coupling"] = LedgerWallCoupling(
+            param, param.fluid, storage.label, geometry
+        )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])
 
     @property

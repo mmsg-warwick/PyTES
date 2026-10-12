@@ -5,23 +5,27 @@
 
 import pybamm
 
+from .. import compat
 from ..variables import add_temperature_variables
 
 
 class WiringError(ValueError):
-    """The submodels' declared inputs and outputs do not fit together"""
+    """The submodels' inputs and outputs do not fit together"""
 
 
 class BaseModel(pybamm.BaseModel):
     """
     A heat battery model: a fixed composition of submodels (DESIGN D3).
 
-    Subclasses define :meth:`get_parameters` and :meth:`set_submodels`. The model builds
-    itself from the submodels and checks their declarations:
+    Subclasses define :meth:`get_parameters` and :meth:`set_submodels`. Each submodel reads
+    the variables of the others as :class:`pybamm.CoupledVariable` (its ``requires``). When
+    the model is built it merges the submodels with :meth:`pybamm.BaseModel.update`, checks
+    the wiring and resolves every coupled variable, so the finished model contains none:
 
-    - every name a submodel requires is provided by exactly one submodel;
-    - every submodel adds exactly the names it provides (plus their [degC] twins);
-    - a submodel only reads the names it requires or provides (it sees no others).
+    - every required name is provided by exactly one submodel;
+    - no variable depends on itself through coupled variables;
+    - once resolved, each provided variable has the primary domain its coupled variable
+      declares.
 
     Parameters
     ----------
@@ -105,7 +109,12 @@ class BaseModel(pybamm.BaseModel):
 
     def check_wiring(self):
         """
-        Check that every required name is provided by exactly one submodel.
+        Check that the submodels fit together (see the class docstring).
+
+        Returns
+        -------
+        dict
+            The submodel providing each variable name.
 
         Raises
         ------
@@ -121,108 +130,70 @@ class BaseModel(pybamm.BaseModel):
                     )
                 providers[name] = submodel
         for submodel in self.submodels.values():
-            for name in submodel.requires:
+            for name in submodel.coupled_variables:
                 if name not in providers:
                     raise WiringError(
                         f"{submodel.name!r} requires '{name}', which no submodel provides"
                     )
+        self._check_no_cycles(providers)
         return providers
 
-    @staticmethod
-    def _view(variables, submodel):
-        """The variables a submodel may read: those it requires or provides"""
-        names = set(submodel.requires) | set(submodel.provides)
-        return {
-            k: v for k, v in variables.items() if k in names or _twin_of(k) in names
-        }
+    def _check_domains(self, providers):
+        """
+        Raise if a provided variable is not on the primary domain its coupled variable
+        declares. Checked after resolution: before it, an expression built from coupled
+        variables only knows their primary domains.
+        """
+        for submodel in self.submodels.values():
+            for name, coupled in submodel.coupled_variables.items():
+                provided = self.variables[name]
+                if coupled.domain and coupled.domain != provided.domain:
+                    raise WiringError(
+                        f"{submodel.name!r} requires '{name}' on {coupled.domain}, but "
+                        f"{providers[name].name!r} provides it on {provided.domain}"
+                    )
 
-    def _call(self, submodel, method, variables):
-        view = self._view(variables, submodel)
-        try:
-            return getattr(submodel, method)(view)
-        except KeyError as error:
-            raise WiringError(
-                f"{submodel.name!r} reads {error} in {method} without declaring it in "
-                "'requires'"
-            ) from None
+    def _check_no_cycles(self, providers):
+        """Raise if a provided variable depends on itself through coupled variables"""
+
+        def coupled_names(symbol):
+            return {
+                node.name
+                for node in symbol.pre_order()
+                if isinstance(node, pybamm.CoupledVariable)
+            }
+
+        done, active = set(), []
+
+        def visit(name):
+            if name in done:
+                return
+            if name in active:
+                cycle = " -> ".join([*active[active.index(name) :], name])
+                raise WiringError(f"Circular dependency: {cycle}")
+            active.append(name)
+            for other in coupled_names(providers[name].variables[name]):
+                visit(other)
+            active.pop()
+            done.add(name)
+
+        for name in providers:
+            visit(name)
 
     def build_model(self):
-        """Build the equations and variables from the submodels, checking the wiring"""
-        self.check_wiring()
-        variables = {
+        """Merge the submodels, check the wiring and resolve the coupled variables"""
+        providers = self.check_wiring()
+        self.variables = {
             "Time [s]": pybamm.t,
             "Time [min]": pybamm.t / 60,
             "Time [h]": pybamm.t / 3600,
         }
-        added = {}
-        for submodel in self.submodels.values():
-            new = submodel.get_fundamental_variables()
-            added[submodel] = set(new)
-            variables.update(new)
-
-        pending = list(self.submodels.values())
-        while pending:
-            ready = [
-                s for s in pending if all(name in variables for name in s.requires)
-            ]
-            if not ready:
-                names = ", ".join(repr(s.name) for s in pending)
-                raise WiringError(f"Circular requirements between {names}")
-            for submodel in ready:
-                view = self._view(variables, submodel)
-                before = set(view)
-                new = self._call_coupled(submodel, view)
-                new_names = set(new) - before
-                added[submodel] |= new_names
-                variables.update({k: new[k] for k in new_names})
-                pending.remove(submodel)
-
-        for submodel, names in added.items():
-            declared = set(submodel.provides)
-            missing = declared - names
-            undeclared = {n for n in names - declared if _twin_of(n) not in declared}
-            if missing:
-                raise WiringError(
-                    f"{submodel.name!r} does not provide {sorted(missing)}"
-                )
-            if undeclared:
-                raise WiringError(
-                    f"{submodel.name!r} adds undeclared variables {sorted(undeclared)}"
-                )
-
-        for submodel in self.submodels.values():
-            for method in (
-                "set_rhs",
-                "set_algebraic",
-                "set_boundary_conditions",
-                "set_initial_conditions",
-                "set_events",
-            ):
-                self._call(submodel, method, variables)
-            self.rhs.update(submodel.rhs)
-            self.algebraic.update(submodel.algebraic)
-            self.initial_conditions.update(submodel.initial_conditions)
-            self.events.extend(submodel.events)
-            for var, bcs in submodel.boundary_conditions.items():
-                existing = self.boundary_conditions.setdefault(var, {})
-                clash = set(existing) & set(bcs)
-                if clash:
-                    raise WiringError(
-                        f"{submodel.name!r} sets the {sorted(clash)} boundary condition "
-                        f"of {var.name!r}, which another submodel already sets"
-                    )
-                existing.update(bcs)
-
-        self.variables.update(variables)
-
-    def _call_coupled(self, submodel, view):
         try:
-            return submodel.get_coupled_variables(dict(view))
-        except KeyError as error:
-            raise WiringError(
-                f"{submodel.name!r} reads {error} in get_coupled_variables without "
-                "declaring it in 'requires'"
-            ) from None
+            self.update(*self.submodels.values())
+        except pybamm.ModelError as error:
+            raise WiringError(str(error)) from None
+        compat.resolve_coupled_variables(self)
+        self._check_domains(providers)
 
     def set_events(self):
         """
@@ -244,10 +215,3 @@ class BaseModel(pybamm.BaseModel):
     def add_temperature_variables(variables, temperatures):
         """See :func:`pytes.variables.add_temperature_variables`"""
         return add_temperature_variables(variables, temperatures)
-
-
-def _twin_of(name):
-    """The [K] name a [degC] name is the twin of (or None)"""
-    if name.endswith("[degC]"):
-        return name[: -len("[degC]")] + "[K]"
-    return None

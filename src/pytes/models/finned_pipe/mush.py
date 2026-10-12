@@ -88,8 +88,9 @@ class MushModel(BaseFinnedPipeModel):
             return pybamm.Integral(param.delta * symbol, y)
 
         fluid = self.fluid_submodel()
+        pcm_geometry = StorageGeometry(x, integrate_pcm, pcm_cross_section)
         pcm = EnthalpyStorage(
-            param, param.pcm, StorageGeometry(x, integrate_pcm, pcm_cross_section)
+            param, param.pcm, pcm_geometry, inner_condition="temperature"
         )
         fins = SensibleConduction(
             param, param.metal, StorageGeometry(y, integrate_fin, fin_cross_section)
@@ -97,8 +98,10 @@ class MushModel(BaseFinnedPipeModel):
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = pcm
         self.submodels["fins"] = fins
-        self.submodels["coupling"] = FinRootCoupling(param, param.fluid, fins)
-        self.submodels["fin-PCM coupling"] = FinPCMCoupling(param, fins, pcm)
+        self.submodels["coupling"] = FinRootCoupling(param, param.fluid, fins.label)
+        self.submodels["fin-PCM coupling"] = FinPCMCoupling(
+            param, pcm.label, pcm_geometry, fins.label
+        )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [pcm, fins])
 
     @property

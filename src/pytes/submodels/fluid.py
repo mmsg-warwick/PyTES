@@ -68,16 +68,6 @@ class AdvectedFluid(BaseSubModel):
         The geometry of the flow paths.
     """
 
-    requires = (HEAT_GAIN, INITIAL_TEMPERATURE)
-    provides = (
-        "Heat transfer fluid temperature [K]",
-        "Inlet temperature [K]",
-        "Outlet temperature [K]",
-        "Inlet specific enthalpy [J.kg-1]",
-        "Outlet specific enthalpy [J.kg-1]",
-        "Mass flow rate [kg.s-1]",
-        "Heat transfer fluid thermal energy [J]",
-    )
     assumptions = (
         "The fluid is incompressible, with constant density.",
         "Axial conduction and dispersion in the fluid are neglected.",
@@ -88,13 +78,14 @@ class AdvectedFluid(BaseSubModel):
     energy_variable = "Heat transfer fluid thermal energy [J]"
 
     def __init__(self, param, fluid, flow_path, name="Heat transfer fluid"):
-        super().__init__(param, name)
         self.fluid = fluid
         self.flow_path = flow_path
+        super().__init__(param, name)
 
-    def get_fundamental_variables(self):
+    def build(self):
         param = self.param
         path = self.flow_path
+        fluid = self.fluid
         T_f = pybamm.Variable(
             "Heat transfer fluid temperature [K]",
             domains={"primary": "pipe"},
@@ -102,11 +93,24 @@ class AdvectedFluid(BaseSubModel):
             reference=param.temperature_reference,
         )
         self.T_f = T_f
+        T_in = param.T_in
         # With constant extrapolation (compat.fluid_spatial_method) this is the value in
         # the last cell, which is the temperature at which upwinding advects the fluid out
         T_out = pybamm.boundary_value(T_f, "right")
-        T_in = param.T_in
-        fluid = self.fluid
+
+        mdot_path = param.mdot / path.n_paths
+        mdot_edge = pybamm.PrimaryBroadcastToEdges(mdot_path, ["pipe"])
+        enthalpy_flux = mdot_edge * fluid.h(pybamm.upwind(T_f))
+        heat_gain = self.coupled(HEAT_GAIN, "pipe")
+        self.rhs = {
+            T_f: (-pybamm.div(enthalpy_flux) + heat_gain)
+            / (path.area * fluid.rho(T_f) * fluid.c_p(T_f))
+        }
+        self.boundary_conditions = {
+            T_f: {"left": (compat.upwind_inlet_value(T_f, T_in), "Dirichlet")}
+        }
+        self.initial_conditions = {T_f: self.coupled(INITIAL_TEMPERATURE)}
+
         E_f = (
             path.n_paths
             * path.area
@@ -118,9 +122,9 @@ class AdvectedFluid(BaseSubModel):
             "Mass flow rate [kg.s-1]": param.mdot,
             # The enthalpy is zero at the lower temperature limit, so this is the energy
             # above the uniform state at that limit
-            "Heat transfer fluid thermal energy [J]": E_f,
+            self.energy_variable: E_f,
         }
-        return add_temperature_variables(
+        self.variables = add_temperature_variables(
             variables,
             {
                 "Heat transfer fluid temperature [K]": T_f,
@@ -138,25 +142,3 @@ class AdvectedFluid(BaseSubModel):
         return (
             path.n_paths * path.area * path.length * self.fluid.rho(T) * self.fluid.h(T)
         )
-
-    def set_rhs(self, variables):
-        param = self.param
-        path = self.flow_path
-        fluid = self.fluid
-        T_f = self.T_f
-        mdot_path = param.mdot / path.n_paths
-        mdot_edge = pybamm.PrimaryBroadcastToEdges(mdot_path, ["pipe"])
-        enthalpy_flux = mdot_edge * fluid.h(pybamm.upwind(T_f))
-        heat_gain = variables[HEAT_GAIN]
-        self.rhs[T_f] = (-pybamm.div(enthalpy_flux) + heat_gain) / (
-            path.area * fluid.rho(T_f) * fluid.c_p(T_f)
-        )
-
-    def set_boundary_conditions(self, variables):
-        T_f = self.T_f
-        self.boundary_conditions[T_f] = {
-            "left": (compat.upwind_inlet_value(T_f, self.param.T_in), "Dirichlet")
-        }
-
-    def set_initial_conditions(self, variables):
-        self.initial_conditions[self.T_f] = variables[INITIAL_TEMPERATURE]

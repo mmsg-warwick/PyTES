@@ -43,34 +43,14 @@ class DeviceEnergy(BaseSubModel):
         ``uniform_energy(T, phi)`` method.
     """
 
-    provides = (
-        "Power [W]",
-        "Power [kW]",
-        "Discharged energy [J]",
-        "Discharged energy [kWh]",
-        "Storage thermal energy [J]",
-        "Total thermal energy [J]",
-        "Heat loss power [W]",
-        "Thermal capacity [J]",
-        "State of charge",
-        INITIAL_TEMPERATURE,
-        INITIAL_LIQUID_FRACTION,
-    )
     assumptions = ("There are no heat losses to the surroundings.",)
 
     def __init__(
         self, param, fluid_component, storage_components, name="Device energy"
     ):
-        super().__init__(param, name)
         self.fluid_component = fluid_component
         self.storage_components = list(storage_components)
-        self.requires = (
-            "Mass flow rate [kg.s-1]",
-            "Inlet specific enthalpy [J.kg-1]",
-            "Outlet specific enthalpy [J.kg-1]",
-            fluid_component.energy_variable,
-            *[c.energy_variable for c in self.storage_components],
-        )
+        super().__init__(param, name)
 
     @property
     def components(self):
@@ -114,42 +94,34 @@ class DeviceEnergy(BaseSubModel):
         phi = fraction(E_solidus, E_liquidus)
         return T, phi
 
-    def get_fundamental_variables(self):
-        E_out = pybamm.Variable("Discharged energy [J]", scale=1e6)
-        self.E_out = E_out
-        return {
-            "Discharged energy [J]": E_out,
-            "Discharged energy [kWh]": E_out / 3.6e6,
-        }
-
-    def get_coupled_variables(self, variables):
+    def build(self):
         param = self.param
-        power = variables["Mass flow rate [kg.s-1]"] * (
-            variables["Outlet specific enthalpy [J.kg-1]"]
-            - variables["Inlet specific enthalpy [J.kg-1]"]
+        power = self.coupled("Mass flow rate [kg.s-1]") * (
+            self.coupled("Outlet specific enthalpy [J.kg-1]")
+            - self.coupled("Inlet specific enthalpy [J.kg-1]")
         )
-        E_storage = variables[self.storage_components[0].energy_variable]
+        E_out = pybamm.Variable("Discharged energy [J]", scale=1e6)
+        self.rhs = {E_out: power}
+        self.initial_conditions = {E_out: pybamm.Scalar(0)}
+
+        E_storage = self.coupled(self.storage_components[0].energy_variable)
         for component in self.storage_components[1:]:
-            E_storage = E_storage + variables[component.energy_variable]
-        E_total = E_storage + variables[self.fluid_component.energy_variable]
+            E_storage = E_storage + self.coupled(component.energy_variable)
+        E_total = E_storage + self.coupled(self.fluid_component.energy_variable)
         capacity = self.uniform_energy(param.T_high, 1)
         T_0, phi_0 = self.initial_state(param.initial_soc)
-        variables.update(
-            {
-                "Power [W]": power,
-                "Power [kW]": power / 1e3,
-                "Storage thermal energy [J]": E_storage,
-                "Total thermal energy [J]": E_total,
-                "Heat loss power [W]": pybamm.Scalar(0),
-                "Thermal capacity [J]": capacity,
-                "State of charge": E_total / capacity,
-                INITIAL_LIQUID_FRACTION: phi_0,
-            }
+        variables = {
+            "Power [W]": power,
+            "Power [kW]": power / 1e3,
+            "Discharged energy [J]": E_out,
+            "Discharged energy [kWh]": E_out / 3.6e6,
+            "Storage thermal energy [J]": E_storage,
+            "Total thermal energy [J]": E_total,
+            "Heat loss power [W]": pybamm.Scalar(0),
+            "Thermal capacity [J]": capacity,
+            "State of charge": E_total / capacity,
+            INITIAL_LIQUID_FRACTION: phi_0,
+        }
+        self.variables = add_temperature_variables(
+            variables, {INITIAL_TEMPERATURE: T_0}
         )
-        return add_temperature_variables(variables, {INITIAL_TEMPERATURE: T_0})
-
-    def set_rhs(self, variables):
-        self.rhs[self.E_out] = variables["Power [W]"]
-
-    def set_initial_conditions(self, variables):
-        self.initial_conditions[self.E_out] = pybamm.Scalar(0)

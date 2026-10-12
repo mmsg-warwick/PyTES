@@ -4,20 +4,25 @@
 """
 Base class for submodels.
 
-PyBaMM's own ``pybamm.BaseSubModel`` assumes a battery (its domains must be "negative",
-"separator" or "positive" and its options are battery options), so PyTES has its own. It
-keeps PyBaMM's method names, so the build loop reads the same.
+A submodel is a small :class:`pybamm.BaseModel`: it sets its own variables, equations and
+boundary and initial conditions, and refers to the variables of other submodels by name with
+:class:`pybamm.CoupledVariable`. The model merges its submodels with
+:meth:`pybamm.BaseModel.update` and resolves the coupled variables when it is built.
+
+PyBaMM's ``pybamm.BaseSubModel`` is not used: it assumes a battery (its domains must be
+"negative", "separator" or "positive" and its options are battery options).
 """
 
+import pybamm
 
-class BaseSubModel:
+
+class BaseSubModel(pybamm.BaseModel):
     """
-    A part of a model with declared inputs and outputs.
+    A part of a model, with its inputs and outputs readable from the code.
 
-    Subclasses declare the variable names they need from other submodels (``requires``)
-    and the names they add (``provides``), and override the ``get_*`` and ``set_*`` methods
-    they need. The model checks the declarations when it is built: every required name must
-    be provided by exactly one submodel, and every submodel must add the names it declares.
+    Subclasses implement :meth:`build`, which sets ``variables``, ``rhs``, ``algebraic``,
+    ``boundary_conditions``, ``initial_conditions`` and ``events``. A variable set by another
+    submodel is read with :meth:`coupled`, never by reaching into that submodel.
 
     Parameters
     ----------
@@ -28,72 +33,57 @@ class BaseSubModel:
 
     Attributes
     ----------
-    requires : tuple of str
-        Names of the variables this submodel needs from other submodels.
-    provides : tuple of str
-        Names of the variables this submodel adds.
+    param : object
+        The model's parameters.
+    coupled_variables : dict
+        The :class:`pybamm.CoupledVariable` objects created by :meth:`coupled`, by name
+        (PyBaMM's own record of the variables a model needs from other models).
     assumptions : tuple of str
         Modelling assumptions, in a sentence each (for model cards).
-    rhs, algebraic, boundary_conditions, initial_conditions : dict
-        Equations, filled by the ``set_*`` methods.
-    events : list
-        Events, filled by :meth:`set_events`.
     """
 
-    requires = ()
-    provides = ()
     assumptions = ()
 
     def __init__(self, param, name=None):
+        super().__init__(name=name or type(self).__name__)
         self.param = param
-        self.name = name or type(self).__name__
-        self.rhs = {}
-        self.algebraic = {}
-        self.boundary_conditions = {}
-        self.initial_conditions = {}
-        self.events = []
+        self.build()
 
-    def get_fundamental_variables(self):
-        """
-        Return the variables this submodel can define without other submodels (its state
-        variables, typically).
+    def build(self):
+        """Set the variables, equations and conditions of the submodel"""
+        raise NotImplementedError
 
-        Returns
-        -------
-        dict
+    def coupled(self, name, domain=None):
         """
-        return {}
-
-    def get_coupled_variables(self, variables):
-        """
-        Return ``variables`` with the variables this submodel defines from those of other
-        submodels added.
+        A variable set by another submodel, to be resolved when the model is built.
 
         Parameters
         ----------
-        variables : dict
-            All the variables defined so far, including every name in ``requires``.
+        name : str
+            Name of the variable.
+        domain : str or list of str, optional
+            Its primary domain. The model checks it against the variable that provides it.
 
         Returns
         -------
-        dict
+        pybamm.CoupledVariable
         """
-        return variables
+        if name not in self.coupled_variables:
+            self.coupled_variables = {
+                **self.coupled_variables,
+                name: pybamm.CoupledVariable(name, domain),
+            }
+        return self.coupled_variables[name]
 
-    def set_rhs(self, variables):
-        """Set ``self.rhs`` from the complete variables"""
+    @property
+    def requires(self):
+        """Names of the variables this submodel needs from other submodels"""
+        return tuple(self.coupled_variables)
 
-    def set_algebraic(self, variables):
-        """Set ``self.algebraic`` from the complete variables"""
-
-    def set_boundary_conditions(self, variables):
-        """Set ``self.boundary_conditions`` from the complete variables"""
-
-    def set_initial_conditions(self, variables):
-        """Set ``self.initial_conditions`` from the complete variables"""
-
-    def set_events(self, variables):
-        """Append to ``self.events`` from the complete variables"""
+    @property
+    def provides(self):
+        """Names of the variables this submodel sets"""
+        return tuple(self.variables)
 
     def __repr__(self):
         return f"{type(self).__name__}(name={self.name!r})"
