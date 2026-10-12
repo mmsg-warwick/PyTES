@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pytes"
+version = "0.0.1"
+description = "Models and tools for heat batteries (thermal energy storage), built on PyBaMM"
+readme = "README.md"
+license = "BSD-3-Clause"
+requires-python = ">=3.10"
+dependencies = [
+  "pybamm>=26.7",
+  "numpy",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib"]
+
+[dependency-groups]
+dev = [
+  "pre-commit>=3.7",
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pytes"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not slow'"
+markers = ["slow: long-running tests (run with -m slow)"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Docstrings may run past 88 characters; the formatter wraps code
+ignore = ["E501"]
