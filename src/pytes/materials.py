@@ -11,7 +11,7 @@ temperature is a function of ``H`` alone. Materials with kinetics or hysteresis 
 internal states without changing the storage submodels (DESIGN D7).
 
 Enthalpies are per unit volume and relative to 0 K. Energy variables subtract the enthalpy
-at the lower temperature limit, so this reference never shows in the outputs.
+at the reference temperature, so this reference never shows in the outputs.
 """
 
 import pybamm
@@ -81,12 +81,16 @@ class SensibleMaterial:
         self.c_p = pybamm.Parameter(f"{prefix} specific heat capacity [J.kg-1.K-1]")
         self.rho_c_p = self.rho * self.c_p
 
+    def T2H(self, T):
+        """Enthalpy per unit volume [J.m-3], relative to 0 K, at temperature ``T`` [K]"""
+        return self.rho_c_p * T
+
     def equilibrium_enthalpy(self, T, phi=0):
         """
         Enthalpy per unit volume [J.m-3] at a uniform temperature ``T`` [K]. ``phi`` is
         ignored (the material does not melt).
         """
-        return self.rho_c_p * T
+        return self.T2H(T)
 
 
 class PhaseChangeMaterial:

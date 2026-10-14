@@ -22,7 +22,7 @@ class Composition(pytes.BaseModel):
 
     def __init__(self, make_submodels):
         self._make_submodels = make_submodels
-        super().__init__("Composition", operating_mode=None)
+        super().__init__("Composition")
 
     def get_parameters(self):
         return FinnedPipeParameters()
@@ -165,7 +165,7 @@ class AlteredSharpFront(pytes.SharpFrontModel):
 
     def __init__(self, alter):
         self._alter = alter
-        super().__init__(operating_mode=None)
+        super().__init__()
 
     def set_submodels(self):
         super().set_submodels()

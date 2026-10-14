@@ -88,7 +88,7 @@ class EnthalpyStorage(BaseSubModel):
     Parameters
     ----------
     param : object
-        The model's parameters. Uses ``T_low`` (lower temperature limit).
+        The model's parameters. Uses ``T_ref`` (reference temperature).
     material : :class:`pytes.materials.PhaseChangeMaterial`
         The storage material.
     geometry : :class:`StorageGeometry`
@@ -169,7 +169,7 @@ class EnthalpyStorage(BaseSubModel):
         }
 
         liquid_fraction = material.liquid_fraction(H, self.internal_states)
-        H_low = material.equilibrium_enthalpy(self.param.T_low, 0)
+        H_ref = material.T2H(self.param.T_ref)
         variables = {
             f"{label} enthalpy [J.m-3]": H,
             f"{label} enthalpy rate of change [W.m-3]": dHdt,
@@ -178,8 +178,8 @@ class EnthalpyStorage(BaseSubModel):
             # Weighted by the volume of this material (DESIGN D13)
             "Average liquid fraction": geometry.integrate(liquid_fraction)
             / geometry.volume,
-            # Above the uniform state at the lower temperature limit
-            self.energy_variable: geometry.integrate(H - H_low),
+            # Above the uniform state at the reference temperature
+            self.energy_variable: geometry.integrate(H - H_ref),
         }
         self.variables = add_temperature_variables(
             variables,
@@ -194,13 +194,12 @@ class EnthalpyStorage(BaseSubModel):
     def uniform_energy(self, T, phi):
         """
         Energy of this storage in the whole device [J] at a uniform temperature ``T`` [K]
-        with liquid fraction ``phi``, above the uniform state at the lower temperature
-        limit.
+        with liquid fraction ``phi``, above the uniform state at the reference temperature.
         """
         material = self.material
-        H_low = material.equilibrium_enthalpy(self.param.T_low, 0)
+        H_ref = material.T2H(self.param.T_ref)
         return self.storage_geometry.volume * (
-            material.equilibrium_enthalpy(T, phi) - H_low
+            material.equilibrium_enthalpy(T, phi) - H_ref
         )
 
 
@@ -216,7 +215,7 @@ class SensibleConduction(BaseSubModel):
     Parameters
     ----------
     param : object
-        The model's parameters. Uses ``T_low``, ``temperature_scale`` and
+        The model's parameters. Uses ``T_ref``, ``temperature_scale`` and
         ``temperature_reference``.
     material : :class:`pytes.materials.SensibleMaterial`
         The material.
@@ -269,7 +268,7 @@ class SensibleConduction(BaseSubModel):
         self.initial_conditions = {T: self.coupled(INITIAL_TEMPERATURE)}
         variables = {
             self.energy_variable: geometry.integrate(
-                material.rho_c_p * (T - param.T_low)
+                material.rho_c_p * (T - param.T_ref)
             )
         }
         self.variables = add_temperature_variables(
@@ -285,10 +284,10 @@ class SensibleConduction(BaseSubModel):
     def uniform_energy(self, T, phi=0):
         """
         Energy of this part in the whole device [J] at a uniform temperature ``T`` [K],
-        above the uniform state at the lower temperature limit. ``phi`` is ignored.
+        above the uniform state at the reference temperature. ``phi`` is ignored.
         """
         return (
             self.storage_geometry.volume
             * self.material.rho_c_p
-            * (T - self.param.T_low)
+            * (T - self.param.T_ref)
         )

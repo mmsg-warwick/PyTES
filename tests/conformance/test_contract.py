@@ -24,7 +24,7 @@ def solutions():
 
     def get(model_class):
         if model_class not in cache:
-            cache[model_class] = solve(model_class(operating_mode=None), COARSE_MESH)
+            cache[model_class] = solve(model_class(), COARSE_MESH)
         return cache[model_class]
 
     return get
@@ -46,17 +46,9 @@ def test_stateless_materials(model_class):
     conformance.check_stateless_materials(model_class())
 
 
-@pytest.mark.parametrize(
-    "operating_mode, n_events", [("discharge", 1), ("charge", 1), (None, 0)]
-)
-def test_operating_mode_events(model_class, operating_mode, n_events):
-    model = model_class(operating_mode=operating_mode)
-    assert len(model.events) == n_events
-
-
-def test_invalid_operating_mode(model_class):
-    with pytest.raises(ValueError, match="not recognised"):
-        model_class(operating_mode="idle")
+def test_no_events(model_class):
+    # Cut-offs are experiment terminations (DESIGN D11)
+    assert model_class().events == []
 
 
 # The discretisation conserves energy exactly, on any mesh, so the balance only differs
@@ -65,9 +57,7 @@ def test_invalid_operating_mode(model_class):
     "mesh, dT_m", [(COARSE_MESH, 0), ({"x": 3, "y": 3, "z": 4}, 0), (COARSE_MESH, 0.5)]
 )
 def test_energy_conservation(model_class, mesh, dT_m):
-    conformance.check_energy_conservation(
-        solve(model_class(operating_mode=None), mesh, dT_m)
-    )
+    conformance.check_energy_conservation(solve(model_class(), mesh, dT_m))
 
 
 def test_power_from_enthalpy(model_class, solutions):
@@ -78,17 +68,6 @@ def test_celsius_twins(model_class, solutions):
     conformance.check_celsius_twins(solutions(model_class))
 
 
-def test_soc_end_points(model_class):
-    model = model_class(operating_mode=None)
-    conformance.check_soc_end_points(model, var_pts=var_pts(model))
-
-
-def test_initial_temperature(model_class):
-    conformance.check_initial_temperature(
-        model_class, var_pts=var_pts(model_class(operating_mode=None))
-    )
-
-
-def test_invalid_initial_state(model_class):
-    with pytest.raises(ValueError, match="not recognised"):
-        model_class(initial_state="liquid fraction")
+def test_initial_state(model_class):
+    model = model_class()
+    conformance.check_initial_state(model, var_pts=var_pts(model))

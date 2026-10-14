@@ -43,7 +43,7 @@ def test_submodels():
 
 
 def solve(model_class, mesh, dT_m, t):
-    model = model_class(operating_mode=None)
+    model = model_class()
     parameter_values = model.default_parameter_values
     parameter_values["PCM melting range [K]"] = dT_m
     sim = pybamm.Simulation(
@@ -64,9 +64,8 @@ def test_discharge_freezes_pcm(model_class):
     assert liquid_fraction[-1] < 0.1
     assert np.all(np.diff(liquid_fraction) <= 1e-12)
     assert np.all(solution["Power [W]"].entries > 0)
-    soc = solution["State of charge"].entries
-    assert soc[0] == pytest.approx(1, abs=1e-12)
-    assert np.all(np.diff(soc) < 0)
+    energy = solution["Total thermal energy [J]"].entries
+    assert np.all(np.diff(energy) < 0)
 
 
 # The reference ran with PyBaMM 26.7 and the same solver tolerances (rtol=1e-5): the

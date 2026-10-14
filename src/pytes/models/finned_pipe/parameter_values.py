@@ -11,9 +11,9 @@ def get_parameter_values(parameter_set=None):
     Return parameter values for the finned-pipe models.
 
     The default set is for a representative heat battery: 14 pipes with a total flow of
-    20 l/min of water, aluminium fins, and a PCM melting at 58 °C. The temperature window is
-    10 °C to 70 °C, and the battery starts fully charged (uniform at 70 °C, liquid) and is
-    discharged with water at 10 °C. See
+    20 l/min of water, aluminium fins, and a PCM melting at 58 °C. The battery starts uniform
+    at 70 °C (liquid) and is discharged with water at 10 °C. Energies are zero at the uniform
+    state at the reference temperature, 10 °C. See
     :class:`pytes.models.finned_pipe.FinnedPipeParameters` for the meaning of each parameter
     and the geometry.
 
@@ -35,12 +35,9 @@ def get_parameter_values(parameter_set=None):
     return pybamm.ParameterValues(
         {
             # Device level
-            "Lower temperature limit [K]": 273.15 + 10,
-            "Upper temperature limit [K]": 273.15 + 70,
-            "Initial state of charge": 1,
+            "Reference temperature [K]": 273.15 + 10,
             "Initial temperature [K]": 273.15 + 70,
             "Inlet temperature [K]": 273.15 + 10,
-            "Cut-off temperature [K]": 273.15 + 40,
             # 20 l/min of water in total
             "Mass flow rate [kg.s-1]": 1000 * 20 / 6e4,
             # Heat transfer fluid (water)

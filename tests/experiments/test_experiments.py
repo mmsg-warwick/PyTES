@@ -21,7 +21,7 @@ def mesh(model):
 
 
 def run(steps, model=None):
-    model = model or pytes.SharpFrontModel(operating_mode=None)
+    model = model or pytes.SharpFrontModel()
     return run_experiment(model, Experiment(steps), var_pts=mesh(model))
 
 
@@ -30,7 +30,7 @@ def all_steps(solution):
 
 
 def test_constant_inputs_match_plain_solve():
-    model = pytes.SharpFrontModel(operating_mode=None)
+    model = pytes.SharpFrontModel()
     plain = pybamm.Simulation(model, var_pts=mesh(model)).solve(
         [0, 600], t_interp=np.linspace(0, 600, 61)
     )
@@ -67,10 +67,9 @@ def test_constant_power(step):
 
 
 def test_charging_has_negative_power():
-    solution = run([s.ConstantInputs(T_HOT, Q0, duration=300)])
-    model = pytes.SharpFrontModel(operating_mode=None)
+    model = pytes.SharpFrontModel()
     pv = model.default_parameter_values
-    pv["Initial state of charge"] = 0  # uniform at T_COLD
+    pv["Initial temperature [K]"] = T_COLD
     solution = run_experiment(
         model,
         Experiment([s.ConstantInputs(T_HOT, Q0, duration=300)]),
@@ -127,7 +126,7 @@ def test_energy_conservation_over_experiment(model_class):
             s.ConstantInputs(T_HOT, Q0, duration=300),
             s.ConstantInputs(T_COLD, 0.0, duration=120),
         ],
-        model_class(operating_mode=None),
+        model_class(),
     )
     E = solution["Total thermal energy [J]"].entries
     released = solution["Discharged energy [J]"].entries
@@ -207,19 +206,11 @@ def test_step_already_terminated_is_skipped():
 
 
 def test_input_model_is_not_modified():
-    model = pytes.SharpFrontModel()  # with its own cut-off event
+    model = pytes.SharpFrontModel()
     events = [e.name for e in model.events]
     run([s.ConstantInputs(T_COLD, Q0, duration=60)], model)
     assert [e.name for e in model.events] == events
     assert len(model.algebraic) == 0
-
-
-def test_model_cut_off_event_does_not_end_the_experiment():
-    # The model's discharge cut-off (40 degC) is removed: each step has its own
-    model = pytes.SharpFrontModel(operating_mode="discharge")
-    solution = run([s.ConstantInputs(T_COLD, Q0, duration=3600, period=60)], model)
-    assert solution["Outlet temperature [degC]"].entries[-1] < 40
-    assert solution.t[-1] == pytest.approx(3600)
 
 
 @pytest.mark.parametrize(

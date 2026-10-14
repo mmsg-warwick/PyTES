@@ -59,7 +59,7 @@ class FinnedPipeParameters(DeviceParameters):
     area, perimeter : pybamm.Symbol
         Flow area ``pi R_f**2`` [m2] and wall perimeter ``2 pi R_f`` [m] of one pipe.
     fluid : :class:`pytes.fluids.ConstantPropertyLiquid`
-        The fluid-property object, with zero enthalpy at the lower temperature limit.
+        The fluid-property object, with zero enthalpy at the reference temperature.
     pcm : :class:`pytes.materials.PureMaterial`
         The PCM on its own (parameters "PCM ...").
     metal : :class:`pytes.materials.SensibleMaterial`
@@ -84,7 +84,7 @@ class FinnedPipeParameters(DeviceParameters):
         self.area = np.pi * self.R_f**2
         self.perimeter = 2 * np.pi * self.R_f
 
-        self.fluid = ConstantPropertyLiquid(T_ref=self.T_low)
+        self.fluid = ConstantPropertyLiquid(T_ref=self.T_ref)
         self.pcm = PureMaterial("PCM")
         self.metal = SensibleMaterial("Metal")
         self.composite = CompositeMaterial(self.pcm, self.metal, self.delta)

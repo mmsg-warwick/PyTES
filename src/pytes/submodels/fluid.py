@@ -120,7 +120,7 @@ class AdvectedFluid(BaseSubModel):
             "Inlet specific enthalpy [J.kg-1]": fluid.h(T_in),
             "Outlet specific enthalpy [J.kg-1]": fluid.h(T_out),
             "Mass flow rate [kg.s-1]": param.mdot,
-            # The enthalpy is zero at the lower temperature limit, so this is the energy
+            # The enthalpy is zero at the reference temperature, so this is the energy
             # above the uniform state at that limit
             self.energy_variable: E_f,
         }

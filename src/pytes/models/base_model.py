@@ -27,20 +27,13 @@ class BaseModel(pybamm.BaseModel):
     - once resolved, each provided variable has the primary domain its coupled variable
       declares.
 
+    The equations are the same for charge and discharge, and the model has no events:
+    cut-offs are the terminations of an experiment (DESIGN D11).
+
     Parameters
     ----------
     name : str
         The name of the model.
-    operating_mode : str or None, optional
-        Sets the cut-off event (DESIGN D11). "discharge" (default) stops when the outlet
-        temperature falls below "Cut-off temperature [K]", "charge" stops when it rises
-        above it, and None runs to the final time. Charge and discharge are defined by heat
-        flowing into or out of the storage.
-    initial_state : str, optional
-        How the initial state is set (DESIGN D14). It is always uniform. "state of charge"
-        (default): the uniform state whose state of charge is "Initial state of charge".
-        "temperature": uniform at "Initial temperature [K]", solid at the melting
-        temperature.
 
     Attributes
     ----------
@@ -56,32 +49,12 @@ class BaseModel(pybamm.BaseModel):
     #: Scale of the temperature variables [K]
     temperature_scale = 200
 
-    #: The ways of setting the initial state
-    initial_states = ("state of charge", "temperature")
-
-    def __init__(
-        self, name, operating_mode="discharge", initial_state="state of charge"
-    ):
+    def __init__(self, name):
         super().__init__(name=name)
-        if operating_mode not in ("discharge", "charge", None):
-            msg = (
-                f"Operating mode '{operating_mode}' not recognised, "
-                "must be 'discharge', 'charge' or None"
-            )
-            raise ValueError(msg)
-        if initial_state not in self.initial_states:
-            msg = (
-                f"Initial state '{initial_state}' not recognised, "
-                "must be 'state of charge' or 'temperature'"
-            )
-            raise ValueError(msg)
-        self.operating_mode = operating_mode
-        self.initial_state = initial_state
         self.param = self.get_parameters()
         self.submodels = {}
         self.set_submodels()
         self.build_model()
-        self.set_events()
 
     def get_parameters(self):
         """Return the model's parameters"""
@@ -211,22 +184,6 @@ class BaseModel(pybamm.BaseModel):
             raise WiringError(str(error)) from None
         compat.resolve_coupled_variables(self)
         self._check_domains(providers)
-
-    def set_events(self):
-        """
-        Set the cut-off event of the operating mode: the solution stops when the outlet
-        temperature falls below (discharge) or rises above (charge) the cut-off
-        temperature. No event is set when the operating mode is None.
-        """
-        T_out = self.variables["Outlet temperature [K]"]
-        if self.operating_mode == "discharge":
-            self.events.append(
-                pybamm.Event("Cut-off temperature [K]", T_out - self.param.T_cut)
-            )
-        elif self.operating_mode == "charge":
-            self.events.append(
-                pybamm.Event("Cut-off temperature [K]", self.param.T_cut - T_out)
-            )
 
     @staticmethod
     def add_temperature_variables(variables, temperatures):

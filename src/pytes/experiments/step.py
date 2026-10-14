@@ -149,16 +149,6 @@ def average_liquid_fraction_above(phi):
     return _ThresholdTermination("Average liquid fraction", phi, below=False)
 
 
-def state_of_charge_below(soc):
-    """End the step when the state of charge falls below soc"""
-    return _ThresholdTermination("State of charge", soc, below=True)
-
-
-def state_of_charge_above(soc):
-    """End the step when the state of charge rises above soc"""
-    return _ThresholdTermination("State of charge", soc, below=False)
-
-
 class Target:
     """
     A value held by a step: a constant, a 2-column time series (time since the start of

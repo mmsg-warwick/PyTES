@@ -121,10 +121,6 @@ def build_experiment_model(model, experiment, parameter_values):
     model = model.new_copy()
     parameter_values = parameter_values.copy()
 
-    # Each step defines its own terminations; the model's own cut-off event (from
-    # operating_mode) would otherwise end the whole experiment
-    model.events = [e for e in model.events if e.name != "Cut-off temperature [K]"]
-
     unique_steps = experiment.unique_steps
     branch_index = {step.branch_key: i + 1 for i, step in enumerate(unique_steps)}
 

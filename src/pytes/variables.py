@@ -21,7 +21,6 @@ REQUIRED_VARIABLES = (
     "Storage thermal energy [J]",
     "Total thermal energy [J]",
     "Heat loss power [W]",
-    "State of charge",
     "Heat transfer fluid temperature [K]",
 )
 
@@ -30,7 +29,6 @@ OPTIONAL_VARIABLES = (
     "Average liquid fraction",
     "Mean storage temperature [K]",
     "Pressure drop [Pa]",
-    "Storage state of charge",
 )
 
 #: Name of the flow-path coordinate in every family

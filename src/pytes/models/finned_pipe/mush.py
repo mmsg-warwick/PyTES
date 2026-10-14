@@ -43,10 +43,6 @@ class MushModel(BaseFinnedPipeModel):
     ----------
     name : str, optional
         The name of the model.
-    operating_mode : str or None, optional
-        See :class:`pytes.models.BaseModel`.
-    initial_state : str, optional
-        See :class:`pytes.models.BaseModel`.
 
     Attributes
     ----------
@@ -55,12 +51,7 @@ class MushModel(BaseFinnedPipeModel):
         pitch, in the "PCM horizontal" domain.
     """
 
-    def __init__(
-        self,
-        name="Mush model",
-        operating_mode="discharge",
-        initial_state="state of charge",
-    ):
+    def __init__(self, name="Mush model"):
         self.x = pybamm.SpatialVariable(
             "x",
             domains={
@@ -70,9 +61,7 @@ class MushModel(BaseFinnedPipeModel):
             },
             coord_sys="cartesian",
         )
-        super().__init__(
-            name=name, operating_mode=operating_mode, initial_state=initial_state
-        )
+        super().__init__(name=name)
 
     def set_submodels(self):
         param = self.param
@@ -111,9 +100,7 @@ class MushModel(BaseFinnedPipeModel):
         self.submodels["fin-PCM coupling"] = FinPCMCoupling(
             param, pcm.label, pcm_geometry, fins.label
         )
-        self.submodels["device energy"] = DeviceEnergy(
-            param, fluid, [pcm, fins], initial_state=self.initial_state
-        )
+        self.submodels["device energy"] = DeviceEnergy(param, fluid, [pcm, fins])
 
     @property
     def default_geometry(self):

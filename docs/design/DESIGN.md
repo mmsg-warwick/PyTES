@@ -267,7 +267,7 @@ states share one energy (hot and cold regions, a supercooled liquid and a partly
 mixture), so "start at SOC x" is not a state. Energy is well defined, and the conservation
 identity needs only differences.
 - **Energy between two states** is toolkit post-processing (D15):
-  `pytes.energy_between(model, parameter_values, T_a, T_b)`, the total thermal energy between
+  `pytes.energy_between(model, T_a, T_b)`, the total thermal energy between
   the uniform states at `T_a` and `T_b`, derived symbolically from materials and geometry,
   never a hand-entered nominal value. A user-defined SOC (energy or exergy based) can be built
   on it later, as just another variable.
@@ -277,8 +277,9 @@ identity needs only differences.
 
 ### D14. Energy reference and initial state are temperatures; terminations belong to the experiment
 - **Energy reference:** `"Reference temperature [K]"`, a device-level parameter (default
-  10 °C). Every energy is zero at the uniform solid state at that temperature, in every
-  family; no model has its own enthalpy zero. Energy differences do not depend on it.
+  10 °C). Every energy is zero at the uniform state at that temperature (solid at the melting
+  temperature), in every family; no model has its own enthalpy zero. Energy differences do
+  not depend on it.
 - **Initial state:** uniform at `"Initial temperature [K]"`, solid at the melting
   temperature (maintainer, 2026-10-14). Temperature, not enthalpy: at equilibrium every medium
   (PCM, metal, fluid) shares one temperature but each has its own enthalpy, so an enthalpy is

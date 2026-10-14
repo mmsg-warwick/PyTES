@@ -12,6 +12,7 @@ the same contract. Each check raises :class:`AssertionError` with a message when
 import numpy as np
 import pybamm
 
+from .postprocessing import energy_between
 from .submodels import BaseSubModel, EnthalpyStorage
 from .variables import REQUIRED_VARIABLES
 
@@ -124,71 +125,36 @@ def check_power_from_enthalpy(solution):
     )
 
 
-def check_soc_end_points(model, parameter_values=None, var_pts=None):
+def check_initial_state(model, parameter_values=None, var_pts=None):
     """
-    The uniform states at the lower and upper temperature limits have states of charge
-    exactly 0 and 1 (DESIGN D14), and an intermediate initial state of charge is honoured
+    The initial state is uniform at "Initial temperature [K]", and every energy is zero at
+    the uniform state at "Reference temperature [K]" (DESIGN D14): the initial total
+    thermal energy equals :func:`pytes.energy_between` from the reference temperature to
+    the initial one, below and above the melting temperature and at the reference itself
     """
     parameter_values = (parameter_values or model.default_parameter_values).copy()
-    for soc in (0, 1, 0.37):
-        parameter_values["Initial state of charge"] = soc
+    T_ref = parameter_values["Reference temperature [K]"]
+    T_m = parameter_values.evaluate(model.param.T_m)
+    scale = abs(energy_between(model, T_ref, T_m + 10, parameter_values, var_pts))
+    for T in (T_ref, (T_ref + T_m) / 2, T_m + 10):
+        parameter_values["Initial temperature [K]"] = T
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, var_pts=var_pts
         )
         solution = sim.solve([0, 1])
-        initial = solution["State of charge"].entries[0]
+        T_0 = solution["Initial uniform temperature [K]"].entries[0]
+        assert T_0 == T, f"{model.name}: initial temperature {T_0} K, expected {T} K"
         np.testing.assert_allclose(
-            initial, soc, rtol=0, atol=1e-12, err_msg=f"{model.name}: SOC {soc}"
+            solution["Heat transfer fluid temperature [K]"].entries[:, 0],
+            T,
+            rtol=1e-12,
+            err_msg=f"{model.name}: fluid not uniform at {T} K",
         )
-
-
-def check_initial_temperature(model_class, parameter_values=None, var_pts=None):
-    """
-    With ``initial_state="temperature"``, the initial state is uniform at "Initial
-    temperature [K]": the window limits give states of charge exactly 0 and 1, and a
-    temperature inside the window gives the same state as its state of charge does
-    """
-    model = model_class(operating_mode=None, initial_state="temperature")
-    parameter_values = (parameter_values or model.default_parameter_values).copy()
-    T_low = parameter_values["Lower temperature limit [K]"]
-    T_high = parameter_values["Upper temperature limit [K]"]
-
-    def initial(model, **values):
-        parameter_values.update(values)
-        sim = pybamm.Simulation(
-            model, parameter_values=parameter_values, var_pts=var_pts
-        )
-        solution = sim.solve([0, 1])
-        return (
-            solution["Initial uniform temperature [K]"].entries[0],
-            solution["State of charge"].entries[0],
-        )
-
-    for T, soc in ((T_low, 0), (T_high, 1)):
-        _, initial_soc = initial(model, **{"Initial temperature [K]": T})
+        expected = energy_between(model, T_ref, T, parameter_values, var_pts)
         np.testing.assert_allclose(
-            initial_soc, soc, rtol=0, atol=1e-12, err_msg=f"{model.name}: T = {T} K"
+            solution["Total thermal energy [J]"].entries[0],
+            expected,
+            rtol=0,
+            atol=1e-12 * scale,
+            err_msg=f"{model.name}: initial energy at {T} K",
         )
-
-    # A sensible state, a third of the way up the window
-    T = T_low + (T_high - T_low) / 3
-    T_0, soc = initial(model, **{"Initial temperature [K]": T})
-    assert T_0 == T, f"{model.name}: initial temperature {T_0} K, expected {T} K"
-    by_soc = model_class(operating_mode=None, initial_state="state of charge")
-    T_soc, _ = initial(by_soc, **{"Initial state of charge": soc})
-    np.testing.assert_allclose(
-        T_soc, T, rtol=1e-12, err_msg=f"{model.name}: state of charge and temperature"
-    )
-
-
-def check_operating_modes(model_class):
-    """``operating_mode`` sets one cut-off event, or none, and rejects unknown modes"""
-    for mode, n_events in (("discharge", 1), ("charge", 1), (None, 0)):
-        model = model_class(operating_mode=mode)
-        assert len(model.events) == n_events, f"{model_class.__name__}: {mode}"
-    try:
-        model_class(operating_mode="idle")
-    except ValueError:
-        pass
-    else:
-        raise AssertionError(f"{model_class.__name__}: accepted operating mode 'idle'")
