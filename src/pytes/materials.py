@@ -63,27 +63,43 @@ class SensibleMaterial:
 
     Attributes
     ----------
-    k, rho, c_p : pybamm.Parameter
+    k_param, rho, c_p : pybamm.Parameter
         Conductivity [W.m-1.K-1], density [kg.m-3] and specific heat capacity
         [J.kg-1.K-1].
     rho_c_p : pybamm.Symbol
         Volumetric heat capacity [J.m-3.K-1].
     internal_states : tuple
         Empty: the temperature is a function of the enthalpy alone.
+    changes_phase : bool
+        False: the material has no liquid fraction.
+    H_scale, H_reference : pybamm.Symbol
+        Typical enthalpy scale and reference [J.m-3], those of 100 K and 300 K. A storage
+        submodel may override them (e.g. to scale like the model's temperatures).
     """
 
     internal_states = ()
+    changes_phase = False
 
     def __init__(self, prefix="Metal"):
         self.prefix = prefix
-        self.k = pybamm.Parameter(f"{prefix} conductivity [W.m-1.K-1]")
+        self.k_param = pybamm.Parameter(f"{prefix} conductivity [W.m-1.K-1]")
         self.rho = pybamm.Parameter(f"{prefix} density [kg.m-3]")
         self.c_p = pybamm.Parameter(f"{prefix} specific heat capacity [J.kg-1.K-1]")
         self.rho_c_p = self.rho * self.c_p
+        self.H_scale = self.rho_c_p * 100
+        self.H_reference = self.rho_c_p * 300
+
+    def H2T(self, H, states=()):
+        """Temperature [K] as a function of the enthalpy per unit volume [J.m-3]"""
+        return H / self.rho_c_p
 
     def T2H(self, T):
         """Enthalpy per unit volume [J.m-3], relative to 0 K, at temperature ``T`` [K]"""
         return self.rho_c_p * T
+
+    def k(self, H, states=()):
+        """Conductivity [W.m-1.K-1] (constant)"""
+        return self.k_param
 
     def equilibrium_enthalpy(self, T, phi=0):
         """
@@ -126,6 +142,7 @@ class PhaseChangeMaterial:
     """
 
     internal_states = ()
+    changes_phase = True
 
     def _set_derived(self):
         """Set the smoothing width, the solidus and liquidus enthalpies and the scaling"""
@@ -305,6 +322,6 @@ class CompositeMaterial(PhaseChangeMaterial):
         self.rho_c_p_s = filler.rho_c_p * delta + pcm.rho_c_p_s * (1 - delta)
         self.rho_c_p_l = filler.rho_c_p * delta + pcm.rho_c_p_l * (1 - delta)
         self.rho_L = pcm.rho_L * (1 - delta)
-        self.k_s = pcm.k_s * (1 - delta) + filler.k * delta
-        self.k_l = pcm.k_l * (1 - delta) + filler.k * delta
+        self.k_s = pcm.k_s * (1 - delta) + filler.k_param * delta
+        self.k_l = pcm.k_l * (1 - delta) + filler.k_param * delta
         self._set_derived()

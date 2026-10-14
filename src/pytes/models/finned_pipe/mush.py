@@ -10,7 +10,6 @@ from ...submodels import (
     EnthalpyStorage,
     FinPCMCoupling,
     FinRootCoupling,
-    SensibleConduction,
     StorageGeometry,
 )
 from .base_finned_pipe import BaseFinnedPipeModel
@@ -33,8 +32,8 @@ class MushModel(BaseFinnedPipeModel):
     - "fluid": :class:`pytes.submodels.AdvectedFluid`;
     - "storage": :class:`pytes.submodels.EnthalpyStorage` of the PCM across the half-gap
       (cartesian);
-    - "fins": :class:`pytes.submodels.SensibleConduction`, radially along the fins
-      (cylindrical);
+    - "fins": :class:`pytes.submodels.EnthalpyStorage` of the fin metal, radially along
+      the fins (cylindrical);
     - "coupling": :class:`pytes.submodels.FinRootCoupling`, the fluid and the fin roots;
     - "fin-PCM coupling": :class:`pytes.submodels.FinPCMCoupling`;
     - "device energy": :class:`pytes.submodels.DeviceEnergy`.
@@ -90,13 +89,23 @@ class MushModel(BaseFinnedPipeModel):
         pcm = EnthalpyStorage(
             param, param.pcm, pcm_geometry, inner_condition="temperature"
         )
-        fins = SensibleConduction(
-            param, param.metal, StorageGeometry(y, integrate_fin, fin_cross_section)
+        fin_geometry = StorageGeometry(y, integrate_fin, fin_cross_section)
+        # The fin metal is a sensible material, its enthalpy scaled like the temperatures
+        fins = EnthalpyStorage(
+            param,
+            param.metal,
+            fin_geometry,
+            label="Fin",
+            heat_source=True,
+            H_scale=param.metal.rho_c_p * param.temperature_scale,
+            H_reference=param.metal.T2H(param.temperature_reference),
         )
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = pcm
         self.submodels["fins"] = fins
-        self.submodels["coupling"] = FinRootCoupling(param, param.fluid, fins.label)
+        self.submodels["coupling"] = FinRootCoupling(
+            param, param.fluid, fins.label, fin_geometry
+        )
         self.submodels["fin-PCM coupling"] = FinPCMCoupling(
             param, pcm.label, pcm_geometry, fins.label
         )

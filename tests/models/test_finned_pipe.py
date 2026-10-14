@@ -42,6 +42,16 @@ def test_submodels():
     ]
 
 
+def test_one_storage_submodel_for_every_medium():
+    # The fins are enthalpy storage of a sensible material (DESIGN D5): they provide no
+    # liquid fraction, so the PCM's is the only one
+    submodels = pytes.MushModel().submodels
+    assert isinstance(submodels["fins"], pytes.submodels.EnthalpyStorage)
+    assert "Fin enthalpy [J.m-3]" in submodels["fins"].provides
+    assert "Average liquid fraction" not in submodels["fins"].provides
+    assert "Average liquid fraction" in submodels["storage"].provides
+
+
 def solve(model_class, mesh, dT_m, t, solver=None):
     model = model_class()
     parameter_values = model.default_parameter_values

@@ -6,7 +6,7 @@ from .coupling import FinPCMCoupling, FinRootCoupling, LedgerWallCoupling
 from .energy import DeviceEnergy
 from .fluid import AdvectedFluid, FlowPath
 from .flux_laws import NewtonCooling, SurfaceFluxLaw
-from .storage import EnthalpyStorage, SensibleConduction, StorageGeometry
+from .storage import EnthalpyStorage, StorageGeometry
 
 __all__ = [
     "AdvectedFluid",
@@ -18,7 +18,6 @@ __all__ = [
     "FlowPath",
     "LedgerWallCoupling",
     "NewtonCooling",
-    "SensibleConduction",
     "StorageGeometry",
     "SurfaceFluxLaw",
 ]

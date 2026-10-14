@@ -43,8 +43,8 @@ with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (
 | Slot | Contract | Current submodels |
 |---|---|---|
 | Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"pipe"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"pipe"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
-| Storage | Enthalpy method, state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`. Provides its enthalpy, `dH/dt`, temperature, surface temperature, liquid fraction and thermal energy. | `EnthalpyStorage`; `SensibleConduction` (fins, also a volumetric `"<label> heat source [W.m-3]"`) |
-| Coupling | Given fluid and storage surface state: provides the heat gain per unit length and the storage's boundary heat flux or temperature. Heat taken from the receiving side's discrete balance where possible (ledger, D6). The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, h_f, T_f, T_s)`, positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `T_f - T_s`. | `LedgerWallCoupling`, `FinRootCoupling`, `FinPCMCoupling` |
+| Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy; and, for a phase-change material only, the liquid fraction. | `EnthalpyStorage` (PCM, composite, fin metal) |
+| Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, h_f, T_f, T_s)`, positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `T_f - T_s`. | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
 | Device energy | Power, energies, initial state. | `DeviceEnergy` |
 
 ## 3. Variables (DESIGN D12)
@@ -134,9 +134,10 @@ temperatures are positive and the melting range is not negative.
 
 ## 6. Materials (DESIGN D7)
 
-A material exposes `internal_states` (empty today), `H2T(H, states)`, `T2H(T)`,
-`equilibrium_enthalpy(T, phi)`, `k(H, states)`, `liquid_fraction(H, states)`, `H_scale` and
-`H_reference`. Enthalpy is per unit volume, relative to 0 K internally. The check "T depends
+A material exposes `internal_states` (empty today), `changes_phase`, `H2T(H, states)`,
+`T2H(T)`, `equilibrium_enthalpy(T, phi)`, `k(H, states)`, `H_scale` and `H_reference`; a
+phase-change material also `liquid_fraction(H, states)`. Sensible materials (`SensibleMaterial`,
+the fin metal) go through the same storage submodel. Enthalpy is per unit volume, relative to 0 K internally. The check "T depends
 on H alone" (`check_stateless_materials`) applies only when `internal_states` is empty.
 
 ## 7. Fluid-property object (DESIGN D8)
