@@ -8,8 +8,9 @@ executable form is `src/pytes/conformance.py`, run over every model by
 
 - A `pytes.BaseModel` subclass (itself a `pybamm.BaseModel`). PyBaMM tools apply directly:
   `pybamm.Simulation`, solvers, `QuickPlot`, PyBOP.
-- A **fixed composition** of submodels in `model.submodels` (an ordered dict). Users call
-  models; they do not assemble submodels.
+- A **fixed composition** of submodels in `model.submodels` (an ordered dict), shown by
+  `model.print_submodel_info()`. Users call models; advanced users may build their own from
+  submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
 - It belongs to a family (today: `finned_pipe`) and passes the conformance suite.
 
 ## 2. Submodels

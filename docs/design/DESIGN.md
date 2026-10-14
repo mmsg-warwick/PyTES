@@ -63,13 +63,19 @@ testable in isolation.
 - **Options** (PyBaMM style): a model's `options` dict selects among submodels, e.g. the
   fluid (dynamic or quasi-steady, D5) or the film coefficient. `operating_mode` and
   `initial_state` are removed (D11, D14). This is the preferred route for variants.
+  *Introduced with the first real variant* (maintainer, 2026-10-14): today no model has a
+  choice to make, and adding `options=None` later is backward compatible. Values are
+  capitalised as names are (e.g. `"surface heat flux": "Newton"`).
 - **No silent swaps.** An option combination that is incompatible raises an error naming the
   conflict; a model never replaces a submodel the user did not ask for. Rationale: PyBaMM's
   options grew complicated and it swapped submodels silently to keep combinations working,
   which hid what was being solved. Every admitted combination passes the conformance suite.
-- **Public composition API** (advanced users): a clean way to display the submodels of a
-  model (class, requires, provides, assumptions) and to build a model from submodels. It
-  runs the same wiring checks as the built-in models. Rationale: it lets people develop their
+- **Public composition API** (advanced users): `model.print_submodel_info()` displays the
+  submodels (class, requires, provides, assumptions), and `pytes.ComposedModel(submodels,
+  param, defaults_from=..., geometry=..., ...)` builds a model from submodels, from scratch
+  or by replacing slots of an existing model (whose submodels are reused, not modified). It
+  runs the same wiring checks as the built-in models, and raises if the geometry, submesh
+  types or spatial methods miss a domain. Rationale: it lets people develop their
   own submodels locally against the real interface. A composed model is not admitted (D1)
   until it goes through the admission standard.
 
@@ -350,8 +356,8 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
   `requires` and `provides` are read from the code, `assumptions` declared, wiring checked at
   build (`contract.md` §2). Still open: per-submodel parameter lists. The display API (D3)
   shows this metadata.*
-- Shape of the public options and composition API (D3): option names and values, how a model
-  is built from submodels, how incompatible options are reported.
+- Shape of the options (D3): option names and values, how incompatible options are
+  reported. *Deferred to the first real variant; the composition API is settled (D3).*
 - Interface of the surface flux law (D6): its arguments (states on both sides, properties,
   geometry, `mdot`) and how a custom law is passed in.
 - Domain and coordinate naming for the capsule radius and the pipe/fin domains.

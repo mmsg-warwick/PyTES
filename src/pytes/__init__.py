@@ -19,12 +19,13 @@ from . import (
     submodels,
     variables,
 )
-from .models import BaseModel, WiringError
+from .models import BaseModel, ComposedModel, WiringError
 from .models.finned_pipe import MushModel, SharpFrontModel
 from .postprocessing import energy_between
 
 __all__ = [
     "BaseModel",
+    "ComposedModel",
     "MushModel",
     "SharpFrontModel",
     "WiringError",

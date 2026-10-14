@@ -97,6 +97,22 @@ class BaseModel(pybamm.BaseModel):
         )
         return mdot * (variables["Outlet specific enthalpy [J.kg-1]"] - fluid.h(T_in))
 
+    def print_submodel_info(self):
+        """
+        Print the submodels: for each slot, the class, the variables it requires and
+        provides, and its modelling assumptions (DESIGN D3).
+        """
+        for slot, submodel in self.submodels.items():
+            print(f"{slot}: {type(submodel).__name__} ({submodel.name})")
+            for heading, names in (
+                ("requires", submodel.requires),
+                ("provides", submodel.provides),
+                ("assumptions", submodel.assumptions),
+            ):
+                print(f"    {heading}:")
+                for name in names or ("(none)",):
+                    print(f"        {name}")
+
     def check_wiring(self):
         """
         Check that the submodels fit together (see the class docstring).
