@@ -23,8 +23,10 @@ class DeviceEnergy(BaseSubModel):
     - Heat loss power: zero (there is no casing yet), positive for loss.
     - State of charge: total thermal energy over the capacity, which is the total thermal
       energy at the uniform state at the upper temperature limit (DESIGN D13).
-    - Initial state: the uniform state whose state of charge is "Initial state of charge"
-      (DESIGN D14).
+    - Initial state, uniform (DESIGN D14): with ``initial_state="state of charge"``, the
+      state whose state of charge is "Initial state of charge"; with
+      ``initial_state="temperature"``, the state at "Initial temperature [K]", solid at the
+      melting temperature.
 
     The uniform states are parametrised by a temperature and a liquid fraction: below the
     melting temperature fully solid, above it fully liquid, and at it with any liquid
@@ -35,19 +37,27 @@ class DeviceEnergy(BaseSubModel):
     ----------
     param : object
         The model's parameters. Uses ``T_low``, ``T_high``, ``T_m`` (the melting
-        temperature that separates the pieces) and ``initial_soc``.
+        temperature that separates the pieces), and ``initial_soc`` or ``T_init``.
     fluid_component : :class:`pytes.submodels.AdvectedFluid`
         The fluid.
     storage_components : list
         The storage submodels. Each has an ``energy_variable`` and a
         ``uniform_energy(T, phi)`` method.
+    initial_state : str, optional
+        "state of charge" (default) or "temperature".
     """
 
     assumptions = ("There are no heat losses to the surroundings.",)
 
     def __init__(
-        self, param, fluid_component, storage_components, name="Device energy"
+        self,
+        param,
+        fluid_component,
+        storage_components,
+        initial_state="state of charge",
+        name="Device energy",
     ):
+        self.initial_state = initial_state
         self.fluid_component = fluid_component
         self.storage_components = list(storage_components)
         super().__init__(param, name)
@@ -64,7 +74,7 @@ class DeviceEnergy(BaseSubModel):
             E = E + component.uniform_energy(T, phi)
         return E
 
-    def initial_state(self, soc):
+    def state_at_soc(self, soc):
         """
         The uniform state with state of charge ``soc``.
 
@@ -94,6 +104,18 @@ class DeviceEnergy(BaseSubModel):
         phi = fraction(E_solidus, E_liquidus)
         return T, phi
 
+    def state_at_temperature(self, T):
+        """
+        The uniform state at temperature ``T`` [K]: solid up to the melting temperature,
+        liquid above it.
+
+        Returns
+        -------
+        T, phi : pybamm.Symbol
+            Its temperature [K] and liquid fraction.
+        """
+        return T, T > self.param.T_m
+
     def build(self):
         param = self.param
         power = self.coupled("Mass flow rate [kg.s-1]") * (
@@ -109,7 +131,10 @@ class DeviceEnergy(BaseSubModel):
             E_storage = E_storage + self.coupled(component.energy_variable)
         E_total = E_storage + self.coupled(self.fluid_component.energy_variable)
         capacity = self.uniform_energy(param.T_high, 1)
-        T_0, phi_0 = self.initial_state(param.initial_soc)
+        if self.initial_state == "temperature":
+            T_0, phi_0 = self.state_at_temperature(param.T_init)
+        else:
+            T_0, phi_0 = self.state_at_soc(param.initial_soc)
         variables = {
             "Power [W]": power,
             "Power [kW]": power / 1e3,

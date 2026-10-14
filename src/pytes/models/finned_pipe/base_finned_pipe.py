@@ -28,7 +28,9 @@ class BaseFinnedPipeModel(BaseModel):
         Distance along the pipe from the inlet [m], in the "pipe" domain.
     """
 
-    def __init__(self, name, operating_mode="discharge"):
+    def __init__(
+        self, name, operating_mode="discharge", initial_state="state of charge"
+    ):
         self.y = pybamm.SpatialVariable(
             "y",
             domains={"primary": "PCM vertical", "secondary": "pipe"},
@@ -37,7 +39,9 @@ class BaseFinnedPipeModel(BaseModel):
         self.z = pybamm.SpatialVariable(
             "z", domains={"primary": "pipe"}, coord_sys="cartesian"
         )
-        super().__init__(name=name, operating_mode=operating_mode)
+        super().__init__(
+            name=name, operating_mode=operating_mode, initial_state=initial_state
+        )
 
     def get_parameters(self):
         return FinnedPipeParameters()

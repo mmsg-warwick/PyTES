@@ -22,8 +22,11 @@ class DeviceParameters:
         window. It defines the capacity and what states of charge 0 and 1 mean: the uniform
         states at these temperatures (DESIGN D14).
     initial_soc : pybamm.Parameter
-        "Initial state of charge". The initial state is the uniform state with this state
-        of charge.
+        "Initial state of charge". With ``initial_state="state of charge"`` (the default),
+        the initial state is the uniform state with this state of charge.
+    T_init : pybamm.Parameter
+        "Initial temperature [K]". With ``initial_state="temperature"``, the initial state
+        is uniform at this temperature (solid at the melting temperature).
     T_in : pybamm.FunctionParameter
         "Inlet temperature [K]", a function of time ("Time [s]"). A control.
     mdot : pybamm.Parameter
@@ -40,6 +43,7 @@ class DeviceParameters:
         self.T_low = pybamm.Parameter("Lower temperature limit [K]")
         self.T_high = pybamm.Parameter("Upper temperature limit [K]")
         self.initial_soc = pybamm.Parameter("Initial state of charge")
+        self.T_init = pybamm.Parameter("Initial temperature [K]")
         self.T_in = pybamm.FunctionParameter(
             "Inlet temperature [K]", {"Time [s]": pybamm.t}
         )

@@ -7,5 +7,9 @@ dist/
 .ipynb_checkpoints/
 .pytest_cache/
 .ruff_cache/
-.claude/settings.local.json
-docs/
+# Claude Code: keep the project's root .claude/ (shared settings, skills), ignore the
+# per-directory ones it creates elsewhere and its local state
+.claude/
+!/.claude/
+/.claude/settings.local.json
+.cc-writes/

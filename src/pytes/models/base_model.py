@@ -36,6 +36,11 @@ class BaseModel(pybamm.BaseModel):
         temperature falls below "Cut-off temperature [K]", "charge" stops when it rises
         above it, and None runs to the final time. Charge and discharge are defined by heat
         flowing into or out of the storage.
+    initial_state : str, optional
+        How the initial state is set (DESIGN D14). It is always uniform. "state of charge"
+        (default): the uniform state whose state of charge is "Initial state of charge".
+        "temperature": uniform at "Initial temperature [K]", solid at the melting
+        temperature.
 
     Attributes
     ----------
@@ -51,7 +56,12 @@ class BaseModel(pybamm.BaseModel):
     #: Scale of the temperature variables [K]
     temperature_scale = 200
 
-    def __init__(self, name, operating_mode="discharge"):
+    #: The ways of setting the initial state
+    initial_states = ("state of charge", "temperature")
+
+    def __init__(
+        self, name, operating_mode="discharge", initial_state="state of charge"
+    ):
         super().__init__(name=name)
         if operating_mode not in ("discharge", "charge", None):
             msg = (
@@ -59,7 +69,14 @@ class BaseModel(pybamm.BaseModel):
                 "must be 'discharge', 'charge' or None"
             )
             raise ValueError(msg)
+        if initial_state not in self.initial_states:
+            msg = (
+                f"Initial state '{initial_state}' not recognised, "
+                "must be 'state of charge' or 'temperature'"
+            )
+            raise ValueError(msg)
         self.operating_mode = operating_mode
+        self.initial_state = initial_state
         self.param = self.get_parameters()
         self.submodels = {}
         self.set_submodels()

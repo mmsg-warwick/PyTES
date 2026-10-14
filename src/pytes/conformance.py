@@ -142,6 +142,45 @@ def check_soc_end_points(model, parameter_values=None, var_pts=None):
         )
 
 
+def check_initial_temperature(model_class, parameter_values=None, var_pts=None):
+    """
+    With ``initial_state="temperature"``, the initial state is uniform at "Initial
+    temperature [K]": the window limits give states of charge exactly 0 and 1, and a
+    temperature inside the window gives the same state as its state of charge does
+    """
+    model = model_class(operating_mode=None, initial_state="temperature")
+    parameter_values = (parameter_values or model.default_parameter_values).copy()
+    T_low = parameter_values["Lower temperature limit [K]"]
+    T_high = parameter_values["Upper temperature limit [K]"]
+
+    def initial(model, **values):
+        parameter_values.update(values)
+        sim = pybamm.Simulation(
+            model, parameter_values=parameter_values, var_pts=var_pts
+        )
+        solution = sim.solve([0, 1])
+        return (
+            solution["Initial uniform temperature [K]"].entries[0],
+            solution["State of charge"].entries[0],
+        )
+
+    for T, soc in ((T_low, 0), (T_high, 1)):
+        _, initial_soc = initial(model, **{"Initial temperature [K]": T})
+        np.testing.assert_allclose(
+            initial_soc, soc, rtol=0, atol=1e-12, err_msg=f"{model.name}: T = {T} K"
+        )
+
+    # A sensible state, a third of the way up the window
+    T = T_low + (T_high - T_low) / 3
+    T_0, soc = initial(model, **{"Initial temperature [K]": T})
+    assert T_0 == T, f"{model.name}: initial temperature {T_0} K, expected {T} K"
+    by_soc = model_class(operating_mode=None, initial_state="state of charge")
+    T_soc, _ = initial(by_soc, **{"Initial state of charge": soc})
+    np.testing.assert_allclose(
+        T_soc, T, rtol=1e-12, err_msg=f"{model.name}: state of charge and temperature"
+    )
+
+
 def check_operating_modes(model_class):
     """``operating_mode`` sets one cut-off event, or none, and rejects unknown modes"""
     for mode, n_events in (("discharge", 1), ("charge", 1), (None, 0)):

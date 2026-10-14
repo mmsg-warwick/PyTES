@@ -81,3 +81,14 @@ def test_celsius_twins(model_class, solutions):
 def test_soc_end_points(model_class):
     model = model_class(operating_mode=None)
     conformance.check_soc_end_points(model, var_pts=var_pts(model))
+
+
+def test_initial_temperature(model_class):
+    conformance.check_initial_temperature(
+        model_class, var_pts=var_pts(model_class(operating_mode=None))
+    )
+
+
+def test_invalid_initial_state(model_class):
+    with pytest.raises(ValueError, match="not recognised"):
+        model_class(initial_state="liquid fraction")

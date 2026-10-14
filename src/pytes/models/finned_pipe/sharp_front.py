@@ -36,10 +36,19 @@ class SharpFrontModel(BaseFinnedPipeModel):
         The name of the model.
     operating_mode : str or None, optional
         See :class:`pytes.models.BaseModel`.
+    initial_state : str, optional
+        See :class:`pytes.models.BaseModel`.
     """
 
-    def __init__(self, name="Sharp front model", operating_mode="discharge"):
-        super().__init__(name=name, operating_mode=operating_mode)
+    def __init__(
+        self,
+        name="Sharp front model",
+        operating_mode="discharge",
+        initial_state="state of charge",
+    ):
+        super().__init__(
+            name=name, operating_mode=operating_mode, initial_state=initial_state
+        )
 
     def set_submodels(self):
         param = self.param
@@ -62,7 +71,9 @@ class SharpFrontModel(BaseFinnedPipeModel):
         self.submodels["coupling"] = LedgerWallCoupling(
             param, param.fluid, storage.label, geometry
         )
-        self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])
+        self.submodels["device energy"] = DeviceEnergy(
+            param, fluid, [storage], initial_state=self.initial_state
+        )
 
     @property
     def default_var_pts(self):

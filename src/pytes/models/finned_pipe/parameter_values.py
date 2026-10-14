@@ -38,6 +38,7 @@ def get_parameter_values(parameter_set=None):
             "Lower temperature limit [K]": 273.15 + 10,
             "Upper temperature limit [K]": 273.15 + 70,
             "Initial state of charge": 1,
+            "Initial temperature [K]": 273.15 + 70,
             "Inlet temperature [K]": 273.15 + 10,
             "Cut-off temperature [K]": 273.15 + 40,
             # 20 l/min of water in total
