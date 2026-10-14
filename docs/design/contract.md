@@ -42,9 +42,9 @@ with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (
 
 | Slot | Contract | Current submodels |
 |---|---|---|
-| Fluid | State: fluid temperature on domain `"pipe"`, coordinate `z`. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the inlet/outlet temperatures and specific enthalpies, the mass flow rate and its thermal energy. Its spatial method on `"pipe"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
+| Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"pipe"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"pipe"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
 | Storage | Enthalpy method, state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`. Provides its enthalpy, `dH/dt`, temperature, surface temperature, liquid fraction and thermal energy. | `EnthalpyStorage`; `SensibleConduction` (fins, also a volumetric `"<label> heat source [W.m-3]"`) |
-| Coupling | Given fluid and storage surface state: provides the heat gain per unit length and the storage's boundary heat flux or temperature. Heat taken from the receiving side's discrete balance where possible (ledger, D6). HTC from the fluid-property object. | `LedgerWallCoupling`, `FinRootCoupling`, `FinPCMCoupling` |
+| Coupling | Given fluid and storage surface state: provides the heat gain per unit length and the storage's boundary heat flux or temperature. Heat taken from the receiving side's discrete balance where possible (ledger, D6). The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, h_f, T_f, T_s)`, positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `T_f - T_s`. | `LedgerWallCoupling`, `FinRootCoupling`, `FinPCMCoupling` |
 | Device energy | Power, energies, initial state. | `DeviceEnergy` |
 
 ## 3. Variables (DESIGN D12)
@@ -62,7 +62,8 @@ with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (
 | `Storage thermal energy [J]` | storage only (PCM, fins) |
 | `Total thermal energy [J]` | storage + fluid inventory |
 | `Heat loss power [W]` | positive for loss; zero today |
-| `Heat transfer fluid temperature [K]` | along `z` |
+| `Heat transfer fluid specific enthalpy [J.kg-1]` | along `z`; the fluid state |
+| `Heat transfer fluid temperature [K]` | along `z`; `T(h)` |
 
 **Optional, standard names:** `Average liquid fraction` (weighted by the PCM volume, fins
 and fluid excluded), `Mean storage temperature [K]`, `Pressure drop [Pa]`.
@@ -102,7 +103,10 @@ temperature [K]`, `PCM melting range [K]`, `Metal density [kg.m-3]`, etc.
 
 **Fluid:** `Heat transfer fluid density [kg.m-3]`, `... specific heat capacity
 [J.kg-1.K-1]`, `... conductivity [W.m-1.K-1]` (unused; kept for axial diffusion),
-`... viscosity [Pa.s]` (declared, unused), `Heat transfer coefficient [W.m-2.K-1]`.
+`... viscosity [Pa.s]` (declared, unused).
+
+**Surface flux law:** `Heat transfer coefficient [W.m-2.K-1]` (`NewtonCooling`, the
+default).
 
 **Family geometry:** unprefixed for now (`Pipe radius [m]`, `Number of pipes`, ...).
 Namespacing is open (DESIGN §4).
@@ -137,9 +141,10 @@ on H alone" (`check_stateless_materials`) applies only when `internal_states` is
 
 ## 7. Fluid-property object (DESIGN D8)
 
-`h(T, p)`, `T(h, p)`, `c_p(T, p)`, `rho(T, p)`, `k(T, p)`, `mu(T, p)`,
-`heat_transfer_coefficient(T, mass_flow_rate, geometry)`. Only `ConstantPropertyLiquid`
-exists; its enthalpy reference is `T_ref`.
+Properties at the fluid state `(h, p)`: `T(h, p)`, `c_p(h, p)`, `rho(h, p)`, `k(h, p)`,
+`mu(h, p)`; and `h(T, p)` for the inlet and initial conditions. `p` is ignored by liquids.
+Only `ConstantPropertyLiquid` exists; its enthalpy reference is `T_ref`. The heat transfer
+coefficient is not a fluid property: it belongs to the coupling's surface flux law (§2).
 
 ## 8. Controls and experiments (DESIGN D9, D10)
 

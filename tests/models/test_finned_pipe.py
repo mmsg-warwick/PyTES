@@ -42,7 +42,7 @@ def test_submodels():
     ]
 
 
-def solve(model_class, mesh, dT_m, t):
+def solve(model_class, mesh, dT_m, t, solver=None):
     model = model_class()
     parameter_values = model.default_parameter_values
     parameter_values["PCM melting range [K]"] = dT_m
@@ -50,6 +50,7 @@ def solve(model_class, mesh, dT_m, t):
         model,
         parameter_values=parameter_values,
         var_pts=var_pts(model, mesh) if mesh else None,
+        solver=solver,
     )
     return sim.solve([0, t[-1]], t_interp=t)
 
@@ -57,7 +58,13 @@ def solve(model_class, mesh, dT_m, t):
 @pytest.mark.parametrize("model_class", [pytes.SharpFrontModel, pytes.MushModel])
 def test_discharge_freezes_pcm(model_class):
     # Default parameters start fully charged (liquid) with a cold inlet
-    solution = solve(model_class, COARSE_MESH, 0.5, np.linspace(0, 1800, 181))
+    # Tighter than the default tolerances: near the end the outlet is within about 1e-5 K
+    # of the inlet, below the default solver error (about 1e-4 K), and the power must
+    # stay positive
+    solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
+    solution = solve(
+        model_class, COARSE_MESH, 0.5, np.linspace(0, 1800, 181), solver=solver
+    )
     liquid_fraction = solution["Average liquid fraction"].entries
     # Up to the smoothing of the melting point (default melting range 0.5 K)
     assert liquid_fraction[0] == pytest.approx(1, abs=1e-3)

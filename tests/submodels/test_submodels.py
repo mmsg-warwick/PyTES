@@ -3,15 +3,20 @@
 import numpy as np
 import pybamm
 import pytest
+from conftest import var_pts
 
 import pytes
+from pytes import conformance
 from pytes.models.finned_pipe import FinnedPipeParameters
 from pytes.submodels import (
     AdvectedFluid,
     BaseSubModel,
     EnthalpyStorage,
     FlowPath,
+    LedgerWallCoupling,
+    NewtonCooling,
     StorageGeometry,
+    SurfaceFluxLaw,
 )
 from pytes.submodels.fluid import HEAT_GAIN, INITIAL_TEMPERATURE
 from pytes.submodels.storage import INITIAL_LIQUID_FRACTION
@@ -170,6 +175,40 @@ class AlteredSharpFront(pytes.SharpFrontModel):
     def set_submodels(self):
         super().set_submodels()
         self._alter(self.submodels, self.param)
+
+
+class CubicFlux(SurfaceFluxLaw):
+    """A nonlinear law, ``c (T_f - T_s)**3``, with ``c`` from the default coefficient"""
+
+    def heat_flux(self, fluid, h_f, T_f, T_s):
+        return NewtonCooling().coefficient / 25 * (T_f - T_s) ** 3
+
+
+def test_any_flux_law_conserves_energy_exactly():
+    # The ledger takes the fluid's heat from the storage's energy balance, so conservation
+    # does not depend on the flux law (DESIGN D6)
+    def alter(submodels, param):
+        storage = submodels["storage"]
+        submodels["coupling"] = LedgerWallCoupling(
+            param,
+            param.fluid,
+            storage.label,
+            storage.storage_geometry,
+            flux_law=CubicFlux(),
+        )
+
+    model = AlteredSharpFront(alter)
+    t = np.linspace(0, 1800, 7)
+    solution = pybamm.Simulation(model, var_pts=var_pts(model)).solve(
+        [0, 1800], t_interp=t
+    )
+    conformance.check_energy_conservation(solution)
+    # The law is used: the outlet temperature differs from Newton's law
+    default = pybamm.Simulation(pytes.SharpFrontModel(), var_pts=var_pts(model)).solve(
+        [0, 1800], t_interp=t
+    )
+    T_out = solution["Outlet temperature [K]"].entries[1:]
+    assert np.all(np.abs(T_out - default["Outlet temperature [K]"].entries[1:]) > 1e-3)
 
 
 def test_missing_provider_is_detected():

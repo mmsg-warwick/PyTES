@@ -11,6 +11,8 @@ from .base_submodel import BaseSubModel
 
 HEAT_GAIN = "Heat transfer fluid heat gain per unit length [W.m-1]"
 INITIAL_TEMPERATURE = "Initial uniform temperature [K]"
+FLUID_ENTHALPY = "Heat transfer fluid specific enthalpy [J.kg-1]"
+FLUID_TEMPERATURE = "Heat transfer fluid temperature [K]"
 
 
 class FlowPath:
@@ -43,16 +45,17 @@ class FlowPath:
 
 class AdvectedFluid(BaseSubModel):
     """
-    Heat transfer fluid advected along the flow path, with its temperature as the state.
-
-    Per flow path, with ``h`` the specific enthalpy from the fluid-property object,
+    Heat transfer fluid advected along the flow path, with its specific enthalpy ``h`` as
+    the state (DESIGN D5). Per flow path,
 
     ``A_flow rho dh/dt + mdot_path dh/dz = q'``,  for ``0 < z < Z``,
 
     where ``mdot_path`` is the mass flow rate per path and ``q'`` the heat the fluid gains
     per unit length of flow path (``"Heat transfer fluid heat gain per unit length
-    [W.m-1]"``, from the coupling). The inflow is at the inlet temperature, and the outlet
-    temperature is the value upwinding advects out of the last cell.
+    [W.m-1]"``, from the coupling). The inflow is at the inlet enthalpy ``h(T_in)``, and the
+    outlet enthalpy is the value upwinding advects out of the last cell. Temperatures and
+    other properties come from the fluid-property object at the state: ``T = T(h)``, and the
+    outlet temperature is ``T(h_out)``.
 
     The enthalpy flux ``mdot_path h`` is upwinded (first order). The inflow uses
     :func:`pytes.compat.upwind_inlet_value`.
@@ -61,7 +64,8 @@ class AdvectedFluid(BaseSubModel):
     ----------
     param : object
         The model's parameters. Uses ``T_in`` (inlet temperature), ``mdot`` (mass flow rate
-        of the whole device), ``temperature_scale`` and ``temperature_reference``.
+        of the whole device), ``T_ref``, ``temperature_scale`` and ``temperature_reference``
+        (to scale the enthalpy like a temperature).
     fluid : :class:`pytes.fluids.ConstantPropertyLiquid`
         The fluid-property object.
     flow_path : :class:`FlowPath`
@@ -86,50 +90,49 @@ class AdvectedFluid(BaseSubModel):
         param = self.param
         path = self.flow_path
         fluid = self.fluid
-        T_f = pybamm.Variable(
-            "Heat transfer fluid temperature [K]",
+        # Scaled like a temperature: for a constant-c_p liquid the scaled enthalpy equals
+        # the scaled temperature
+        h_f = pybamm.Variable(
+            FLUID_ENTHALPY,
             domains={"primary": "pipe"},
-            scale=param.temperature_scale,
-            reference=param.temperature_reference,
+            scale=fluid.h(param.T_ref + param.temperature_scale) - fluid.h(param.T_ref),
+            reference=fluid.h(param.temperature_reference),
         )
-        self.T_f = T_f
+        self.h_f = h_f
         T_in = param.T_in
+        h_in = fluid.h(T_in)
         # With constant extrapolation (compat.fluid_spatial_method) this is the value in
-        # the last cell, which is the temperature at which upwinding advects the fluid out
-        T_out = pybamm.boundary_value(T_f, "right")
+        # the last cell, which is the enthalpy at which upwinding advects the fluid out
+        h_out = pybamm.boundary_value(h_f, "right")
 
         mdot_path = param.mdot / path.n_paths
         mdot_edge = pybamm.PrimaryBroadcastToEdges(mdot_path, ["pipe"])
-        enthalpy_flux = mdot_edge * fluid.h(pybamm.upwind(T_f))
+        enthalpy_flux = mdot_edge * pybamm.upwind(h_f)
         heat_gain = self.coupled(HEAT_GAIN, "pipe")
         self.rhs = {
-            T_f: (-pybamm.div(enthalpy_flux) + heat_gain)
-            / (path.area * fluid.rho(T_f) * fluid.c_p(T_f))
+            h_f: (-pybamm.div(enthalpy_flux) + heat_gain) / (path.area * fluid.rho(h_f))
         }
         self.boundary_conditions = {
-            T_f: {"left": (compat.upwind_inlet_value(T_f, T_in), "Dirichlet")}
+            h_f: {"left": (compat.upwind_inlet_value(h_f, h_in), "Dirichlet")}
         }
-        self.initial_conditions = {T_f: self.coupled(INITIAL_TEMPERATURE)}
+        self.initial_conditions = {h_f: fluid.h(self.coupled(INITIAL_TEMPERATURE))}
 
-        E_f = (
-            path.n_paths
-            * path.area
-            * pybamm.Integral(fluid.rho(T_f) * fluid.h(T_f), path.z)
-        )
+        E_f = path.n_paths * path.area * pybamm.Integral(fluid.rho(h_f) * h_f, path.z)
         variables = {
-            "Inlet specific enthalpy [J.kg-1]": fluid.h(T_in),
-            "Outlet specific enthalpy [J.kg-1]": fluid.h(T_out),
+            FLUID_ENTHALPY: h_f,
+            "Inlet specific enthalpy [J.kg-1]": h_in,
+            "Outlet specific enthalpy [J.kg-1]": h_out,
             "Mass flow rate [kg.s-1]": param.mdot,
             # The enthalpy is zero at the reference temperature, so this is the energy
-            # above the uniform state at that limit
+            # above the uniform state at that temperature
             self.energy_variable: E_f,
         }
         self.variables = add_temperature_variables(
             variables,
             {
-                "Heat transfer fluid temperature [K]": T_f,
+                FLUID_TEMPERATURE: fluid.T(h_f),
                 "Inlet temperature [K]": T_in,
-                "Outlet temperature [K]": T_out,
+                "Outlet temperature [K]": fluid.T(h_out),
             },
         )
 
@@ -139,6 +142,5 @@ class AdvectedFluid(BaseSubModel):
         relative to the fluid's enthalpy reference. ``phi`` is ignored.
         """
         path = self.flow_path
-        return (
-            path.n_paths * path.area * path.length * self.fluid.rho(T) * self.fluid.h(T)
-        )
+        h = self.fluid.h(T)
+        return path.n_paths * path.area * path.length * self.fluid.rho(h) * h

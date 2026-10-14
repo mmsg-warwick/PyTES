@@ -4,9 +4,16 @@
 """
 Heat transfer fluid (HTF) properties.
 
-The fluid-property object is the only way a model obtains fluid properties (DESIGN D8). Power
-is defined from the specific enthalpy, ``mdot (h_out - h_in)``, so the definitions stay valid
-for a fluid whose enthalpy is not linear in temperature (a refrigerant, later).
+The fluid-property object is the only way a model obtains fluid properties (DESIGN D8). Its
+properties are functions of the fluid state, the specific enthalpy ``h`` and the pressure
+``p``, the natural inputs of property tables, so that they stay valid for a fluid whose
+temperature is flat across a phase change (a refrigerant, later). ``h(T, p)`` gives the
+enthalpy for the inlet and initial conditions. Power is defined from the specific enthalpy,
+``mdot (h_out - h_in)``.
+
+The heat transfer coefficient is not a fluid property: it depends on the geometry and the
+flow too, and belongs to the surface flux law of a coupling (DESIGN D6, D8, see
+:mod:`pytes.submodels.flux_laws`).
 """
 
 import pybamm
@@ -34,8 +41,6 @@ class ConstantPropertyLiquid:
         "<prefix> conductivity [W.m-1.K-1]" and "<prefix> viscosity [Pa.s]". The
         conductivity and the viscosity are not used by the current models; they are the hook
         for axial diffusion and for flow-dependent heat transfer coefficients.
-    h_coefficient : pybamm.Parameter
-        "Heat transfer coefficient [W.m-2.K-1]", constant for now.
     """
 
     def __init__(self, prefix="Heat transfer fluid", T_ref=0):
@@ -47,7 +52,6 @@ class ConstantPropertyLiquid:
         )
         self.k_param = pybamm.Parameter(f"{prefix} conductivity [W.m-1.K-1]")
         self.mu_param = pybamm.Parameter(f"{prefix} viscosity [Pa.s]")
-        self.h_coefficient = pybamm.Parameter("Heat transfer coefficient [W.m-2.K-1]")
 
     def h(self, T, p=None):
         """Specific enthalpy [J.kg-1] at temperature ``T`` [K] (``p`` is ignored)"""
@@ -57,27 +61,18 @@ class ConstantPropertyLiquid:
         """Temperature [K] at specific enthalpy ``h`` [J.kg-1] (``p`` is ignored)"""
         return self.T_ref + h / self.c_p_param
 
-    def c_p(self, T, p=None):
-        """Specific heat capacity ``dh/dT`` [J.kg-1.K-1]"""
+    def c_p(self, h, p=None):
+        """Specific heat capacity ``dh/dT`` [J.kg-1.K-1] at specific enthalpy ``h``"""
         return self.c_p_param
 
-    def rho(self, T, p=None):
-        """Density [kg.m-3]"""
+    def rho(self, h, p=None):
+        """Density [kg.m-3] at specific enthalpy ``h`` [J.kg-1]"""
         return self.rho_param
 
-    def k(self, T, p=None):
-        """Conductivity [W.m-1.K-1]"""
+    def k(self, h, p=None):
+        """Conductivity [W.m-1.K-1] at specific enthalpy ``h`` [J.kg-1]"""
         return self.k_param
 
-    def mu(self, T, p=None):
-        """Dynamic viscosity [Pa.s]"""
+    def mu(self, h, p=None):
+        """Dynamic viscosity [Pa.s] at specific enthalpy ``h`` [J.kg-1]"""
         return self.mu_param
-
-    def heat_transfer_coefficient(self, T, mass_flow_rate=None, geometry=None):
-        """
-        Heat transfer coefficient [W.m-2.K-1] between the fluid and a wall or a surface.
-
-        Constant for now. ``mass_flow_rate`` and ``geometry`` are the hook for Nusselt and
-        Reynolds number correlations (deferred).
-        """
-        return self.h_coefficient

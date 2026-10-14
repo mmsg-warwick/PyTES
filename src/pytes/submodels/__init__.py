@@ -1,9 +1,11 @@
-"""Submodels: the fluid, storage and coupling slots, and the device-level energy."""
+"""Submodels: the fluid, storage and coupling slots, the device-level energy, and the
+surface flux laws of the couplings."""
 
 from .base_submodel import BaseSubModel
 from .coupling import FinPCMCoupling, FinRootCoupling, LedgerWallCoupling
 from .energy import DeviceEnergy
 from .fluid import AdvectedFluid, FlowPath
+from .flux_laws import NewtonCooling, SurfaceFluxLaw
 from .storage import EnthalpyStorage, SensibleConduction, StorageGeometry
 
 __all__ = [
@@ -15,6 +17,8 @@ __all__ = [
     "FinRootCoupling",
     "FlowPath",
     "LedgerWallCoupling",
+    "NewtonCooling",
     "SensibleConduction",
     "StorageGeometry",
+    "SurfaceFluxLaw",
 ]

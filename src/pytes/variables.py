@@ -21,6 +21,7 @@ REQUIRED_VARIABLES = (
     "Storage thermal energy [J]",
     "Total thermal energy [J]",
     "Heat loss power [W]",
+    "Heat transfer fluid specific enthalpy [J.kg-1]",
     "Heat transfer fluid temperature [K]",
 )
 
