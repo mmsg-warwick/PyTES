@@ -136,10 +136,10 @@ class AdvectedFluid(BaseSubModel):
             },
         )
 
-    def uniform_energy(self, T, phi=0):
+    def uniform_energy(self, T):
         """
         Energy of the fluid in the whole device [J] at a uniform temperature ``T`` [K],
-        relative to the fluid's enthalpy reference. ``phi`` is ignored.
+        relative to the fluid's enthalpy reference.
         """
         path = self.flow_path
         h = self.fluid.h(T)

@@ -16,8 +16,8 @@ def energy_between(model, T_a, T_b, parameter_values=None, var_pts=None):
     """
     Total thermal energy [J] between the uniform states at ``T_a`` and ``T_b`` (DESIGN D13).
 
-    Each uniform state is solid up to the melting temperature and liquid above it, as for
-    the initial state. The result is positive when ``T_b`` holds more energy than ``T_a``.
+    Each uniform state is the equilibrium state at its temperature, as for the initial state
+    (for a sharp melting point, solid at the melting temperature). The result is positive when ``T_b`` holds more energy than ``T_a``.
     It is derived from the materials and geometry on the model's mesh, so it equals the
     difference in the model's "Total thermal energy [J]" between those two states. For
     example, ``energy_between(model, T_cold, T_hot)`` is the energy a full charge from

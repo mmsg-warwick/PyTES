@@ -18,8 +18,9 @@ class SharpFrontModel(BaseFinnedPipeModel):
     """
     Finned-pipe model in which the PCM and the fins are homogenised into a single composite
     material (:class:`pytes.materials.CompositeMaterial`), with heat conduction across the
-    PCM ("PCM vertical", radially from the pipe) at each point along the pipe. Without
-    smoothing ("PCM melting range [K]" = 0) the melting front is sharp, hence the name.
+    PCM ("PCM vertical", radially from the pipe) at each point along the pipe. With a sharp
+    melting point and no smoothing ("PCM melting range [K]" and "PCM smoothing width [K]"
+    both 0) the melting front is sharp, hence the name.
 
     Submodels:
 

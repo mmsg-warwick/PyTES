@@ -55,7 +55,7 @@ def test_one_storage_submodel_for_every_medium():
 def solve(model_class, mesh, dT_m, t, solver=None):
     model = model_class()
     parameter_values = model.default_parameter_values
-    parameter_values["PCM melting range [K]"] = dT_m
+    parameter_values["PCM smoothing width [K]"] = dT_m
     sim = pybamm.Simulation(
         model,
         parameter_values=parameter_values,
@@ -76,7 +76,7 @@ def test_discharge_freezes_pcm(model_class):
         model_class, COARSE_MESH, 0.5, np.linspace(0, 1800, 181), solver=solver
     )
     liquid_fraction = solution["Average liquid fraction"].entries
-    # Up to the smoothing of the melting point (default melting range 0.5 K)
+    # Up to the smoothing of the melting point (default smoothing width 0.5 K)
     assert liquid_fraction[0] == pytest.approx(1, abs=1e-3)
     assert liquid_fraction[-1] < 0.1
     assert np.all(np.diff(liquid_fraction) <= 1e-12)

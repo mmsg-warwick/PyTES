@@ -130,13 +130,14 @@ def check_initial_state(model, parameter_values=None, var_pts=None):
     The initial state is uniform at "Initial temperature [K]", and every energy is zero at
     the uniform state at "Reference temperature [K]" (DESIGN D14): the initial total
     thermal energy equals :func:`pytes.energy_between` from the reference temperature to
-    the initial one, below and above the melting temperature and at the reference itself
+    the initial one, at the reference itself, below, at and above the melting temperature
+    (inside the mushy zone if the material has a melting range)
     """
     parameter_values = (parameter_values or model.default_parameter_values).copy()
     T_ref = parameter_values["Reference temperature [K]"]
     T_m = parameter_values.evaluate(model.param.T_m)
     scale = abs(energy_between(model, T_ref, T_m + 10, parameter_values, var_pts))
-    for T in (T_ref, (T_ref + T_m) / 2, T_m + 10):
+    for T in (T_ref, (T_ref + T_m) / 2, T_m, T_m + 10):
         parameter_values["Initial temperature [K]"] = T
         sim = pybamm.Simulation(
             model, parameter_values=parameter_values, var_pts=var_pts

@@ -17,9 +17,11 @@ def get_parameter_values(parameter_set=None):
     :class:`pytes.models.finned_pipe.FinnedPipeParameters` for the meaning of each parameter
     and the geometry.
 
-    The melting point is smoothed over "PCM melting range [K]" = 0.5 K by default, which
-    makes the models about 2 to 3 times faster and changes the outlet temperature by about
-    0.05 K compared with a sharp melting point. Set it to 0 for a sharp melting point.
+    The PCM has a sharp melting point ("PCM melting range [K]" = 0), whose corners are
+    smoothed over "PCM smoothing width [K]" = 0.5 K: this makes the models about 2 to 3
+    times faster and changes the outlet temperature by about 0.05 K compared with no
+    smoothing. Set the smoothing width to 0 for exact corners, and the melting range to the
+    solidus-to-liquidus span of a PCM that melts over a range of temperatures.
 
     Parameters
     ----------
@@ -54,7 +56,8 @@ def get_parameter_values(parameter_set=None):
             "PCM liquid phase specific heat capacity [J.kg-1.K-1]": 3500,
             "PCM latent heat [J.kg-1]": 226e3,
             "PCM melting temperature [K]": 273.15 + 58,
-            "PCM melting range [K]": 0.5,
+            "PCM melting range [K]": 0,
+            "PCM smoothing width [K]": 0.5,
             # Fins (aluminium)
             "Metal conductivity [W.m-1.K-1]": 237,
             "Metal density [kg.m-3]": 2700,

@@ -7,6 +7,7 @@ import pytes
 from pytes.parameters import validate_parameter_values
 
 T_1, T_2, T_3 = 273.15 + 20, 273.15 + 58, 273.15 + 70
+NON_NEGATIVE = ("PCM melting range [K]", "PCM smoothing width [K]")
 
 
 def test_energy_between_is_a_difference(model_class):
@@ -51,11 +52,12 @@ def test_energy_between_needs_device_energy():
         ("Reference temperature [K]", -1),
         ("Initial temperature [K]", 0),
         ("PCM melting range [K]", -0.1),
+        ("PCM smoothing width [K]", -0.1),
     ],
 )
 def test_validate_parameter_values(name, value):
     parameter_values = pytes.SharpFrontModel().default_parameter_values
-    validate_parameter_values(parameter_values, "PCM melting range [K]")
+    validate_parameter_values(parameter_values, NON_NEGATIVE)
     parameter_values[name] = value
     with pytest.raises(ValueError, match="must"):
-        validate_parameter_values(parameter_values, "PCM melting range [K]")
+        validate_parameter_values(parameter_values, NON_NEGATIVE)

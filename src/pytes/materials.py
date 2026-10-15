@@ -101,43 +101,49 @@ class SensibleMaterial:
         """Conductivity [W.m-1.K-1] (constant)"""
         return self.k_param
 
-    def equilibrium_enthalpy(self, T, phi=0):
-        """
-        Enthalpy per unit volume [J.m-3] at a uniform temperature ``T`` [K]. ``phi`` is
-        ignored (the material does not melt).
-        """
-        return self.T2H(T)
-
 
 class PhaseChangeMaterial:
     """
-    Thermal properties of a material with a melting temperature, and the
-    enthalpy-temperature relations derived from them. The enthalpy is per unit volume and
-    relative to 0 K.
+    Thermal properties of a material that melts, and the enthalpy-temperature relations
+    derived from them. The enthalpy is per unit volume and relative to 0 K.
 
     Subclasses set the solid and liquid volumetric heat capacities ``rho_c_p_s`` and
     ``rho_c_p_l`` [J.m-3.K-1], the volumetric latent heat ``rho_L`` [J.m-3], the solid and
     liquid conductivities ``k_s`` and ``k_l`` [W.m-1.K-1], the melting temperature ``T_m``
-    [K] and the melting range ``melting_range`` [K], then call :meth:`_set_derived`.
+    [K], the melting range ``melting_range`` [K] and the smoothing width
+    ``smoothing_width`` [K], then call :meth:`_set_derived`.
 
-    The corners of the relations at the solidus and liquidus are smoothed over a
-    temperature width equal to the melting range, as for a material that melts over a
-    narrow range of temperatures. A width of 0 gives a sharp melting point.
+    The material melts between the solidus ``T_m - melting_range / 2`` and the liquidus
+    ``T_m + melting_range / 2`` (DESIGN D7). In between (the mushy zone) the enthalpy is
+    linear in temperature: the latent heat spread evenly, plus the mean of the solid and
+    liquid heat capacities. A melting range of 0 gives a sharp melting point, where the
+    temperature stays at ``T_m`` while the material melts.
+
+    Separately, the corners of the relations at the solidus and liquidus are smoothed over
+    ``smoothing_width``, a numerical device that makes the models faster. A width of 0
+    gives exact corners. Both may be 0.
 
     Attributes
     ----------
     internal_states : tuple
         Empty: the temperature is a function of the enthalpy alone.
-    dT_m : pybamm.Symbol
-        Smoothing width [K]: the melting range, floored at 1e-9 K so that derivatives stay
-        defined where the arguments of :func:`smooth_min` and :func:`smooth_max` are equal
-        (its effect is at most 5e-10 K).
+    changes_phase : bool
+        True: the material has a liquid fraction.
+    T_solidus, T_liquidus : pybamm.Symbol
+        Solidus and liquidus temperatures [K].
+    rho_c_p_mushy : pybamm.Symbol
+        Sensible heat capacity in the mushy zone [J.m-3.K-1], the mean of the solid and
+        liquid ones.
     H_solidus, H_liquidus : pybamm.Symbol
-        Enthalpy at the melting temperature when fully solid and fully liquid [J.m-3].
+        Enthalpy at the solidus (fully solid) and at the liquidus (fully liquid) [J.m-3].
+    dT_smooth : pybamm.Symbol
+        The smoothing width, floored at 1e-9 K so that derivatives stay defined where the
+        arguments of :func:`smooth_min` and :func:`smooth_max` are equal (its effect is at
+        most 5e-10 K).
     H_scale, H_reference : pybamm.Symbol
-        Scale and reference for the enthalpy as a solver variable: ``rho_L`` and the middle
-        of the melting band. The scaled enthalpy is then the liquid fraction minus 1/2 while
-        melting, and of order one over the operating range, as the sensible heat is
+        Scale and reference for the enthalpy as a solver variable: the enthalpy of the
+        mushy zone and its middle. The scaled enthalpy is then the liquid fraction minus 1/2
+        while melting, and of order one over the operating range, as the sensible heat is
         comparable to the latent heat.
     """
 
@@ -145,25 +151,30 @@ class PhaseChangeMaterial:
     changes_phase = True
 
     def _set_derived(self):
-        """Set the smoothing width, the solidus and liquidus enthalpies and the scaling"""
+        """Set the solidus, the liquidus, the smoothing width and the scaling"""
+        self.T_solidus = self.T_m - self.melting_range / 2
+        self.T_liquidus = self.T_m + self.melting_range / 2
+        self.rho_c_p_mushy = (self.rho_c_p_s + self.rho_c_p_l) / 2
+        self.H_solidus = self.rho_c_p_s * self.T_solidus
+        self.H_liquidus = (
+            self.H_solidus + self.rho_L + self.rho_c_p_mushy * self.melting_range
+        )
         # Floor the width at 1 nK so that derivatives stay defined (rather than 0 / 0)
-        # where the arguments of smooth_min / smooth_max are equal, even when the melting
-        # range is 0
-        self.dT_m = pybamm.maximum(self.melting_range, 1e-9)
-        self.H_solidus = self.rho_c_p_s * self.T_m
-        self.H_liquidus = self.H_solidus + self.rho_L
-        # The scaled enthalpy is (H - H_solidus) / rho_L - 1/2, i.e. the liquid fraction
-        # - 1/2 while melting
-        self.H_scale = self.rho_L
-        self.H_reference = self.H_solidus + self.rho_L / 2
+        # where the arguments of smooth_min / smooth_max are equal, even when the
+        # smoothing width is 0
+        self.dT_smooth = pybamm.maximum(self.smoothing_width, 1e-9)
+        # The scaled enthalpy is the liquid fraction - 1/2 while melting
+        self.H_scale = self.H_liquidus - self.H_solidus
+        self.H_reference = (self.H_solidus + self.H_liquidus) / 2
 
     def H2T(self, H, states=()):
         """
         Temperature as a function of the enthalpy and the internal states (none here).
 
-        Below the solidus the temperature is ``H / rho_c_p_s``, above the liquidus it is
-        ``T_m + (H - H_liquidus) / rho_c_p_l``, and in between it is ``T_m``, with the
-        corners smoothed over ``dT_m``.
+        Below the solidus the temperature is ``H / rho_c_p_s``; in the mushy zone it rises
+        linearly from the solidus to the liquidus temperature with the liquid fraction;
+        above the liquidus it is ``T_liquidus + (H - H_liquidus) / rho_c_p_l``. The corners
+        are smoothed over ``dT_smooth``.
 
         Parameters
         ----------
@@ -177,21 +188,23 @@ class PhaseChangeMaterial:
         pybamm.Symbol
             Temperature [K].
         """
-        solid = H / self.rho_c_p_s
-        liquid = self.T_m + (H - self.H_liquidus) / self.rho_c_p_l
+        # Each term is one piece, clipped: the corner widths in enthalpy match dT_smooth
+        solid = smooth_min(H, self.H_solidus, self.rho_c_p_s * self.dT_smooth)
+        liquid = smooth_max(H - self.H_liquidus, 0, self.rho_c_p_l * self.dT_smooth)
         return (
-            smooth_min(solid, self.T_m, self.dT_m)
-            + smooth_max(liquid, self.T_m, self.dT_m)
-            - self.T_m
+            solid / self.rho_c_p_s
+            + self.melting_range * self.liquid_fraction(H, states)
+            + liquid / self.rho_c_p_l
         )
 
     def T2H(self, T):
         """
         Enthalpy as a function of the temperature.
 
-        This is the exact (unsmoothed) relation. Away from the melting temperature it
-        inverts :meth:`H2T` up to about ``dT_m**2 / (4 |T - T_m|)``. At exactly
-        ``T = T_m`` the material is taken to be fully solid.
+        This is the exact (unsmoothed) relation. Away from the solidus and the liquidus it
+        inverts :meth:`H2T` up to about ``dT_smooth**2 / (4 d)``, with ``d`` the distance
+        to the nearer of them. For a sharp melting point (melting range 0), the material at
+        exactly ``T = T_m`` is taken to be fully solid.
 
         Parameters
         ----------
@@ -203,24 +216,13 @@ class PhaseChangeMaterial:
         pybamm.Symbol
             Enthalpy per unit volume, relative to 0 K [J.m-3].
         """
-        H_l = self.rho_c_p_l * (T - self.T_m) + self.H_liquidus
-        H_s = self.rho_c_p_s * T
-        # At exactly T = T_m the material is taken to be fully solid
-        return H_l * (T > self.T_m) + H_s * (T <= self.T_m)
-
-    def equilibrium_enthalpy(self, T, phi):
-        """
-        Enthalpy per unit volume [J.m-3] of a uniform state at temperature ``T`` [K] with
-        liquid fraction ``phi``.
-
-        ``phi`` only matters at ``T = T_m``: the result is
-        ``rho_c_p_s min(T, T_m) + phi rho_L + rho_c_p_l max(T - T_m, 0)``, which equals
-        :meth:`T2H` for ``phi = 0`` below the melting temperature and ``phi = 1`` above it.
-        """
+        # The floor makes a melting range of 0 a step, solid at T_m
+        width = pybamm.maximum(self.melting_range, 1e-12)
+        phi = pybamm.minimum(pybamm.maximum((T - self.T_solidus) / width, 0), 1)
         return (
-            self.rho_c_p_s * pybamm.minimum(T, self.T_m)
-            + phi * self.rho_L
-            + self.rho_c_p_l * pybamm.maximum(T - self.T_m, 0)
+            self.rho_c_p_s * pybamm.minimum(T, self.T_solidus)
+            + (self.H_liquidus - self.H_solidus) * phi
+            + self.rho_c_p_l * pybamm.maximum(T - self.T_liquidus, 0)
         )
 
     def k(self, H, states=()):
@@ -232,15 +234,17 @@ class PhaseChangeMaterial:
 
     def liquid_fraction(self, H, states=()):
         """
-        Liquid fraction as a function of the enthalpy [J.m-3]: ``(H - H_solidus) / rho_L``,
-        clipped to [0, 1] with the corners smoothed over the enthalpy widths matching
-        ``dT_m`` (``rho_c_p_s * dT_m`` and ``rho_c_p_l * dT_m``). It is between 0 and 1 up
-        to an overshoot of order ``(rho_c_p * dT_m / rho_L)**2`` when smoothed.
+        Liquid fraction as a function of the enthalpy [J.m-3]: the fraction of the mushy
+        zone's enthalpy, ``(H - H_solidus) / (H_liquidus - H_solidus)``, clipped to
+        [0, 1] with the corners smoothed over the enthalpy widths matching ``dT_smooth``
+        (``rho_c_p_s * dT_smooth`` and ``rho_c_p_l * dT_smooth``). In the mushy zone it is
+        also ``(T - T_solidus) / melting_range``. It is between 0 and 1 up to an overshoot
+        of order ``(rho_c_p * dT_smooth / rho_L)**2`` when smoothed.
         """
-        # The enthalpy widths of the corners match those of H2T
-        phi = (H - self.H_solidus) / self.rho_L
-        phi = smooth_max(phi, 0, self.rho_c_p_s * self.dT_m / self.rho_L)
-        return smooth_min(phi, 1, self.rho_c_p_l * self.dT_m / self.rho_L)
+        dH = self.H_liquidus - self.H_solidus
+        phi = (H - self.H_solidus) / dH
+        phi = smooth_max(phi, 0, self.rho_c_p_s * self.dT_smooth / dH)
+        return smooth_min(phi, 1, self.rho_c_p_l * self.dT_smooth / dH)
 
 
 class PureMaterial(PhaseChangeMaterial):
@@ -253,17 +257,20 @@ class PureMaterial(PhaseChangeMaterial):
     ----------
     prefix : str, optional
         Prefix of the parameter names (default "PCM"), e.g. "<prefix> latent heat
-        [J.kg-1]" and "<prefix> melting range [K]".
+        [J.kg-1]", "<prefix> melting range [K]" and "<prefix> smoothing width [K]".
 
     Attributes
     ----------
-    k_s, k_l, rho_s, rho_l, c_p_s, c_p_l, L, T_m, melting_range : pybamm.Parameter
+    k_s, k_l, rho_s, rho_l, c_p_s, c_p_l, L, T_m, melting_range, smoothing_width : \
+pybamm.Parameter
         "<prefix> solid phase conductivity [W.m-1.K-1]", "<prefix> liquid phase
         conductivity [W.m-1.K-1]", "<prefix> solid phase density [kg.m-3]", "<prefix>
         liquid phase density [kg.m-3]", "<prefix> solid phase specific heat capacity
         [J.kg-1.K-1]", "<prefix> liquid phase specific heat capacity [J.kg-1.K-1]",
-        "<prefix> latent heat [J.kg-1]", "<prefix> melting temperature [K]" and "<prefix>
-        melting range [K]".
+        "<prefix> latent heat [J.kg-1]", "<prefix> melting temperature [K]" (the middle
+        of the melting range), "<prefix> melting range [K]" (from solidus to liquidus; 0
+        for a sharp melting point) and "<prefix> smoothing width [K]" (numerical; 0 for
+        exact corners).
     """
 
     def __init__(self, prefix="PCM"):
@@ -280,9 +287,8 @@ class PureMaterial(PhaseChangeMaterial):
         )
         self.L = pybamm.Parameter(f"{prefix} latent heat [J.kg-1]")
         self.T_m = pybamm.Parameter(f"{prefix} melting temperature [K]")
-        # Width over which the corners of the enthalpy-temperature relation at the
-        # solidus and liquidus are smoothed (0 gives a sharp melting point)
         self.melting_range = pybamm.Parameter(f"{prefix} melting range [K]")
+        self.smoothing_width = pybamm.Parameter(f"{prefix} smoothing width [K]")
 
         self.rho_c_p_s = self.rho_s * self.c_p_s
         self.rho_c_p_l = self.rho_l * self.c_p_l
@@ -319,6 +325,7 @@ class CompositeMaterial(PhaseChangeMaterial):
         delta = volume_fraction
         self.T_m = pcm.T_m
         self.melting_range = pcm.melting_range
+        self.smoothing_width = pcm.smoothing_width
         self.rho_c_p_s = filler.rho_c_p * delta + pcm.rho_c_p_s * (1 - delta)
         self.rho_c_p_l = filler.rho_c_p * delta + pcm.rho_c_p_l * (1 - delta)
         self.rho_L = pcm.rho_L * (1 - delta)

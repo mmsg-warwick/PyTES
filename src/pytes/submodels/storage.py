@@ -9,7 +9,6 @@ from ..variables import add_temperature_variables
 from .base_submodel import BaseSubModel
 
 INITIAL_TEMPERATURE = "Initial uniform temperature [K]"
-INITIAL_LIQUID_FRACTION = "Initial uniform liquid fraction"
 
 
 class StorageGeometry:
@@ -183,12 +182,7 @@ class EnthalpyStorage(BaseSubModel):
         self.boundary_conditions = {
             T: {geometry.inner: inner, geometry.outer: (pybamm.Scalar(0), "Neumann")}
         }
-        self.initial_conditions = {
-            H: material.equilibrium_enthalpy(
-                self.coupled(INITIAL_TEMPERATURE),
-                self.coupled(INITIAL_LIQUID_FRACTION),
-            )
-        }
+        self.initial_conditions = {H: material.T2H(self.coupled(INITIAL_TEMPERATURE))}
 
         H_ref = material.T2H(self.param.T_ref)
         variables = {
@@ -219,13 +213,11 @@ class EnthalpyStorage(BaseSubModel):
             },
         )
 
-    def uniform_energy(self, T, phi):
+    def uniform_energy(self, T):
         """
-        Energy of this storage in the whole device [J] at a uniform temperature ``T`` [K]
-        with liquid fraction ``phi``, above the uniform state at the reference temperature.
+        Energy of this storage in the whole device [J] at a uniform temperature ``T`` [K],
+        above the uniform state at the reference temperature.
         """
         material = self.material
         H_ref = material.T2H(self.param.T_ref)
-        return self.storage_geometry.volume * (
-            material.equilibrium_enthalpy(T, phi) - H_ref
-        )
+        return self.storage_geometry.volume * (material.T2H(T) - H_ref)

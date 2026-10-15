@@ -1,4 +1,4 @@
-"""Tests for the enthalpy-temperature relations of the phase-change materials."""
+"""Tests for the enthalpy-temperature relations of the phase-change materials (DESIGN D7)."""
 
 import numpy as np
 import pybamm
@@ -10,9 +10,10 @@ param = FinnedPipeParameters()
 T_m = get_parameter_values()["PCM melting temperature [K]"]
 
 
-def evaluate(symbol, dT_m=0):
+def evaluate(symbol, dT_m=0, melting_range=0):
     parameter_values = get_parameter_values()
-    parameter_values["PCM melting range [K]"] = dT_m
+    parameter_values["PCM smoothing width [K]"] = dT_m
+    parameter_values["PCM melting range [K]"] = melting_range
     return np.asarray(parameter_values.evaluate(symbol)).squeeze()
 
 
@@ -21,12 +22,52 @@ def material(request):
     return getattr(param, request.param)
 
 
+@pytest.mark.parametrize("melting_range", [0, 2])
 @pytest.mark.parametrize("dT_m", [0, 0.5])
 @pytest.mark.parametrize("T", [T_m - 30, T_m - 5, T_m + 5, T_m + 30])
-def test_temperature_enthalpy_round_trip(material, T, dT_m):
-    # T2H is exact, so with smoothing H2T only inverts it up to dT_m^2 / 4|T - T_m|
-    tol = dT_m**2 / (2 * abs(T - T_m)) + 1e-9
-    assert evaluate(material.H2T(material.T2H(T)), dT_m) == pytest.approx(T, abs=tol)
+def test_temperature_enthalpy_round_trip(material, T, dT_m, melting_range):
+    # T2H is exact, so with smoothing H2T only inverts it up to dT_m^2 / 4 d, with d the
+    # distance to the nearer of the solidus and the liquidus
+    d = abs(T - T_m) - melting_range / 2
+    tol = dT_m**2 / (2 * d) + 1e-9
+    H = material.T2H(T)
+    assert evaluate(material.H2T(H), dT_m, melting_range) == pytest.approx(T, abs=tol)
+
+
+def test_mushy_zone(material):
+    # Melting from T_m - 1 K to T_m + 1 K, without smoothing: the enthalpy is linear in
+    # temperature, with the latent heat plus the mean sensible heat over the range
+    melting_range = 2
+
+    def value(symbol):
+        return evaluate(symbol, 0, melting_range)
+
+    T_s, T_l = T_m - 1, T_m + 1
+    H_s, H_l = value(material.H_solidus), value(material.H_liquidus)
+    assert value(material.T2H(T_s)) == pytest.approx(H_s)
+    assert value(material.T2H(T_l)) == pytest.approx(H_l)
+    rho_c_p_mushy = (value(material.rho_c_p_s) + value(material.rho_c_p_l)) / 2
+    assert H_l - H_s == pytest.approx(
+        value(material.rho_L) + rho_c_p_mushy * melting_range
+    )
+    for T, phi in [(T_s + 0.5, 0.25), (T_m, 0.5), (T_l - 0.2, 0.9)]:
+        H = material.T2H(T)
+        assert value(material.H2T(H)) == pytest.approx(T, abs=1e-9)
+        assert value(material.liquid_fraction(H)) == pytest.approx(phi)
+
+
+@pytest.mark.parametrize("melting_range", [0, 2])
+def test_no_smoothing_has_finite_derivatives(material, melting_range):
+    # A smoothing width of 0 gives exact corners, yet the Jacobian stays finite there
+    y = pybamm.StateVector(slice(0, 1))
+    parameter_values = get_parameter_values()
+    parameter_values["PCM smoothing width [K]"] = 0
+    parameter_values["PCM melting range [K]"] = melting_range
+    for corner in (material.H_solidus, material.H_liquidus):
+        H = parameter_values.evaluate(corner)
+        T = parameter_values.process_symbol(material.H2T(y))
+        dTdH = T.jac(y).evaluate(y=np.array([H]))
+        assert np.all(np.isfinite(dTdH.toarray() if hasattr(dTdH, "toarray") else dTdH))
 
 
 def test_round_trip_close_to_melting_temperature(material):
@@ -34,7 +75,7 @@ def test_round_trip_close_to_melting_temperature(material):
         assert evaluate(material.H2T(material.T2H(T))) == pytest.approx(T)
 
 
-def test_melting_temperature_is_solid(material):
+def test_sharp_melting_temperature_is_solid(material):
     assert evaluate(material.T2H(T_m)) == pytest.approx(evaluate(material.H_solidus))
     assert evaluate(material.liquid_fraction(material.T2H(T_m))) == pytest.approx(
         0, abs=1e-9

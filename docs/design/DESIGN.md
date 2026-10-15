@@ -174,8 +174,11 @@ internal states.
 **Melting range is physical; smoothing is separate** (maintainer, 2026-10-14). The material
 has a physical melting range, with `H(T)` linear between solidus and liquidus (a data-sheet
 value users will fit), and a separate small numerical smoothing width for the corners
-(speed-up of 2 to 3 times for about 0.05 K at 0.5 K). Today one parameter,
-`"PCM melting range [K]"`, is used as the smoothing width; splitting it is a contract change.
+(speed-up of 2 to 3 times for about 0.05 K at 0.5 K). The parameters are
+`"PCM melting range [K]"` (physical, solidus to liquidus around the melting temperature;
+default 0, a sharp melting point) and `"PCM smoothing width [K]"` (numerical; default 0.5 K).
+Either or both may be 0 (F-035). In the mushy zone the enthalpy carries the latent heat plus
+the mean of the solid and liquid heat capacities.
 
 ### D8. Fluid-property object is the only door to fluid properties
 Provides thermophysical properties only: `T(h, p)`, `rho`, `c_p`, `k` and `mu`, as functions
@@ -350,7 +353,7 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
 - Parameter naming details and namespacing scheme for family-specific geometry. *Stage A:
   materials are prefixed (`PCM ...`, `Metal ...`); finned-pipe geometry is unprefixed for
   now. The prefixes are the hook for parameter layering (D1); geometry stays family-specific
-  (D4). Also to name: the smoothing width separate from the melting range (D7).*
+  (D4). The smoothing width is `"PCM smoothing width [K]"` (D7).*
 - Exact submodel metadata format (requires / provides / parameters / assumptions). *Stage A
   draft: submodels are small PyBaMM models coupled through `pybamm.CoupledVariable`;
   `requires` and `provides` are read from the code, `assumptions` declared, wiring checked at

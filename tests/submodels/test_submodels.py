@@ -14,7 +14,6 @@ from pytes.submodels import (
     StorageGeometry,
 )
 from pytes.submodels.fluid import HEAT_GAIN, INITIAL_TEMPERATURE
-from pytes.submodels.storage import INITIAL_LIQUID_FRACTION
 
 
 class Composition(pytes.BaseModel):
@@ -128,8 +127,8 @@ def test_insulated_storage_keeps_its_energy():
                 "Phase-change material boundary heat flux [W.m-2]": (
                     pybamm.PrimaryBroadcast(0, "pipe")
                 ),
-                INITIAL_TEMPERATURE: p.T_m,
-                INITIAL_LIQUID_FRACTION: pybamm.Scalar(0.4),
+                # Inside a 2 K melting range: liquid fraction (T - T_solidus) / 2 K = 0.4
+                INITIAL_TEMPERATURE: p.T_m - 0.2,
                 # Read by the base model's events (none in operating mode None)
                 "Outlet temperature [K]": p.T_m,
             },
@@ -143,8 +142,11 @@ def test_insulated_storage_keeps_its_energy():
         "PCM vertical": {y: {"min": model.param.R_f, "max": model.param.H}},
         "pipe": {z: {"min": 0, "max": model.param.Z}},
     }
+    parameter_values = model.default_parameter_values
+    parameter_values["PCM melting range [K]"] = 2
     sim = pybamm.Simulation(
         model,
+        parameter_values=parameter_values,
         geometry=geometry,
         submesh_types={d: pybamm.Uniform1DSubMesh for d in geometry},
         var_pts={y: 5, z: 3},
@@ -153,8 +155,8 @@ def test_insulated_storage_keeps_its_energy():
     solution = sim.solve([0, 600])
     E = solution["Phase-change material thermal energy [J]"].entries
     np.testing.assert_allclose(E, E[0], rtol=1e-12)
-    # Constant in time; 0.4 up to the smoothing of the melting point, which shifts the
-    # liquid fraction by about width**2 / (4 phi) with width = rho_c_p dT_m / rho_L
+    # Constant in time; 0.4 up to the smoothing of the corners, which shifts the liquid
+    # fraction by about w**2 / (4 phi), with w the smoothing width in liquid fraction
     phi = solution["Average liquid fraction"].entries
     np.testing.assert_allclose(phi, phi[0], rtol=1e-9)
     assert phi[0] == pytest.approx(0.4, abs=1e-4)

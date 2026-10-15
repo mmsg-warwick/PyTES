@@ -73,8 +73,7 @@ and fluid excluded), `Mean storage temperature [K]`, `Pressure drop [Pa]`.
 uniform states is `pytes.energy_between(model, T_a, T_b)` (§5).
 
 **Also provided by every current model:** `Power [kW]`, `Discharged energy [kWh]`,
-`Initial uniform temperature [K]`, `Initial uniform liquid fraction`, `Heat transfer fluid
-thermal energy [J]`.
+`Initial uniform temperature [K]`, `Heat transfer fluid thermal energy [J]`.
 
 **Family-specific:** prefixed (`Fin temperature [K]`). `Phase-change material ...` names are
 the PCM storage's own (for the sharp-front model, the composite).
@@ -100,7 +99,9 @@ does not demand a twin (e.g. a `[K difference]` unit tag).
 
 **Materials:** `<prefix> ...` names, prefix `PCM` (phase change) or `Metal` (sensible):
 `PCM solid phase conductivity [W.m-1.K-1]`, `PCM latent heat [J.kg-1]`, `PCM melting
-temperature [K]`, `PCM melting range [K]`, `Metal density [kg.m-3]`, etc.
+temperature [K]` (the middle of the melting range), `PCM melting range [K]` (solidus to
+liquidus, physical; 0 for a sharp melting point), `PCM smoothing width [K]` (numerical
+rounding of the corners; 0 for exact corners), `Metal density [kg.m-3]`, etc.
 
 **Fluid:** `Heat transfer fluid density [kg.m-3]`, `... specific heat capacity
 [J.kg-1.K-1]`, `... conductivity [W.m-1.K-1]` (unused; kept for axial diffusion),
@@ -113,31 +114,35 @@ default).
 Namespacing is open (DESIGN §4).
 
 `pytes.parameters.validate_parameter_values` checks that the reference and initial
-temperatures are positive and the melting range is not negative.
+temperatures are positive and the parameters it is given (e.g. the melting range and the
+smoothing width) are not negative.
 
 ## 5. Energy reference and initial state (DESIGN D13, D14)
 
-- Every energy is zero at the uniform state at `T_ref` (solid at `T_m`). The fluid's
-  enthalpy is zero there; storage energies subtract the material's `T2H(T_ref)`.
-- Uniform states are parametrised by `(T, phi)`, with `phi = 1` if `T > T_m`, else 0. Each
-  heat-holding submodel implements `uniform_energy(T, phi)`; `DeviceEnergy.uniform_energy(T)`
+- Every energy is zero at the uniform equilibrium state at `T_ref`. The fluid's enthalpy is
+  zero there; storage energies subtract the material's `T2H(T_ref)`.
+- A uniform state is set by its temperature alone: each material is at `T2H(T)` (for a
+  sharp melting point, solid at `T_m`; with a melting range, partly liquid inside it). Each
+  heat-holding submodel implements `uniform_energy(T)`; `DeviceEnergy.uniform_energy(T)`
   sums them.
-- Initial state: `(T_init, phi)`; each submodel starts there, exposed as
-  `Initial uniform temperature [K]` and `Initial uniform liquid fraction`. Other starts use
-  `model.set_initial_conditions_from(solution)`.
+- Initial state: uniform at `T_init`, exposed as `Initial uniform temperature [K]`. Other
+  starts use `model.set_initial_conditions_from(solution)`.
 - `pytes.energy_between(model, T_a, T_b, parameter_values=None, var_pts=None)`: the total
   thermal energy between the uniform states at `T_a` and `T_b`, discretised on the model's
   mesh, so it matches the model's `Total thermal energy [J]` exactly.
 - The models have no events; cut-offs are experiment terminations (DESIGN D11).
 - Checked (`check_initial_state`): at `T_init` equal to `T_ref`, between `T_ref` and `T_m`,
-  and above `T_m`, the initial state is uniform at `T_init` and its total thermal energy is
-  `energy_between(model, T_ref, T_init)`.
+  at `T_m` and above it, the initial state is uniform at `T_init` and its total thermal
+  energy is `energy_between(model, T_ref, T_init)`; run with and without a melting range.
 
 ## 6. Materials (DESIGN D7)
 
 A material exposes `internal_states` (empty today), `changes_phase`, `H2T(H, states)`,
-`T2H(T)`, `equilibrium_enthalpy(T, phi)`, `k(H, states)`, `H_scale` and `H_reference`; a
-phase-change material also `liquid_fraction(H, states)`. Sensible materials (`SensibleMaterial`,
+`T2H(T)`, `k(H, states)`, `H_scale` and `H_reference`; a phase-change material also
+`liquid_fraction(H, states)`, `T_solidus`, `T_liquidus`, `H_solidus` and `H_liquidus`. In
+the mushy zone `H` is linear in `T`: the latent heat plus the mean of the solid and liquid
+heat capacities. `H2T`, `k` and the liquid fraction are smoothed at the solidus and liquidus
+over the smoothing width (floored at 1e-9 K); `T2H` is exact. Sensible materials (`SensibleMaterial`,
 the fin metal) go through the same storage submodel. Enthalpy is per unit volume, relative to 0 K internally. The check "T depends
 on H alone" (`check_stateless_materials`) applies only when `internal_states` is empty.
 
