@@ -23,8 +23,7 @@ from .step import (
     MASS_FLOW_RATE,
     START_TIME,
     BaseStep,
-    ConstantPowerFlowRate,
-    ConstantPowerInletTemperature,
+    ConstantPower,
 )
 
 #: Input parameter selecting the active branch of the experiment model (1-based)
@@ -186,13 +185,13 @@ def build_experiment_model(model, experiment, parameter_values):
 
 def _failure_hint(step):
     """Likely cause of a solver failure in a step, for the warning"""
-    if isinstance(step, ConstantPowerFlowRate):
+    if isinstance(step, ConstantPower) and step.adjusted == MASS_FLOW_RATE:
         return (
             " The mass flow rate needed to hold the power grows without bound as the"
             " outlet temperature approaches the inlet temperature: limit it with"
             " step.mass_flow_rate_above(...)."
         )
-    if isinstance(step, ConstantPowerInletTemperature):
+    if isinstance(step, ConstantPower) and step.adjusted == INLET_TEMPERATURE:
         return (
             " Consider limiting the inlet temperature with"
             " step.inlet_temperature_below(...) or step.inlet_temperature_above(...)."

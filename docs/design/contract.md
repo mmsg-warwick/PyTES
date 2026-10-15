@@ -159,6 +159,9 @@ coefficient is not a fluid property: it belongs to the coupling's surface flux l
 `Mass flow rate [kg.s-1]`. Each step declares `controls`; the runner rejects a step that
 does not drive exactly the model's controls. Power equations in steps use
 `model.power(variables, replaced_controls)`, so they stay `mdot (h_out - h_in)`.
+Step types: `ConstantInputs(inlet_temperature, mass_flow_rate)` holds both controls;
+`ConstantPower(power, inlet_temperature=... | mass_flow_rate=...)` holds the one given and
+adjusts the other (`step.adjusted`), raising unless exactly one is given.
 
 ## 9. Conformance checks
 

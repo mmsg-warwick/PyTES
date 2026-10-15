@@ -224,7 +224,7 @@ series). Cycles group steps and can repeat. Returns an ordinary `pybamm.Solution
   `ConstantPower(P, inlet_temperature=...)` adjusts the mass flow rate; giving both or
   neither raises. Rationale: the names `ConstantPowerInletTemperature` and
   `ConstantPowerFlowRate` read as what is held, but named what is adjusted. The rule extends
-  to refrigerant controls (D9). Today's code still has the two classes.
+  to refrigerant controls (D9).
 Upstream contributions are welcome later but are not assumed.
 
 ### D11. Operating mode is defined by heat flow into or out of the storage

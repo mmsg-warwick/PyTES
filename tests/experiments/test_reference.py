@@ -19,8 +19,8 @@ def test_matches_reference_experiment():
     model = pytes.SharpFrontModel()
     steps = [
         s.ConstantInputs(T_COLD, MDOT, duration=60, period=10),
-        s.ConstantPowerFlowRate(15e3, T_COLD, duration=300, period=10),
-        s.ConstantPowerInletTemperature(20e3, MDOT, duration=300, period=10),
+        s.ConstantPower(15e3, inlet_temperature=T_COLD, duration=300, period=10),
+        s.ConstantPower(20e3, mass_flow_rate=MDOT, duration=300, period=10),
     ]
     solution = run_experiment(
         model, Experiment(steps), var_pts={model.y: 4, model.z: 5}

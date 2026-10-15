@@ -369,86 +369,79 @@ class ConstantInputs(BaseStep):
         }
 
 
-class ConstantPowerInletTemperature(BaseStep):
+class ConstantPower(BaseStep):
     """
-    Hold the power [W] (positive for discharge) by adjusting the inlet temperature, at a
-    given mass flow rate [kg.s-1]. Use :func:`inlet_temperature_below` and
-    :func:`inlet_temperature_above` to limit the inlet temperature.
+    Hold the power [W] (positive for discharge) by adjusting the one control that is not
+    given (DESIGN D10). Give exactly one of:
+
+    - ``mass_flow_rate``: the inlet temperature is adjusted. Use
+      :func:`inlet_temperature_below` and :func:`inlet_temperature_above` to limit it.
+    - ``inlet_temperature``: the mass flow rate is adjusted. Use
+      :func:`mass_flow_rate_above` to limit it: the flow needed grows without bound as the
+      outlet temperature approaches the inlet temperature. The step also ends if the mass
+      flow rate would become negative.
 
     Parameters
     ----------
     power : float, numpy.ndarray or callable
         Power of the whole battery [W], positive for discharge and negative for charge.
-    mass_flow_rate : float, numpy.ndarray or callable
-        Mass flow rate through the whole device [kg.s-1]. Must not be 0: no power can be
-        exchanged without flow.
+    inlet_temperature : float, numpy.ndarray or callable, optional
+        Inlet temperature [K], held.
+    mass_flow_rate : float, numpy.ndarray or callable, optional
+        Mass flow rate through the whole device [kg.s-1], held. Must not be 0: no power can
+        be exchanged without flow.
     **kwargs
         ``duration``, ``termination``, ``period`` and ``description``, see
         :class:`BaseStep`.
+
+    Attributes
+    ----------
+    adjusted : str
+        Name of the control the step adjusts.
+
+    Raises
+    ------
+    ValueError
+        If both controls or neither are given.
     """
 
-    def __init__(self, power, mass_flow_rate, **kwargs):
-        super().__init__(
-            [Target("Power [W]", power), Target(MASS_FLOW_RATE, mass_flow_rate)],
-            **kwargs,
-        )
-
-    def control_residuals(self, variables, targets, power):
-        """
-        The power, written with the target mass flow rate, equals its target, and the mass
-        flow rate equals its target
-        """
-        # The power with the target mass flow rate (which the mass flow rate equals in
-        # this step), so that the equation depends on the inlet temperature even when the
-        # mass flow rate starts from 0 (e.g. after a rest)
-        mdot = targets[MASS_FLOW_RATE]
-        return {
-            INLET_TEMPERATURE: power({MASS_FLOW_RATE: mdot}) - targets["Power [W]"],
-            MASS_FLOW_RATE: variables[MASS_FLOW_RATE] - mdot,
+    def __init__(self, power, *, inlet_temperature=None, mass_flow_rate=None, **kwargs):
+        held = {
+            name: value
+            for name, value in (
+                (INLET_TEMPERATURE, inlet_temperature),
+                (MASS_FLOW_RATE, mass_flow_rate),
+            )
+            if value is not None
         }
-
-
-class ConstantPowerFlowRate(BaseStep):
-    """
-    Hold the power [W] (positive for discharge) by adjusting the mass flow rate, at a given
-    inlet temperature [K]. Use :func:`mass_flow_rate_above` to limit the mass flow rate: the
-    flow needed grows without bound as the outlet temperature approaches the inlet
-    temperature. The step also ends if the mass flow rate would become negative.
-
-    Parameters
-    ----------
-    power : float, numpy.ndarray or callable
-        Power of the whole battery [W], positive for discharge and negative for charge.
-    inlet_temperature : float, numpy.ndarray or callable
-        Inlet temperature [K].
-    **kwargs
-        ``duration``, ``termination``, ``period`` and ``description``, see
-        :class:`BaseStep`.
-    """
-
-    def __init__(self, power, inlet_temperature, **kwargs):
+        free = [name for name in self.controls if name not in held]
+        if len(free) != 1:
+            raise ValueError(
+                "ConstantPower adjusts one control to hold the power: give exactly one "
+                "of inlet_temperature and mass_flow_rate"
+            )
+        self.adjusted = free[0]
         super().__init__(
-            [
-                Target("Power [W]", power),
-                Target(INLET_TEMPERATURE, inlet_temperature),
-            ],
+            [Target("Power [W]", power)]
+            + [Target(name, value) for name, value in held.items()],
             **kwargs,
         )
 
     def safety_terminations(self):
-        """End the step if the flow rate would become negative"""
-        return [_ThresholdTermination(MASS_FLOW_RATE, 0, below=True)]
+        """End the step if the mass flow rate, when adjusted, would become negative"""
+        if self.adjusted == MASS_FLOW_RATE:
+            return [_ThresholdTermination(MASS_FLOW_RATE, 0, below=True)]
+        return []
 
     def control_residuals(self, variables, targets, power):
         """
-        The inlet temperature equals its target, and the power, written with the target
-        inlet temperature, equals its target
+        The held control equals its target, and the power, written with the held control
+        at its target, equals its target
         """
-        # The power with the target inlet temperature (which the inlet temperature
-        # equals in this step), so that the equation depends on the mass flow rate
-        # whatever the inlet temperature starts from
-        T_in = targets[INLET_TEMPERATURE]
-        return {
-            INLET_TEMPERATURE: variables[INLET_TEMPERATURE] - T_in,
-            MASS_FLOW_RATE: power({INLET_TEMPERATURE: T_in}) - targets["Power [W]"],
-        }
+        held = {name: targets[name] for name in self.controls if name != self.adjusted}
+        residuals = {name: variables[name] - value for name, value in held.items()}
+        # The power with the held control at its target (which it equals in this step),
+        # so that the equation depends on the adjusted control whatever the held one
+        # starts from (e.g. a mass flow rate of 0 after a rest)
+        residuals[self.adjusted] = power(held) - targets["Power [W]"]
+        return residuals
