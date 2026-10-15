@@ -97,7 +97,8 @@ testable in isolation.
   - *Per device:* the shared interface is always whole-device, in J and W, so experiments,
     power controls and measurements mean the same in every family. Families may add
     normalised twins as extra outputs (e.g. per unit bed cross-section [J.m-2], per tube),
-    so the bed needs a cross-section parameter (F-002).
+    so the bed needs a cross-section parameter (F-002). The bed provides them with the
+    `PerAreaTotals` submodel ("Power per unit area [W.m-2]" and so on).
 
 ### D5. Three slots: fluid, storage, coupling
 - **Fluid** is written once. Geometry-neutral form, with `q'` the heat exchanged per unit
@@ -335,6 +336,7 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
 |---|---|
 | Refrigerant HTF (PCM unit as condenser/evaporator) | Power from enthalpy; fluid-property object; controls declared by model; fluid slot not defined as an advection PDE; outlet state concept; operating mode by heat flow |
 | Kinetic undercooling, hysteresis, subcooling | Storage state list; material maps `(H, states) -> T` and declares state names; states evolved by a kinetics submodel (D7); conservation tests unchanged; "T = f(H)" test only for stateless materials |
+| Capsule shell (packed bed) | Resistance only: a series-resistance surface flux law (D6), no new state. Thermal mass too: the shell as a second `EnthalpyStorage` of a sensible material on a spherical shell domain, coupled to the fluid and to the PCM like the fins in the mush model; needs `EnthalpyStorage` boundary conditions from couplings on both sides (today the outer side is zero flux). `"Capsule radius [m]"` is the outer radius, so `"Capsule shell thickness [m]"` (default 0) adds without renames |
 | Casing and heat losses | Heat loss power variable (zero); total energy includes everything that holds heat in the model |
 | Flow-dependent film coefficient (Nusselt/Reynolds) | The coefficient lives in the coupling's replaceable surface flux law (D6), constant for now, using properties from the fluid-property object and the family geometry (D8) |
 | Lumped capsule fidelity | Storage geometry switch and shared parameters |

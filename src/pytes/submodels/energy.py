@@ -89,3 +89,45 @@ class DeviceEnergy(BaseSubModel):
         self.variables = add_temperature_variables(
             variables, {INITIAL_TEMPERATURE: param.T_init}
         )
+
+
+class PerAreaTotals(BaseSubModel):
+    """
+    Device totals per unit of a reference area, as family-specific twins of the shared
+    whole-device outputs (DESIGN D4): for each total ``"<name> [<unit>]"``, the variable
+    ``"<name> per unit area [<unit>.m-2]"``.
+
+    Parameters
+    ----------
+    param : object
+        The model's parameters.
+    area : pybamm.Symbol
+        The reference area [m2], e.g. a bed cross-section.
+    totals : iterable of str, optional
+        Names of the totals, each ending in "[W]" or "[J]" (default: power, discharged
+        energy, storage and total thermal energy).
+    """
+
+    def __init__(
+        self,
+        param,
+        area,
+        totals=(
+            "Power [W]",
+            "Discharged energy [J]",
+            "Storage thermal energy [J]",
+            "Total thermal energy [J]",
+        ),
+        name="Per-area totals",
+    ):
+        self.area = area
+        self.totals = tuple(totals)
+        super().__init__(param, name)
+
+    def build(self):
+        variables = {}
+        for total in self.totals:
+            stem, unit = total[: total.rindex("[")].strip(), total[total.rindex("[") :]
+            per_area = f"{stem} per unit area {unit[:-1]}.m-2]"
+            variables[per_area] = self.coupled(total) / self.area
+        self.variables = variables

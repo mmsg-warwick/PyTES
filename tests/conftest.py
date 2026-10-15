@@ -3,10 +3,10 @@ import pytest
 import pytes
 
 #: Every admitted model. The conformance suite runs over all of them.
-MODELS = [pytes.SharpFrontModel, pytes.MushModel]
+MODELS = [pytes.SharpFrontModel, pytes.MushModel, pytes.PackedBedModel]
 
 #: A coarse mesh for fast tests, by spatial variable name
-COARSE_MESH = {"x": 5, "y": 6, "z": 10}
+COARSE_MESH = {"r": 5, "x": 5, "y": 6, "z": 10}
 
 
 def var_pts(model, mesh=None):

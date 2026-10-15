@@ -11,7 +11,7 @@ executable form is `src/pytes/conformance.py`, run over every model by
 - A **fixed composition** of submodels in `model.submodels` (an ordered dict), shown by
   `model.print_submodel_info()`. Users call models; advanced users may build their own from
   submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
-- It belongs to a family (today: `finned_tube`) and passes the conformance suite.
+- It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance suite.
 
 ## 2. Submodels
 
@@ -44,7 +44,7 @@ with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (
 | Slot | Contract | Current submodels |
 |---|---|---|
 | Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"flow path"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"flow path"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
-| Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy; and, for a phase-change material only, the liquid fraction. | `EnthalpyStorage` (PCM, composite, fin metal) |
+| Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy; and, for a phase-change material only, the liquid fraction. | `EnthalpyStorage` (PCM, composite, fin metal, PCM capsule) |
 | Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, h_f, T_f, T_s)`, positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `T_f - T_s`. | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
 | Device energy | Power, energies, initial state. | `DeviceEnergy` |
 
@@ -75,7 +75,10 @@ uniform states is `pytes.energy_between(model, T_a, T_b)` (§5).
 **Also provided by every current model:** `Power [kW]`, `Discharged energy [kWh]`,
 `Initial uniform temperature [K]`, `Heat transfer fluid thermal energy [J]`.
 
-**Family-specific:** prefixed (`Fin temperature [K]`). `Phase-change material ...` names are
+**Family-specific:** prefixed (`Fin temperature [K]`). The packed bed adds the device totals
+per unit bed cross-section (`Power per unit area [W.m-2]`, `Discharged energy per unit area
+[J.m-2]`, `Storage thermal energy per unit area [J.m-2]`, `Total thermal energy per unit
+area [J.m-2]`) from the `PerAreaTotals` submodel. `Phase-change material ...` names are
 the PCM storage's own (for the sharp-front model, the composite).
 
 **Units:** temperatures in K only; every `[K]` variable gets a `[degC]` twin from

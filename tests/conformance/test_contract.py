@@ -58,7 +58,7 @@ def test_no_events(model_class):
     "mesh, dT_m, melting_range",
     [
         (COARSE_MESH, 0, 0),
-        ({"x": 3, "y": 3, "z": 4}, 0, 0),
+        ({"r": 3, "x": 3, "y": 3, "z": 4}, 0, 0),
         (COARSE_MESH, 0.5, 0),
         (COARSE_MESH, 0, 2),
         (COARSE_MESH, 0.5, 2),

@@ -21,12 +21,14 @@ from . import (
 )
 from .models import BaseModel, ComposedModel, WiringError
 from .models.finned_tube import MushModel, SharpFrontModel
+from .models.packed_bed import PackedBedModel
 from .postprocessing import energy_between
 
 __all__ = [
     "BaseModel",
     "ComposedModel",
     "MushModel",
+    "PackedBedModel",
     "SharpFrontModel",
     "WiringError",
     "energy_between",
