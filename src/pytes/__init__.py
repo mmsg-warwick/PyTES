@@ -4,8 +4,9 @@ PyTES: models and tools for heat batteries (thermal energy storage), built on Py
 - Models (strict): :mod:`pytes.models`, by family. Each is a fixed composition of
   submodels, listed in ``model.submodels``.
 - Toolkit (permissive): materials (:mod:`pytes.materials`), fluids (:mod:`pytes.fluids`),
-  experiments (:mod:`pytes.experiments`), post-processing (:mod:`pytes.postprocessing`)
-  and the conformance checks (:mod:`pytes.conformance`).
+  experiments (:mod:`pytes.experiments`), post-processing (:mod:`pytes.postprocessing`),
+  the conformance checks (:mod:`pytes.conformance`) and analytical solutions for validation
+  (:mod:`pytes.validation`).
 """
 
 from . import (
@@ -17,6 +18,7 @@ from . import (
     parameters,
     postprocessing,
     submodels,
+    validation,
     variables,
 )
 from .models import BaseModel, ComposedModel, WiringError
@@ -40,5 +42,6 @@ __all__ = [
     "parameters",
     "postprocessing",
     "submodels",
+    "validation",
     "variables",
 ]

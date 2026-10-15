@@ -428,7 +428,8 @@ affecting physics); fluid porosity and capacity terms; domain layout; naming.
 
 ## 6. Validation strategy
 
-Analytical and invariant checks first, experimental data at v1.0: energy conservation
+Analytical and invariant checks first, experimental data at v1.0 (analytical solutions in
+`pytes.validation`; benchmarks in `tests/validation/`): energy conservation
 (exact), Schumann solution (sensible bed), Stefan problem (planar and spherical),
 reference-model comparison for the finned tube, cross-fidelity comparison within a family,
 energy-reference checks.
