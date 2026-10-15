@@ -64,9 +64,11 @@ testable in isolation.
 - **Options** (PyBaMM style): a model's `options` dict selects among submodels, e.g. the
   fluid (dynamic or quasi-steady, D5) or the film coefficient. `operating_mode` and
   `initial_state` are removed (D11, D14). This is the preferred route for variants.
-  *Introduced with the first real variant* (maintainer, 2026-10-14): today no model has a
-  choice to make, and adding `options=None` later is backward compatible. Values are
-  capitalised as names are (e.g. `"surface heat flux": "Newton"`).
+  *Introduced with the first real variant* (maintainer, 2026-10-14), which is
+  `"storage": "resolved" | "averaged"` (D4; maintainer, 2026-10-15). Each model declares
+  `allowed_options`, the first value of each being the default; unknown options or values
+  raise `pytes.OptionError`, and `check_options` rejects incompatible combinations. Values
+  are lower case unless they are names (e.g. `"surface heat flux": "Newton"`).
 - **No silent swaps.** An option combination that is incompatible raises an error naming the
   conflict; a model never replaces a submodel the user did not ask for. Rationale: PyBaMM's
   options grew complicated and it swapped submodels silently to keep combinations working,
@@ -90,6 +92,13 @@ testable in isolation.
     effective coefficient) is a logged exception.
   - *Outputs:* a higher-fidelity model provides every variable of the simpler models in its
     family and may add more (e.g. the mush model's fin variables).
+  - *Averaged storage* (maintainer, 2026-10-15): every model has the option
+    `"storage": "averaged"`, in which one storage cross-section (a capsule, an annulus, a
+    fin-PCM unit) stands for the average along the flow path and exchanges heat with the
+    fluid averaged along it. Averaging is a fidelity choice that applies across families,
+    so it is an option, not a model class per family (it replaces the planned
+    `AverageCapsuleModel`, F-019). In the mush model the fin-PCM unit is averaged, with
+    the fins and the PCM still separate submodels.
 - **Across families:** same device-level interface: the contract's required outputs,
   experiments, and a small shared device description (reference and initial temperature, HTF,
   controls: mass flow rate and inlet temperature). Geometry parameters stay in
@@ -363,8 +372,16 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
   `requires` and `provides` are read from the code, `assumptions` declared, wiring checked at
   build (`contract.md` §2). Still open: per-submodel parameter lists. The display API (D3)
   shows this metadata.*
-- Shape of the options (D3): option names and values, how incompatible options are
-  reported. *Deferred to the first real variant; the composition API is settled (D3).*
+- Shape of the options (D3). *Settled with the first option, `"storage"` (D3, F-041).*
+- How an averaged storage exchanges heat with the fluid (D4; parked by the maintainer,
+  2026-10-15). *Today (a), as PB's `ReducedModel`: one flux from the fluid averaged along
+  the flow path, taken uniformly from the fluid. It conserves energy exactly but can drive
+  the fluid outside its inlet and initial temperatures (the default bed's outlet dips to
+  27 °C from 32 °C). Candidate (b): the local flux `h (T_f(z) - T_s)` against the averaged
+  storage surface; the storage receives its mean, the fluid the exact ledger total plus a
+  zero-sum redistribution `-S (q(z) - mean q)`, with `S` the storage surface per unit
+  length of flow path (a new geometric quantity per family). A prototype on the bed removed
+  the dip and kept conservation exact (2e-14).*
 - Interface of the surface flux law (D6): its arguments (states on both sides, properties,
   geometry, `mdot`) and how a custom law is passed in.
 - Domain and coordinate naming for the capsule radius and the fin domains. *Settled: the

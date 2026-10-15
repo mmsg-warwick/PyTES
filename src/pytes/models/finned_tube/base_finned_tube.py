@@ -19,43 +19,82 @@ class BaseFinnedTubeModel(BaseModel):
     are multiplied by the number of tubes. See
     :mod:`pytes.models.finned_tube.parameters` for the geometry and the assumptions.
 
+    Options:
+
+    - "storage": "resolved" (default), the storage at every point along the tube; or
+      "averaged", one storage cross-section standing for the average along the tube,
+      exchanging heat with the fluid averaged along it (DESIGN D3, D4).
+
+    Parameters
+    ----------
+    name : str
+        The name of the model.
+    options : dict, optional
+        The model's options.
+
     Attributes
     ----------
     y : pybamm.SpatialVariable
         Distance from the tube axis [m], from the tube radius to the PCM outer radius, in
-        the "PCM vertical" domain (cylindrical coordinates).
+        the "PCM vertical" domain (cylindrical coordinates), with the "flow path" as its
+        secondary domain unless the storage is averaged.
     z : pybamm.SpatialVariable
         Distance along the tube from the inlet [m], in the "flow path" domain.
     """
 
-    def __init__(self, name):
+    allowed_options = {"storage": ("resolved", "averaged")}
+
+    def __init__(self, name, options=None):
+        super().__init__(name=name, options=options)
+
+    @property
+    def averaged(self):
+        """Whether the storage is averaged along the tube"""
+        return self.options["storage"] == "averaged"
+
+    def storage_domains(self, *domains):
+        """The given storage domains, then the flow path unless the storage is averaged"""
+        domains = [*domains] if self.averaged else [*domains, "flow path"]
+        return dict(zip(("primary", "secondary", "tertiary"), domains, strict=False))
+
+    def set_spatial_variables(self):
         self.y = pybamm.SpatialVariable(
             "y",
-            domains={"primary": "PCM vertical", "secondary": "flow path"},
+            domains=self.storage_domains("PCM vertical"),
             coord_sys="cylindrical polar",
         )
         self.z = pybamm.SpatialVariable(
             "z", domains={"primary": "flow path"}, coord_sys="cartesian"
         )
-        super().__init__(name=name)
 
     def get_parameters(self):
         return FinnedTubeParameters()
 
+    @property
+    def flow_path(self):
+        """The flow paths: one per tube"""
+        param = self.param
+        return FlowPath(self.z, param.Z, param.area, param.N_tubes)
+
     def fluid_submodel(self):
         """The heat transfer fluid in the tubes"""
-        param = self.param
-        flow_path = FlowPath(self.z, param.Z, param.area, param.N_tubes)
-        return AdvectedFluid(param, param.fluid, flow_path)
+        return AdvectedFluid(self.param, self.param.fluid, self.flow_path)
+
+    def storage_flow_path(self):
+        """The flow path a storage geometry is averaged along, or None if resolved"""
+        return self.flow_path if self.averaged else None
 
     def integrate_over_tube(self, symbol):
         """
         Integrate a symbol over one tube: for a "PCM vertical" symbol, its integral over the
         annulus around the tube, ``int int symbol 2 pi y dy dz``; for a "flow path" symbol,
-        ``int symbol dz``.
+        ``int symbol dz``. A storage averaged along the tube is the same at every ``z``,
+        so its integral along the tube is the tube length times its value.
         """
         if symbol.domain == ["PCM vertical"]:
             symbol = pybamm.Integral(symbol, self.y)
+        if symbol.domain == []:
+            return self.param.Z * symbol
         return pybamm.Integral(symbol, self.z)
 
     @property

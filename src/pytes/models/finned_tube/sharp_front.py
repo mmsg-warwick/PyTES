@@ -35,10 +35,12 @@ class SharpFrontModel(BaseFinnedTubeModel):
     ----------
     name : str, optional
         The name of the model.
+    options : dict, optional
+        The model's options; see :class:`BaseFinnedTubeModel`.
     """
 
-    def __init__(self, name="Sharp front model"):
-        super().__init__(name=name)
+    def __init__(self, name="Sharp front model", options=None):
+        super().__init__(name=name, options=options)
 
     def set_submodels(self):
         param = self.param
@@ -51,7 +53,13 @@ class SharpFrontModel(BaseFinnedTubeModel):
             # The integral in cylindrical coordinates includes 2 pi y
             return pybamm.Integral(symbol, y)
 
-        geometry = StorageGeometry(y, integrate, cross_section_integral, inner="left")
+        geometry = StorageGeometry(
+            y,
+            integrate,
+            cross_section_integral,
+            inner="left",
+            flow_path=self.storage_flow_path(),
+        )
         fluid = self.fluid_submodel()
         # The PCM and the fins are homogenised into a composite material, which keeps the
         # "Phase-change material" variable names

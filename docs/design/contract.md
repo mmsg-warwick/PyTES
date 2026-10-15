@@ -11,7 +11,10 @@ executable form is `src/pytes/conformance.py`, run over every model by
 - A **fixed composition** of submodels in `model.submodels` (an ordered dict), shown by
   `model.print_submodel_info()`. Users call models; advanced users may build their own from
   submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
-- It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance suite.
+- It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance
+  suite, with every combination of its options (`allowed_options`; today `"storage":
+  "resolved" | "averaged"` in every model). Unknown options or values raise
+  `pytes.OptionError`.
 
 ## 2. Submodels
 

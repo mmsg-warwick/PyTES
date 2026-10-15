@@ -13,6 +13,10 @@ class WiringError(ValueError):
     """The submodels' inputs and outputs do not fit together"""
 
 
+class OptionError(ValueError):
+    """An option, a value or a combination of options that the model does not allow"""
+
+
 class BaseModel(pybamm.BaseModel):
     """
     A heat battery model: a fixed composition of submodels (DESIGN D3).
@@ -30,15 +34,24 @@ class BaseModel(pybamm.BaseModel):
     The equations are the same for charge and discharge, and the model has no events:
     cut-offs are the terminations of an experiment (DESIGN D11).
 
+    Variants are chosen through ``options`` (DESIGN D3): each model declares the values it
+    allows in :attr:`allowed_options`, the first being the default. An unknown option or
+    value raises, as does a combination :meth:`check_options` rejects; a model never swaps a
+    submodel the user did not ask for.
+
     Parameters
     ----------
     name : str
         The name of the model.
+    options : dict, optional
+        The model's options; missing ones take their defaults.
 
     Attributes
     ----------
     param : object
         The parameters, from :meth:`get_parameters`.
+    options : dict
+        The model's options, defaults included.
     submodels : dict
         The submodels, by name, in the order they were added.
     controls : dict
@@ -49,12 +62,52 @@ class BaseModel(pybamm.BaseModel):
     #: Scale of the temperature variables [K]
     temperature_scale = 200
 
-    def __init__(self, name):
+    #: Allowed values of each option, the first being the default
+    allowed_options = {}
+
+    def __init__(self, name, options=None):
         super().__init__(name=name)
+        self.options = self.process_options(options)
+        self.set_spatial_variables()
         self.param = self.get_parameters()
         self.submodels = {}
         self.set_submodels()
         self.build_model()
+
+    def process_options(self, options):
+        """
+        The options with their defaults filled in.
+
+        Raises
+        ------
+        pytes.OptionError
+            If an option or a value is not allowed, or the combination is rejected by
+            :meth:`check_options`.
+        """
+        options = dict(options or {})
+        for key, value in options.items():
+            if key not in self.allowed_options:
+                raise OptionError(
+                    f"{self.name}: option '{key}' not recognised; the options are "
+                    f"{sorted(self.allowed_options)}"
+                )
+            if value not in self.allowed_options[key]:
+                raise OptionError(
+                    f"{self.name}: value '{value}' of option '{key}' not recognised; "
+                    f"it must be one of {list(self.allowed_options[key])}"
+                )
+        options = {
+            key: options.get(key, values[0])
+            for key, values in self.allowed_options.items()
+        }
+        self.check_options(options)
+        return options
+
+    def check_options(self, options):
+        """Raise :class:`pytes.OptionError` for an incompatible combination (none yet)"""
+
+    def set_spatial_variables(self):
+        """Create the spatial variables, which may depend on the options"""
 
     def get_parameters(self):
         """Return the model's parameters"""

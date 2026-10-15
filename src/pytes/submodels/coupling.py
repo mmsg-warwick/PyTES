@@ -34,6 +34,11 @@ class LedgerWallCoupling(BaseSubModel):
     slightly, as the storage flux uses the conductivity at the cell face rather than at the
     surface.)
 
+    For a storage averaged along the flow path (``geometry.averaged``), the flux law sees
+    the fluid state averaged along the flow path, and the heat the fluid gains is spread
+    uniformly along it; energy stays exact, as the storage integrates over the flow path
+    length.
+
     Parameters
     ----------
     param : object
@@ -76,9 +81,15 @@ class LedgerWallCoupling(BaseSubModel):
         h_f = self.coupled(FLUID_ENTHALPY, "flow path")
         T_f = self.coupled(FLUID_TEMPERATURE, "flow path")
         T_s = self.coupled(f"{label} surface temperature [K]", geometry.boundary_domain)
+        heat_gain = -geometry.cross_section_integral(conduction)
+        if geometry.averaged:
+            path = geometry.flow_path
+            h_f = pybamm.Integral(h_f, path.z) / path.length
+            T_f = pybamm.Integral(T_f, path.z) / path.length
+            heat_gain = pybamm.PrimaryBroadcast(heat_gain, "flow path")
         heat_flux = self.flux_law.heat_flux(self.fluid, h_f, T_f, T_s)
         self.variables = {
-            HEAT_GAIN: -geometry.cross_section_integral(conduction),
+            HEAT_GAIN: heat_gain,
             f"{label} boundary heat flux [W.m-2]": self.flux_factor * heat_flux,
         }
 

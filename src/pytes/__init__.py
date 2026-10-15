@@ -21,7 +21,7 @@ from . import (
     validation,
     variables,
 )
-from .models import BaseModel, ComposedModel, WiringError
+from .models import BaseModel, ComposedModel, OptionError, WiringError
 from .models.finned_tube import MushModel, SharpFrontModel
 from .models.packed_bed import PackedBedModel
 from .postprocessing import energy_between
@@ -30,6 +30,7 @@ __all__ = [
     "BaseModel",
     "ComposedModel",
     "MushModel",
+    "OptionError",
     "PackedBedModel",
     "SharpFrontModel",
     "WiringError",

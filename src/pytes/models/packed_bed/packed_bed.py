@@ -40,30 +40,50 @@ class PackedBedModel(BaseModel):
     - "per-area totals": :class:`pytes.submodels.PerAreaTotals`, the device totals per unit
       bed cross-sectional area (e.g. "Power per unit area [W.m-2]").
 
+    Options:
+
+    - "storage": "resolved" (default), a capsule at every point along the bed; or
+      "averaged", one capsule standing for the average along the bed, exchanging heat with
+      the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
+      ``encapsulated-LTES`` repository).
+
     Parameters
     ----------
     name : str, optional
         The name of the model.
+    options : dict, optional
+        The model's options.
 
     Attributes
     ----------
     r : pybamm.SpatialVariable
         Distance from the capsule centre [m], from 0 to the capsule radius, in the
-        "capsule" domain (spherical).
+        "capsule" domain (spherical), with the "flow path" as its secondary domain unless
+        the storage is averaged.
     z : pybamm.SpatialVariable
         Distance along the bed from the inlet [m], in the "flow path" domain.
     """
 
-    def __init__(self, name="Packed bed model"):
+    allowed_options = {"storage": ("resolved", "averaged")}
+
+    def __init__(self, name="Packed bed model", options=None):
+        super().__init__(name=name, options=options)
+
+    @property
+    def averaged(self):
+        """Whether the capsules are averaged along the bed"""
+        return self.options["storage"] == "averaged"
+
+    def set_spatial_variables(self):
+        domains = {"primary": "capsule"}
+        if not self.averaged:
+            domains["secondary"] = "flow path"
         self.r = pybamm.SpatialVariable(
-            "r",
-            domains={"primary": "capsule", "secondary": "flow path"},
-            coord_sys="spherical polar",
+            "r", domains=domains, coord_sys="spherical polar"
         )
         self.z = pybamm.SpatialVariable(
             "z", domains={"primary": "flow path"}, coord_sys="cartesian"
         )
-        super().__init__(name=name)
 
     def get_parameters(self):
         return PackedBedParameters()
@@ -74,20 +94,25 @@ class PackedBedModel(BaseModel):
 
         # The integral over r of a spherical symbol is over the capsule volume (it
         # includes 4 pi r**2); there are capsule_density capsules per unit bed volume
-        def integrate(symbol):
-            return (
-                param.A
-                * param.capsule_density
-                * pybamm.Integral(pybamm.Integral(symbol, r), z)
-            )
-
         def cross_section_integral(symbol):
             return param.A * param.capsule_density * pybamm.Integral(symbol, r)
 
-        geometry = StorageGeometry(r, integrate, cross_section_integral, inner="right")
-        fluid = AdvectedFluid(
-            param, param.fluid, FlowPath(z, param.Z, param.flow_area, 1)
+        # An averaged capsule is the same at every z
+        def integrate(symbol):
+            per_length = cross_section_integral(symbol)
+            if self.averaged:
+                return param.Z * per_length
+            return pybamm.Integral(per_length, z)
+
+        flow_path = FlowPath(z, param.Z, param.flow_area, 1)
+        geometry = StorageGeometry(
+            r,
+            integrate,
+            cross_section_integral,
+            inner="right",
+            flow_path=flow_path if self.averaged else None,
         )
+        fluid = AdvectedFluid(param, param.fluid, flow_path)
         storage = EnthalpyStorage(param, param.pcm, geometry)
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage

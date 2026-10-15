@@ -42,6 +42,8 @@ class MushModel(BaseFinnedTubeModel):
     ----------
     name : str, optional
         The name of the model.
+    options : dict, optional
+        The model's options; see :class:`BaseFinnedTubeModel`.
 
     Attributes
     ----------
@@ -50,17 +52,16 @@ class MushModel(BaseFinnedTubeModel):
         pitch, in the "PCM horizontal" domain.
     """
 
-    def __init__(self, name="Mush model"):
+    def __init__(self, name="Mush model", options=None):
+        super().__init__(name=name, options=options)
+
+    def set_spatial_variables(self):
+        super().set_spatial_variables()
         self.x = pybamm.SpatialVariable(
             "x",
-            domains={
-                "primary": "PCM horizontal",
-                "secondary": "PCM vertical",
-                "tertiary": "flow path",
-            },
+            domains=self.storage_domains("PCM horizontal", "PCM vertical"),
             coord_sys="cartesian",
         )
-        super().__init__(name=name)
 
     def set_submodels(self):
         param = self.param
@@ -85,11 +86,15 @@ class MushModel(BaseFinnedTubeModel):
             return pybamm.Integral(param.delta * symbol, y)
 
         fluid = self.fluid_submodel()
+        # When averaged, the fin-PCM unit is averaged along the tube: the fins and the PCM
+        # stay separate submodels, and only the fins exchange heat with the fluid
         pcm_geometry = StorageGeometry(x, integrate_pcm, pcm_cross_section)
         pcm = EnthalpyStorage(
             param, param.pcm, pcm_geometry, inner_condition="temperature"
         )
-        fin_geometry = StorageGeometry(y, integrate_fin, fin_cross_section)
+        fin_geometry = StorageGeometry(
+            y, integrate_fin, fin_cross_section, flow_path=self.storage_flow_path()
+        )
         # The fin metal is a sensible material, its enthalpy scaled like the temperatures
         fins = EnthalpyStorage(
             param,
