@@ -14,20 +14,35 @@ import pybamm
 
 from .postprocessing import energy_between
 from .submodels import BaseSubModel, EnthalpyStorage
-from .variables import REQUIRED_VARIABLES
+from .variables import REQUIRED_VARIABLES, is_temperature_difference
 
 
 def check_required_variables(model):
-    """Every required variable is defined, and every [K] variable has its [degC] twin"""
+    """
+    Every required variable is defined, every [K] temperature has its [degC] twin, and no
+    temperature difference has one (DESIGN D12)
+    """
     missing = [name for name in REQUIRED_VARIABLES if name not in model.variables]
     assert not missing, f"{model.name}: missing required variables {missing}"
+
+    def twin(name):
+        return name[: -len("[K]")] + "[degC]"
+
+    kelvin = [name for name in model.variables if name.endswith("[K]")]
     no_twin = [
         name
-        for name in model.variables
-        if name.endswith("[K]")
-        and name[: -len("[K]")] + "[degC]" not in model.variables
+        for name in kelvin
+        if not is_temperature_difference(name) and twin(name) not in model.variables
     ]
     assert not no_twin, f"{model.name}: temperatures without a [degC] twin {no_twin}"
+    twinned = [
+        name
+        for name in kelvin
+        if is_temperature_difference(name) and twin(name) in model.variables
+    ]
+    assert not twinned, (
+        f"{model.name}: temperature differences with a [degC] twin {twinned}"
+    )
 
 
 def check_submodels(model):

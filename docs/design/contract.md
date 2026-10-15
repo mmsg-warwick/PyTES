@@ -79,9 +79,11 @@ uniform states is `pytes.energy_between(model, T_a, T_b)` (§5).
 the PCM storage's own (for the sharp-front model, the composite).
 
 **Units:** temperatures in K only; every `[K]` variable gets a `[degC]` twin from
-`pytes.variables.add_temperature_variables`. Temperature differences get K-only names
-(DESIGN D12). None exists yet; open: how to name them so that `check_required_variables`
-does not demand a twin (e.g. a `[K difference]` unit tag).
+`pytes.variables.add_temperature_variables`. Temperature differences are K-only (DESIGN
+D12): their names contain "temperature difference" (e.g. `Inlet-outlet temperature
+difference [K]`), they are added with `add_temperature_difference_variables` (which
+`add_temperature_variables` refuses to stand in for), and `check_required_variables` fails
+if one has a `[degC]` twin. No current model provides one.
 
 **Conservation identity** (`check_energy_conservation`, round-off tolerance):
 `Total thermal energy(t) - Total thermal energy(0) = -Discharged energy(t) - int(Heat loss power) dt`.
