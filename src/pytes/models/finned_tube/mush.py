@@ -1,7 +1,7 @@
 #
-# Mush model of the finned-pipe family
+# Mush model of the finned-tube family
 #
-"""Finned-pipe model that resolves the fins and the PCM between them."""
+"""Finned-tube model that resolves the fins and the PCM between them."""
 
 import pybamm
 
@@ -12,18 +12,18 @@ from ...submodels import (
     FinRootCoupling,
     StorageGeometry,
 )
-from .base_finned_pipe import BaseFinnedPipeModel
+from .base_finned_tube import BaseFinnedTubeModel
 
 
-class MushModel(BaseFinnedPipeModel):
+class MushModel(BaseFinnedTubeModel):
     """
-    Finned-pipe model that resolves the fins and the PCM separately. Heat flows from the
-    pipe wall along annular fins ("PCM vertical") and from the fins into the PCM between
-    them ("PCM horizontal"), at each point along the pipe.
+    Finned-tube model that resolves the fins and the PCM separately. Heat flows from the
+    tube wall along annular fins ("PCM vertical") and from the fins into the PCM between
+    them ("PCM horizontal"), at each point along the tube.
 
-    The PCM only exchanges heat with the fins: it does not touch the pipe wall, and heat
+    The PCM only exchanges heat with the fins: it does not touch the tube wall, and heat
     flows through it only across the gap between two fins (in ``x``), not radially or along
-    the pipe. By symmetry, only half the gap is modelled, from the fin surface
+    the tube. By symmetry, only half the gap is modelled, from the fin surface
     (``x = d_c / 2``) to the midplane (``x = d_m / 2``). The PCM uses the properties of the
     PCM on its own (:class:`pytes.materials.PureMaterial`).
 
@@ -56,7 +56,7 @@ class MushModel(BaseFinnedPipeModel):
             domains={
                 "primary": "PCM horizontal",
                 "secondary": "PCM vertical",
-                "tertiary": "pipe",
+                "tertiary": "flow path",
             },
             coord_sys="cartesian",
         )
@@ -70,7 +70,7 @@ class MushModel(BaseFinnedPipeModel):
         # integrating over x and multiplying by 2 / d_m gives the PCM per unit length of
         # the fin pitch
         def integrate_pcm(symbol):
-            return param.N_pipes * self.integrate_over_pipe(
+            return param.N_tubes * self.integrate_over_tube(
                 2 / param.d_m * pybamm.Integral(symbol, x)
             )
 
@@ -79,7 +79,7 @@ class MushModel(BaseFinnedPipeModel):
 
         # The fins take up a fraction delta of the annulus
         def integrate_fin(symbol):
-            return param.N_pipes * self.integrate_over_pipe(param.delta * symbol)
+            return param.N_tubes * self.integrate_over_tube(param.delta * symbol)
 
         def fin_cross_section(symbol):
             return pybamm.Integral(param.delta * symbol, y)
@@ -114,7 +114,7 @@ class MushModel(BaseFinnedPipeModel):
     @property
     def default_geometry(self):
         """
-        That of :class:`BaseFinnedPipeModel`, plus the half-gap between two fins (``x``
+        That of :class:`BaseFinnedTubeModel`, plus the half-gap between two fins (``x``
         from half the fin thickness to half the fin pitch)
         """
         geometry = super().default_geometry

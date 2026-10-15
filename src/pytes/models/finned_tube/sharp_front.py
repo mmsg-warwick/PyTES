@@ -1,7 +1,7 @@
 #
-# Sharp-front model of the finned-pipe family
+# Sharp-front model of the finned-tube family
 #
-"""Finned-pipe model in which the PCM and the fins are homogenised."""
+"""Finned-tube model in which the PCM and the fins are homogenised."""
 
 import pybamm
 
@@ -11,14 +11,14 @@ from ...submodels import (
     LedgerWallCoupling,
     StorageGeometry,
 )
-from .base_finned_pipe import BaseFinnedPipeModel
+from .base_finned_tube import BaseFinnedTubeModel
 
 
-class SharpFrontModel(BaseFinnedPipeModel):
+class SharpFrontModel(BaseFinnedTubeModel):
     """
-    Finned-pipe model in which the PCM and the fins are homogenised into a single composite
+    Finned-tube model in which the PCM and the fins are homogenised into a single composite
     material (:class:`pytes.materials.CompositeMaterial`), with heat conduction across the
-    PCM ("PCM vertical", radially from the pipe) at each point along the pipe. With a sharp
+    PCM ("PCM vertical", radially from the tube) at each point along the tube. With a sharp
     melting point and no smoothing ("PCM melting range [K]" and "PCM smoothing width [K]"
     both 0) the melting front is sharp, hence the name.
 
@@ -28,7 +28,7 @@ class SharpFrontModel(BaseFinnedPipeModel):
     - "storage": :class:`pytes.submodels.EnthalpyStorage` of the composite, in cylindrical
       coordinates;
     - "coupling": :class:`pytes.submodels.LedgerWallCoupling`, the composite touching the
-      pipe wall;
+      tube wall;
     - "device energy": :class:`pytes.submodels.DeviceEnergy`.
 
     Parameters
@@ -45,7 +45,7 @@ class SharpFrontModel(BaseFinnedPipeModel):
         y = self.y
 
         def integrate(symbol):
-            return param.N_pipes * self.integrate_over_pipe(symbol)
+            return param.N_tubes * self.integrate_over_tube(symbol)
 
         def cross_section_integral(symbol):
             # The integral in cylindrical coordinates includes 2 pi y

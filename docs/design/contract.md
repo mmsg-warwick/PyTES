@@ -11,7 +11,7 @@ executable form is `src/pytes/conformance.py`, run over every model by
 - A **fixed composition** of submodels in `model.submodels` (an ordered dict), shown by
   `model.print_submodel_info()`. Users call models; advanced users may build their own from
   submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
-- It belongs to a family (today: `finned_pipe`) and passes the conformance suite.
+- It belongs to a family (today: `finned_tube`) and passes the conformance suite.
 
 ## 2. Submodels
 
@@ -43,7 +43,7 @@ with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (
 
 | Slot | Contract | Current submodels |
 |---|---|---|
-| Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"pipe"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"pipe"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
+| Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"flow path"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"flow path"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
 | Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy; and, for a phase-change material only, the liquid fraction. | `EnthalpyStorage` (PCM, composite, fin metal) |
 | Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, h_f, T_f, T_s)`, positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `T_f - T_s`. | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
 | Device energy | Power, energies, initial state. | `DeviceEnergy` |
@@ -112,7 +112,7 @@ rounding of the corners; 0 for exact corners), `Metal density [kg.m-3]`, etc.
 **Surface flux law:** `Heat transfer coefficient [W.m-2.K-1]` (`NewtonCooling`, the
 default).
 
-**Family geometry:** unprefixed for now (`Pipe radius [m]`, `Number of pipes`, ...).
+**Family geometry:** unprefixed for now (`Tube radius [m]`, `Number of tubes`, ...).
 Namespacing is open (DESIGN §4).
 
 `pytes.parameters.validate_parameter_values` checks that the reference and initial

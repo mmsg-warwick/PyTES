@@ -17,12 +17,13 @@ Two public layers:
   maintainer's review (D1).
 - **Toolkit (permissive):** materials, experiments, KPIs, plots, conformance tests.
 
-Origin: `heat_batteries` (composite finned-pipe family: sharp-front and mush models) and a
+Origin: `heat_batteries` (composite finned-tube family, then called finned pipe: sharp-front
+and mush models) and a
 separate packed-bed repo (encapsulated family, enthalpy method, resolved radial conduction in
 the capsule, constant film coefficient, temperature as fluid state). Both are by the
 maintainer and are PyBaMM models with the same physics (enthalpy method, upwinded fluid),
 but they share neither code nor the conservation approach: the material classes are separate
-copies that differ (F-003), and only the finned pipe conserves energy exactly (F-004). They
+copies that differ (F-003), and only the finned tube conserves energy exactly (F-004). They
 are starting points, not something to preserve as they are.
 
 ## 2. Decided
@@ -95,7 +96,7 @@ testable in isolation.
   family-specific namespaces.
   - *Per device:* the shared interface is always whole-device, in J and W, so experiments,
     power controls and measurements mean the same in every family. Families may add
-    normalised twins as extra outputs (e.g. per unit bed cross-section [J.m-2], per pipe),
+    normalised twins as extra outputs (e.g. per unit bed cross-section [J.m-2], per tube),
     so the bed needs a cross-section parameter (F-002).
 
 ### D5. Three slots: fluid, storage, coupling
@@ -103,7 +104,7 @@ testable in isolation.
   length of flow path:
   `A_flow * rho * dh/dt + mdot * dh/dz = q'`.
   Porosity enters only through `A_flow`. Axial dispersion is an optional extra term (zero for
-  pipes). The contract must not define the fluid slot as "an advection PDE", because a
+  tubes). The contract must not define the fluid slot as "an advection PDE", because a
   quasi-steady fluid (`mdot * dh/dz = q'`) is a planned option (refrigerant, high-flow water).
   - *State is the specific enthalpy* `h` (maintainer, 2026-10-14). The temperature is
     `T(h)` from the fluid-property object. It is an internal state, and enthalpy handles
@@ -137,7 +138,7 @@ and storage-storage (maintainer, 2026-10-14). Rationale: PyBaMM imposes a Neuman
 the gradient, so the flux the finite volumes use is `k_face / k_surface` times the one
 requested, and with a temperature (Dirichlet) condition it is whatever the scheme computes;
 the ledger is exact in both cases, for any conductivity. In a bed, the film resistance works
-as at the finned-pipe wall: the flux uses the boundary value of `T(H)`, with no extra unknown
+as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no extra unknown
 (F-014).
 - **General surface flux law.** Because the ledger makes conservation independent of how the
   boundary flux is computed, the flux law is a replaceable part of the coupling: a function
@@ -251,7 +252,8 @@ from the inputs (inlet state against storage state), and the sign of the power s
     temperature, pressure drop, outlet fluid state (quality, superheat; later).
   - *Family-specific:* namespaced with a prefix ("Capsule ...", "Fin ...") so they cannot
     collide with the shared set.
-- **One standard name for the flow-path coordinate** (`z`) across families.
+- **One standard name for the flow path** across families: domain `"flow path"`,
+  coordinate `z` (maintainer, 2026-10-15; was `"pipe"`, which does not fit a bed).
 - **K canonical.** Models define temperatures in K only. A shared helper generates the Celsius
   twins, tagged `[degC]`. This departs from PyBaMM's `[C]` deliberately: `[C]` is also the
   coulomb, and TES users have no reason to know PyBaMM's habit. Differences are K-only and
@@ -351,7 +353,7 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
   `pytes.variables`. Settled since: temperature-difference naming, fluid enthalpy required,
   no SOC or capacity (D12, D13).*
 - Parameter naming details and namespacing scheme for family-specific geometry. *Stage A:
-  materials are prefixed (`PCM ...`, `Metal ...`); finned-pipe geometry is unprefixed for
+  materials are prefixed (`PCM ...`, `Metal ...`); finned-tube geometry is unprefixed for
   now. The prefixes are the hook for parameter layering (D1); geometry stays family-specific
   (D4). The smoothing width is `"PCM smoothing width [K]"` (D7).*
 - Exact submodel metadata format (requires / provides / parameters / assumptions). *Stage A
@@ -363,12 +365,14 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
   reported. *Deferred to the first real variant; the composition API is settled (D3).*
 - Interface of the surface flux law (D6): its arguments (states on both sides, properties,
   geometry, `mdot`) and how a custom law is passed in.
-- Domain and coordinate naming for the capsule radius and the pipe/fin domains.
+- Domain and coordinate naming for the capsule radius and the fin domains. *Settled: the
+  shared flow domain is `"flow path"`, coordinate `z`, in every family (D12); the finned
+  family uses "tube" (maintainer, 2026-10-15).*
 - How the conformance suite parametrises over models and families. *Stage A draft:
   importable checks in `pytes.conformance`, run over `tests/conftest.py::MODELS`. Must also
   cover every admitted option combination (D3).*
 - Repository layout (one package with family subpackages is the leading option). *Stage A:
-  one package, `pytes.models.finned_pipe` as the first family subpackage.*
+  one package, `pytes.models.finned_tube` as the first family subpackage.*
 - Axial dispersion: include in the first bed port or defer. *The fluid equation keeps it as
   an optional term (D5); `k_f` is kept for it.*
 
@@ -406,7 +410,7 @@ controls-declared-by-model change requires).
 `findings.md` before any refactoring. Report before proceeding.
 
 ### Stage B brief: port the encapsulated bed
-**Goal:** the packed-bed family passes the same conformance suite as the finned-pipe family.
+**Goal:** the packed-bed family passes the same conformance suite as the finned-tube family.
 **Acceptance criteria:**
 - Conformance suite passes unmodified for both families, or each exception is a logged
   finding with a verdict.
@@ -415,7 +419,7 @@ controls-declared-by-model change requires).
   solution within a stated tolerance.
 - Spherical Stefan benchmark passes for the capsule storage.
 - A shared fluid submodel is used by both families.
-- Liquid fraction weighting is consistent with the finned-pipe definition (D13).
+- Liquid fraction weighting is consistent with the finned-tube definition (D13).
 **Expected friction, in order of likelihood:** power and fluid-state definition; film
 coefficient source; exactness of energy conservation across the coupling; controls (flow rate
 affecting physics); fluid porosity and capacity terms; domain layout; naming.
@@ -424,5 +428,5 @@ affecting physics); fluid porosity and capacity terms; domain layout; naming.
 
 Analytical and invariant checks first, experimental data at v1.0: energy conservation
 (exact), Schumann solution (sensible bed), Stefan problem (planar and spherical),
-reference-model comparison for the finned pipe, cross-fidelity comparison within a family,
+reference-model comparison for the finned tube, cross-fidelity comparison within a family,
 energy-reference checks.

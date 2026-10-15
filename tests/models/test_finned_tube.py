@@ -1,4 +1,4 @@
-"""The finned-pipe family: construction, behaviour and agreement with the reference models."""
+"""The finned-tube family: construction, behaviour and agreement with the reference models."""
 
 from pathlib import Path
 

@@ -5,7 +5,7 @@ import pybamm
 import pytest
 
 import pytes
-from pytes.models.finned_pipe import FinnedPipeParameters
+from pytes.models.finned_tube import FinnedTubeParameters
 from pytes.submodels import (
     AdvectedFluid,
     BaseSubModel,
@@ -24,14 +24,14 @@ class Composition(pytes.BaseModel):
         super().__init__("Composition")
 
     def get_parameters(self):
-        return FinnedPipeParameters()
+        return FinnedTubeParameters()
 
     def set_submodels(self):
         self.submodels.update(self._make_submodels(self.param))
 
     @property
     def default_parameter_values(self):
-        return pytes.models.finned_pipe.get_parameter_values()
+        return pytes.models.finned_tube.get_parameter_values()
 
 
 class Stub(BaseSubModel):
@@ -45,17 +45,17 @@ class Stub(BaseSubModel):
         self.variables = self.make(self.param, self)
 
 
-z = pybamm.SpatialVariable("z", domains={"primary": "pipe"}, coord_sys="cartesian")
+z = pybamm.SpatialVariable("z", domains={"primary": "flow path"}, coord_sys="cartesian")
 y = pybamm.SpatialVariable(
     "y",
-    domains={"primary": "PCM vertical", "secondary": "pipe"},
+    domains={"primary": "PCM vertical", "secondary": "flow path"},
     coord_sys="cylindrical polar",
 )
 
 
 def fluid_submodel(param):
     return AdvectedFluid(
-        param, param.fluid, FlowPath(z, param.Z, param.area, param.N_pipes)
+        param, param.fluid, FlowPath(z, param.Z, param.area, param.N_tubes)
     )
 
 
@@ -84,7 +84,7 @@ def test_fluid_steady_state_with_uniform_heat_gain():
         source = Stub(
             param,
             lambda p, s: {
-                HEAT_GAIN: pybamm.PrimaryBroadcast(q, "pipe"),
+                HEAT_GAIN: pybamm.PrimaryBroadcast(q, "flow path"),
                 INITIAL_TEMPERATURE: p.T_in,
             },
         )
@@ -92,19 +92,19 @@ def test_fluid_steady_state_with_uniform_heat_gain():
 
     model = Composition(make)
     pv = model.default_parameter_values
-    geometry = {"pipe": {z: {"min": 0, "max": model.param.Z}}}
+    geometry = {"flow path": {z: {"min": 0, "max": model.param.Z}}}
     sim = pybamm.Simulation(
         model,
         parameter_values=pv,
         geometry=geometry,
-        submesh_types={"pipe": pybamm.Uniform1DSubMesh},
+        submesh_types={"flow path": pybamm.Uniform1DSubMesh},
         var_pts={z: 20},
-        spatial_methods={"pipe": pytes.compat.fluid_spatial_method()},
+        spatial_methods={"flow path": pytes.compat.fluid_spatial_method()},
         solver=pybamm.IDAKLUSolver(rtol=1e-9, atol=1e-9),
     )
     solution = sim.solve([0, 600])
-    expected = pv["Inlet temperature [K]"] + pv["Number of pipes"] * q * pv[
-        "Pipe length [m]"
+    expected = pv["Inlet temperature [K]"] + pv["Number of tubes"] * q * pv[
+        "Tube length [m]"
     ] / (
         pv["Mass flow rate [kg.s-1]"]
         * pv["Heat transfer fluid specific heat capacity [J.kg-1.K-1]"]
@@ -117,7 +117,7 @@ def test_fluid_steady_state_with_uniform_heat_gain():
 def test_insulated_storage_keeps_its_energy():
     def make(param):
         def integrate(symbol):
-            return param.N_pipes * pybamm.Integral(pybamm.Integral(symbol, y), z)
+            return param.N_tubes * pybamm.Integral(pybamm.Integral(symbol, y), z)
 
         geometry = StorageGeometry(y, integrate, lambda s: pybamm.Integral(s, y))
         storage = EnthalpyStorage(param, param.composite, geometry)
@@ -125,7 +125,7 @@ def test_insulated_storage_keeps_its_energy():
             param,
             lambda p, s: {
                 "Phase-change material boundary heat flux [W.m-2]": (
-                    pybamm.PrimaryBroadcast(0, "pipe")
+                    pybamm.PrimaryBroadcast(0, "flow path")
                 ),
                 # Inside a 2 K melting range: liquid fraction (T - T_solidus) / 2 K = 0.4
                 INITIAL_TEMPERATURE: p.T_m - 0.2,
@@ -140,7 +140,7 @@ def test_insulated_storage_keeps_its_energy():
     assert storage.states == [storage.H]
     geometry = {
         "PCM vertical": {y: {"min": model.param.R_f, "max": model.param.H}},
-        "pipe": {z: {"min": 0, "max": model.param.Z}},
+        "flow path": {z: {"min": 0, "max": model.param.Z}},
     }
     parameter_values = model.default_parameter_values
     parameter_values["PCM melting range [K]"] = 2
@@ -194,7 +194,9 @@ def test_domain_mismatch_is_detected():
     def alter(submodels, param):
         submodels["extra"] = Stub(
             param,
-            lambda p, s: {"Twice the power [W]": 2 * s.coupled("Power [W]", "pipe")},
+            lambda p, s: {
+                "Twice the power [W]": 2 * s.coupled("Power [W]", "flow path")
+            },
         )
 
     with pytest.raises(pytes.WiringError, match="provides it on"):

@@ -21,7 +21,7 @@ class FlowPath:
 
     The device has ``n_paths`` identical flow paths in parallel, each of length ``length``
     and flow area ``area``. The fluid submodel describes one of them, on the domain
-    ``"pipe"`` with coordinate ``z`` (DESIGN D12). Device totals are multiplied by
+    ``"flow path"`` with coordinate ``z`` (DESIGN D12). Device totals are multiplied by
     ``n_paths``.
 
     Parameters
@@ -94,7 +94,7 @@ class AdvectedFluid(BaseSubModel):
         # the scaled temperature
         h_f = pybamm.Variable(
             FLUID_ENTHALPY,
-            domains={"primary": "pipe"},
+            domains={"primary": "flow path"},
             scale=fluid.h(param.T_ref + param.temperature_scale) - fluid.h(param.T_ref),
             reference=fluid.h(param.temperature_reference),
         )
@@ -106,9 +106,9 @@ class AdvectedFluid(BaseSubModel):
         h_out = pybamm.boundary_value(h_f, "right")
 
         mdot_path = param.mdot / path.n_paths
-        mdot_edge = pybamm.PrimaryBroadcastToEdges(mdot_path, ["pipe"])
+        mdot_edge = pybamm.PrimaryBroadcastToEdges(mdot_path, ["flow path"])
         enthalpy_flux = mdot_edge * pybamm.upwind(h_f)
-        heat_gain = self.coupled(HEAT_GAIN, "pipe")
+        heat_gain = self.coupled(HEAT_GAIN, "flow path")
         self.rhs = {
             h_f: (-pybamm.div(enthalpy_flux) + heat_gain) / (path.area * fluid.rho(h_f))
         }

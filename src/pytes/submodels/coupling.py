@@ -73,8 +73,8 @@ class LedgerWallCoupling(BaseSubModel):
         conduction = self.coupled(
             f"{label} conduction heating rate [W.m-3]", geometry.primary_domain
         )
-        h_f = self.coupled(FLUID_ENTHALPY, "pipe")
-        T_f = self.coupled(FLUID_TEMPERATURE, "pipe")
+        h_f = self.coupled(FLUID_ENTHALPY, "flow path")
+        T_f = self.coupled(FLUID_TEMPERATURE, "flow path")
         T_s = self.coupled(f"{label} surface temperature [K]", geometry.boundary_domain)
         heat_flux = self.flux_law.heat_flux(self.fluid, h_f, T_f, T_s)
         self.variables = {

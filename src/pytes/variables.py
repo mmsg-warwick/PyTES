@@ -38,7 +38,7 @@ OPTIONAL_VARIABLES = (
 FLOW_COORDINATE = "z"
 
 #: Name of the flow-path domain in every family
-FLOW_DOMAIN = "pipe"
+FLOW_DOMAIN = "flow path"
 
 _KELVIN_OFFSET = 273.15
 

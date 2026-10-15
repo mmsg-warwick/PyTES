@@ -4,9 +4,9 @@ import numpy as np
 import pybamm
 import pytest
 
-from pytes.models.finned_pipe import FinnedPipeParameters, get_parameter_values
+from pytes.models.finned_tube import FinnedTubeParameters, get_parameter_values
 
-param = FinnedPipeParameters()
+param = FinnedTubeParameters()
 T_m = get_parameter_values()["PCM melting temperature [K]"]
 
 

@@ -1,20 +1,20 @@
 #
-# Parameter values of the finned-pipe family
+# Parameter values of the finned-tube family
 #
-"""Default parameter values of the finned-pipe family."""
+"""Default parameter values of the finned-tube family."""
 
 import pybamm
 
 
 def get_parameter_values(parameter_set=None):
     """
-    Return parameter values for the finned-pipe models.
+    Return parameter values for the finned-tube models.
 
-    The default set is for a representative heat battery: 14 pipes with a total flow of
+    The default set is for a representative heat battery: 14 tubes with a total flow of
     20 l/min of water, aluminium fins, and a PCM melting at 58 °C. The battery starts uniform
     at 70 °C (liquid) and is discharged with water at 10 °C. Energies are zero at the uniform
     state at the reference temperature, 10 °C. See
-    :class:`pytes.models.finned_pipe.FinnedPipeParameters` for the meaning of each parameter
+    :class:`pytes.models.finned_tube.FinnedTubeParameters` for the meaning of each parameter
     and the geometry.
 
     The PCM has a sharp melting point ("PCM melting range [K]" = 0), whose corners are
@@ -63,11 +63,11 @@ def get_parameter_values(parameter_set=None):
             "Metal density [kg.m-3]": 2700,
             "Metal specific heat capacity [J.kg-1.K-1]": 900,
             # Geometry
-            "Number of pipes": 14,
-            "Pipe radius [m]": 3.25e-3,
-            "Pipe length [m]": 11.1,
+            "Number of tubes": 14,
+            "Tube radius [m]": 3.25e-3,
+            "Tube length [m]": 11.1,
             "Fin thickness [m]": 1.05e-4,
             "Fin spacing [m]": 1.95e-3,
-            "PCM outer radius [m]": 1e-2,  # roughly pipes 2 cm apart
+            "PCM outer radius [m]": 1e-2,  # roughly tubes 2 cm apart
         }
     )

@@ -31,7 +31,7 @@ def test_matches_reference_experiment():
         np.testing.assert_allclose(
             solution[name].entries, expected, rtol=0, atol=1e-6 * np.max(abs(expected))
         )
-    # The reference flow rate was per pipe, in m3.s-1, with water at 1000 kg.m-3
+    # The reference flow rate was per tube, in m3.s-1, with water at 1000 kg.m-3
     np.testing.assert_allclose(
         solution["Mass flow rate [kg.s-1]"].entries,
         REFERENCE["experiment/Inlet flow rate [m3.s-1]"] * 1000 * 14,

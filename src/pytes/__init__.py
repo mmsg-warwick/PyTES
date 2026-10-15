@@ -20,7 +20,7 @@ from . import (
     variables,
 )
 from .models import BaseModel, ComposedModel, WiringError
-from .models.finned_pipe import MushModel, SharpFrontModel
+from .models.finned_tube import MushModel, SharpFrontModel
 from .postprocessing import energy_between
 
 __all__ = [

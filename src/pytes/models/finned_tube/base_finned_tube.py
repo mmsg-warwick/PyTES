@@ -1,7 +1,7 @@
 #
-# Base model of the finned-pipe family
+# Base model of the finned-tube family
 #
-"""Base class of the finned-pipe family: the pipe, the PCM annulus and the defaults."""
+"""Base class of the finned-tube family: the tube, the PCM annulus and the defaults."""
 
 import pybamm
 
@@ -9,49 +9,49 @@ from ... import compat
 from ...submodels import AdvectedFluid, FlowPath
 from ..base_model import BaseModel
 from .parameter_values import get_parameter_values
-from .parameters import FinnedPipeParameters
+from .parameters import FinnedTubeParameters
 
 
-class BaseFinnedPipeModel(BaseModel):
+class BaseFinnedTubeModel(BaseModel):
     """
-    Base model of the finned-pipe family: heat transfer fluid flowing along a pipe that
-    exchanges heat with the surrounding PCM and fins. One pipe is modelled; device totals
-    are multiplied by the number of pipes. See
-    :mod:`pytes.models.finned_pipe.parameters` for the geometry and the assumptions.
+    Base model of the finned-tube family: heat transfer fluid flowing along a tube that
+    exchanges heat with the surrounding PCM and fins. One tube is modelled; device totals
+    are multiplied by the number of tubes. See
+    :mod:`pytes.models.finned_tube.parameters` for the geometry and the assumptions.
 
     Attributes
     ----------
     y : pybamm.SpatialVariable
-        Distance from the pipe axis [m], from the pipe radius to the PCM outer radius, in
+        Distance from the tube axis [m], from the tube radius to the PCM outer radius, in
         the "PCM vertical" domain (cylindrical coordinates).
     z : pybamm.SpatialVariable
-        Distance along the pipe from the inlet [m], in the "pipe" domain.
+        Distance along the tube from the inlet [m], in the "flow path" domain.
     """
 
     def __init__(self, name):
         self.y = pybamm.SpatialVariable(
             "y",
-            domains={"primary": "PCM vertical", "secondary": "pipe"},
+            domains={"primary": "PCM vertical", "secondary": "flow path"},
             coord_sys="cylindrical polar",
         )
         self.z = pybamm.SpatialVariable(
-            "z", domains={"primary": "pipe"}, coord_sys="cartesian"
+            "z", domains={"primary": "flow path"}, coord_sys="cartesian"
         )
         super().__init__(name=name)
 
     def get_parameters(self):
-        return FinnedPipeParameters()
+        return FinnedTubeParameters()
 
     def fluid_submodel(self):
-        """The heat transfer fluid in the pipes"""
+        """The heat transfer fluid in the tubes"""
         param = self.param
-        flow_path = FlowPath(self.z, param.Z, param.area, param.N_pipes)
+        flow_path = FlowPath(self.z, param.Z, param.area, param.N_tubes)
         return AdvectedFluid(param, param.fluid, flow_path)
 
-    def integrate_over_pipe(self, symbol):
+    def integrate_over_tube(self, symbol):
         """
-        Integrate a symbol over one pipe: for a "PCM vertical" symbol, its integral over the
-        annulus around the pipe, ``int int symbol 2 pi y dy dz``; for a "pipe" symbol,
+        Integrate a symbol over one tube: for a "PCM vertical" symbol, its integral over the
+        annulus around the tube, ``int int symbol 2 pi y dy dz``; for a "flow path" symbol,
         ``int symbol dz``.
         """
         if symbol.domain == ["PCM vertical"]:
@@ -61,13 +61,13 @@ class BaseFinnedPipeModel(BaseModel):
     @property
     def default_geometry(self):
         """
-        The PCM annulus (``y`` from the pipe radius to the PCM outer radius) and the pipe
-        (``z`` from 0 to the pipe length)
+        The PCM annulus (``y`` from the tube radius to the PCM outer radius) and the tube
+        (``z`` from 0 to the tube length)
         """
         return pybamm.Geometry(
             {
                 "PCM vertical": {self.y: {"min": self.param.R_f, "max": self.param.H}},
-                "pipe": {self.z: {"min": pybamm.Scalar(0), "max": self.param.Z}},
+                "flow path": {self.z: {"min": pybamm.Scalar(0), "max": self.param.Z}},
             }
         )
 
@@ -86,11 +86,11 @@ class BaseFinnedPipeModel(BaseModel):
 
     @property
     def default_spatial_methods(self):
-        """Finite volumes in every domain; the pipe uses the fluid's spatial method"""
+        """Finite volumes in every domain; the tube uses the fluid's spatial method"""
         spatial_methods = {
             domain: pybamm.FiniteVolume() for domain in self.default_geometry
         }
-        spatial_methods["pipe"] = compat.fluid_spatial_method()
+        spatial_methods["flow path"] = compat.fluid_spatial_method()
         return spatial_methods
 
     @property
@@ -115,5 +115,5 @@ class BaseFinnedPipeModel(BaseModel):
 
     @property
     def default_parameter_values(self):
-        """See :func:`pytes.models.finned_pipe.get_parameter_values`"""
+        """See :func:`pytes.models.finned_tube.get_parameter_values`"""
         return get_parameter_values()
