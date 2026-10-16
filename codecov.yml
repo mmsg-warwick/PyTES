@@ -1,0 +1,16 @@
+# Codecov (https://about.codecov.io): coverage from the "coverage" job in
+# .github/workflows/tests.yml, which runs every test, slow ones included
+coverage:
+  status:
+    project:
+      default:
+        # Coverage may fall by at most 1 % against the base commit
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        # Lines a pull request adds or changes should be tested
+        target: 90%
+comment:
+  layout: "diff, files"
+  require_changes: true

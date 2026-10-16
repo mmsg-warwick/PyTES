@@ -193,6 +193,8 @@ All code needs tests. We use [pytest](https://docs.pytest.org):
 ```bash
 uv run pytest             # the fast tests (the default)
 uv run pytest -m slow     # the slow tests (e.g. the full-size mush model)
+uv run pytest --nbmake examples/   # the example notebooks
+uv run pytest -m "" --cov          # everything, with coverage
 uv run pytest tests/models/test_packed_bed.py::test_charge_melts_the_pcm   # one test
 ```
 
@@ -203,6 +205,9 @@ The suite is organised as:
 - `tests/models/`, `tests/submodels/`, `tests/experiments/`, `tests/toolkit/`: each part of
   PyTES.
 - `tests/validation/`: comparisons with analytical solutions.
+
+Tests are grouped by what they test, not split into unit and integration tests; the `slow`
+marker separates the expensive ones.
 
 ### Writing tests
 
@@ -230,7 +235,8 @@ changes and discrepancies).
 ### Example notebooks
 
 Each capability has a short example notebook in [`examples/`](examples). Notebooks are
-committed with their outputs, so run them before committing, and keep them short.
+committed with their outputs, so run them before committing, and keep them short. CI
+executes every notebook (`uv run pytest --nbmake examples/`) and fails if a cell raises.
 
 ## Infrastructure
 
@@ -246,7 +252,9 @@ Every push and pull request runs, with [GitHub Actions](https://docs.github.com/
 
 - the pre-commit hooks;
 - the tests on every Python version PyBaMM supports, against the latest PyBaMM release;
-- the slow tests;
+- coverage: every test, slow ones included, reported to
+  [Codecov](https://codecov.io/gh/mmsg-warwick/PyTES) (configured in `codecov.yml`);
+- the example notebooks;
 - the tests against PyBaMM's `main` branch (non-blocking, to catch upstream changes early);
 - on pull requests, the check for a changelog fragment.
 

@@ -1,5 +1,6 @@
 # Tests (CLAUDE.md): every Python version PyBaMM supports, against the latest PyBaMM
-# release (blocking) and PyBaMM main (non-blocking), plus pre-commit and the slow tests.
+# release (blocking) and PyBaMM main (non-blocking), plus pre-commit and coverage (all
+# tests, slow ones included, uploaded to Codecov).
 name: Tests
 
 on:
@@ -26,9 +27,6 @@ jobs:
   tests:
     name: Python ${{ matrix.python-version }}, latest PyBaMM release
     runs-on: ubuntu-latest
-    # 3.15: some of PyBaMM's dependencies publish no wheels yet (e.g. PyYAML); promote
-    # to blocking once they install
-    continue-on-error: ${{ matrix.python-version == '3.15' }}
     strategy:
       fail-fast: false
       matrix:
@@ -43,14 +41,34 @@ jobs:
       - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
       - run: uv run pytest
 
-  slow-tests:
-    name: Slow tests
+  coverage:
+    name: Coverage (all tests, slow ones included)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
       - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
-      - run: uv run pytest -m slow
+      - run: uv run pytest -m "" --cov --cov-report=xml
+      - uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # A Codecov outage should not fail the tests
+          fail_ci_if_error: false
+
+  notebooks:
+    name: Example notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+      - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
+      # Executes every notebook in examples/ and fails if a cell raises
+      - run: uv run pytest --nbmake examples/
 
   pybamm-main:
     name: PyBaMM main (non-blocking)
@@ -61,9 +79,12 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync
       # PyBaMM main is a uv workspace (packages/pybamm, packages/pybammsolvers, ...); install
-      # the pybamm package only, with pybammsolvers from PyPI. If main ever requires an
-      # unreleased pybammsolvers, install packages/pybammsolvers from main as well
-      - run: uv pip install "pybamm @ git+https://github.com/pybamm-team/PyBaMM.git@main#subdirectory=packages/pybamm"
+      # the pybamm package only. Its workspace source for pybammsolvers would compile the
+      # solvers (SuiteSparse, SUNDIALS, which need BLAS), so take pybammsolvers from PyPI
+      # instead. If main ever requires an unreleased pybammsolvers, build it with BLAS.
+      - run: >-
+          uv pip install --no-sources-package pybammsolvers
+          "pybamm @ git+https://github.com/pybamm-team/PyBaMM.git@main#subdirectory=packages/pybamm"
       - run: uv run --no-sync pytest
 
   changelog:

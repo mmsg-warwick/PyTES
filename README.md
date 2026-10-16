@@ -7,6 +7,9 @@
 
 # PyTES
 
+[![Tests](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml/badge.svg)](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml)
+[![Coverage](https://codecov.io/gh/mmsg-warwick/PyTES/branch/main/graph/badge.svg)](https://codecov.io/gh/mmsg-warwick/PyTES)
+
 PyTES (Python Thermal Energy Storage) is a library of models and tools for thermal energy storage (also known as heat batteries), built on
 [PyBaMM](https://pybamm.org). What PyBaMM is to electrochemical batteries, PyTES aims to be to thermal
 energy storage: a set of validated models that share one interface, so that designs compare

@@ -361,8 +361,13 @@ versus discharged energy is the key comparison plot.
 - Support PyBaMM releases from the last 3 months (CalVer). CI against the latest release is
   blocking, against `main` non-blocking.
 - Support every Python version PyBaMM supports (maintainer, 2026-10-16; today 3.10 to
-  3.15), tested in CI. A version whose dependencies do not install yet (3.15: no PyYAML
-  wheel) runs non-blocking until they do.
+  3.15), tested in CI, all blocking. A version whose dependencies do not install yet runs
+  non-blocking until they do (3.15 did, until `pybammsolvers` 0.11.1 shipped its wheels).
+- Testing layout (maintainer, 2026-10-16): tests grouped by what they test (`conformance/`,
+  `models/`, `submodels/`, `experiments/`, `toolkit/`, `validation/`), with a `slow` marker
+  for cost, not split into unit and integration (the suite runs in about 25 s, and the
+  conformance suite is clearest as one folder). The example notebooks run in CI with
+  `nbmake`. Coverage (all tests, slow ones included) goes to Codecov.
 - Known upstream items: `pybamm.upwind` inflow uses a ghost node (`2*T_bc - T_1`) and can draw
   in fluid colder than the inlet (workaround in `compat`); first-order upwinding is diffusive
   (matters most for packed-bed thermoclines); face boundary values (#5094, assigned to the

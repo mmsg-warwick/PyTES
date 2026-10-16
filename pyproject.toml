@@ -36,8 +36,10 @@ plot = ["matplotlib", "ipywidgets"]
 
 [dependency-groups]
 dev = [
+  "nbmake>=1.5.5",
   "pre-commit>=3.7",
   "pytest>=8.0",
+  "pytest-cov>=7.1.0",
   "ruff>=0.17",
   "towncrier>=26.9.0",
 ]
@@ -57,6 +59,15 @@ default-groups = ["dev", "notebooks"]
 testpaths = ["tests"]
 addopts = "-m 'not slow'"
 markers = ["slow: long-running tests (run with -m slow)"]
+
+[tool.coverage.run]
+source = ["pytes"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["raise NotImplementedError"]
 
 [tool.ruff]
 line-length = 88
