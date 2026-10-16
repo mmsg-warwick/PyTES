@@ -59,7 +59,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync
-      - run: uv pip install "pybamm @ git+https://github.com/pybamm-team/PyBaMM.git@main"
+      # PyBaMM main is a uv workspace (packages/pybamm, packages/pybammsolvers, ...); install
+      # the pybamm package only, with pybammsolvers from PyPI. If main ever requires an
+      # unreleased pybammsolvers, install packages/pybammsolvers from main as well
+      - run: uv pip install "pybamm @ git+https://github.com/pybamm-team/PyBaMM.git@main#subdirectory=packages/pybamm"
       - run: uv run --no-sync pytest
 
   changelog:
