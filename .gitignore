@@ -13,3 +13,5 @@ dist/
 !/.claude/
 /.claude/settings.local.json
 .cc-writes/
+# Private working notes (e.g. briefs for upstream fixes)
+docs/upstream/

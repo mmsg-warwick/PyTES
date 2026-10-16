@@ -61,3 +61,18 @@ jobs:
       - run: uv sync
       - run: uv pip install "pybamm @ git+https://github.com/pybamm-team/PyBaMM.git@main"
       - run: uv run --no-sync pytest
+
+  changelog:
+    name: Changelog fragment
+    # A pull request with a user-visible change adds a fragment in changelog.d/
+    # (CONTRIBUTING.md); internal changes are labelled "no changelog"
+    if: >-
+      github.event_name == 'pull_request' &&
+      !contains(github.event.pull_request.labels.*.name, 'no changelog')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - run: uv run towncrier check --compare-with origin/${{ github.base_ref }}

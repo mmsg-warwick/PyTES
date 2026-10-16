@@ -370,6 +370,9 @@ versus discharged energy is the key comparison plot.
   (`Discretisation(resolve_coupled_variables=True)`; workaround in `compat`, F-028).
 - No upstream issue filed yet for the inflow ghost node or the coupled-variable resolution
   (maintainer's call when to file).
+- `pybamm.QuickPlot` hard-codes its default line colours, although its docstring says it
+  follows matplotlib's colour cycle; the maintainer will fix it upstream (2026-10-16). No
+  PyTES workaround; pass `colors=` meanwhile.
 
 ### D17. Housekeeping
 Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `slow` marker.
@@ -380,6 +383,13 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
   `tests/conformance/` over every admitted model with every combination of its options
   (`tests/conftest.py::MODELS`).
 - **Options:** shape as in D3 (F-041).
+- **Changelog** (maintainer, 2026-10-16): towncrier fragments in `changelog.d/`
+  (`<PR>.<type>.md`; types breaking, deprecated, feature, improvement, fix; a PR may add
+  several), assembled
+  into `CHANGELOG.md` at release; CI requires a fragment on pull requests unless labelled
+  `no changelog`. Rationale: no conflicts between pull requests and no forgotten entries,
+  the two problems of a hand-edited changelog. `CONTRIBUTING.md` adapted from PyBaMM's
+  (itself from PINTS); licence BSD 3-Clause, "the PyTES developers".
 
 ## 3. Deferred, with the hook that must exist now
 
