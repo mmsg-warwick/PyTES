@@ -74,8 +74,8 @@ def test_power_from_enthalpy(model_class, solutions):
     conformance.check_power_from_enthalpy(solutions(model_class))
 
 
-def test_celsius_twins(model_class, solutions):
-    conformance.check_celsius_twins(solutions(model_class))
+def test_unit_twins(model_class, solutions):
+    conformance.check_unit_twins(solutions(model_class))
 
 
 @pytest.mark.parametrize("melting_range", [0, 2])

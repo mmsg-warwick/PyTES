@@ -6,7 +6,6 @@
 import pybamm
 
 from .. import compat
-from ..variables import add_temperature_variables
 from .base_submodel import BaseSubModel
 
 HEAT_GAIN = "Heat transfer fluid heat gain per unit length [W.m-1]"
@@ -127,14 +126,14 @@ class AdvectedFluid(BaseSubModel):
             # above the uniform state at that temperature
             self.energy_variable: E_f,
         }
-        self.variables = add_temperature_variables(
-            variables,
+        variables.update(
             {
                 FLUID_TEMPERATURE: fluid.T(h_f),
                 "Inlet temperature [K]": T_in,
                 "Outlet temperature [K]": fluid.T(h_out),
-            },
+            }
         )
+        self.variables = variables
 
     def uniform_energy(self, T):
         """

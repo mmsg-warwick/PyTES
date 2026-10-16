@@ -1,8 +1,9 @@
-# PyTES model contract (draft, Stage A)
+# PyTES model contract (Stage B)
 
-Status: **draft**. Nothing here is stable before the end of Stage B (DESIGN §5). The
-executable form is `src/pytes/conformance.py`, run over every model by
-`tests/conformance/`. **Where this page and the tests disagree, the tests win.**
+Status: **Stage B** (closed 2026-10-16). Changes from here on are logged in `findings.md`;
+the contract is frozen at v1.0 (Stage E, DESIGN §5). The executable form is
+`src/pytes/conformance.py`, run over every model by `tests/conformance/`. **Where this page
+and the tests disagree, the tests win.**
 
 ## 1. What a model is
 
@@ -32,7 +33,13 @@ Metadata, on every submodel, read from the code rather than declared separately:
 |---|---|
 | `requires` | Names of its coupled variables (PyBaMM's `coupled_variables`) |
 | `provides` | Names of its `variables` |
-| `assumptions` | One sentence each, for model cards (rendering deferred) |
+| `parameters` | Names of the parameters in its equations, conditions, variables and state scales |
+| `assumptions` | One sentence each, declared, for model cards (rendering deferred) |
+
+On the model: `geometry_parameters`, the parameters of its default geometry (domain
+lengths), and `print_submodel_info()`, which shows all of the above. Every parameter of a
+model's default set belongs to a submodel or to the geometry, except declared hooks
+(tested).
 
 The model merges the submodels with `pybamm.BaseModel.update` and checks the wiring
 (`WiringError` otherwise): each required name is provided by exactly one submodel; no
@@ -40,7 +47,18 @@ variable depends on itself through coupled variables; after resolution, each pro
 variable is on the primary domain its coupled variable declares; no two submodels set
 equations or conditions for the same variable. It then resolves every coupled variable
 (`pytes.compat.resolve_coupled_variables`), so the finished model contains none and works
-with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (open).
+with a default `pybamm.Simulation`.
+
+### Domains (DESIGN D12)
+
+- `"flow path"`, coordinate `z`: along the flow, from the inlet; every family.
+- `"storage depth"`, coordinate `y`: distance into the storage from the heat-exchange wall,
+  **not along the flow** (finned tube; cylindrical around a tube).
+- `"fin gap"`, coordinate `x`: across the gap between two resolved fins (mush model).
+- `"capsule"`, coordinate `r`: from a capsule's centre (packed bed; spherical).
+
+A storage resolved along the flow path has `"flow path"` as its last secondary domain; an
+averaged one (`"storage": "averaged"`) does not.
 
 ### Slots (DESIGN D5)
 
@@ -48,7 +66,7 @@ with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (
 |---|---|---|
 | Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"flow path"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"flow path"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
 | Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy; and, for a phase-change material only, the liquid fraction. | `EnthalpyStorage` (PCM, composite, fin metal, PCM capsule) |
-| Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, h_f, T_f, T_s)`, positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `T_f - T_s`. | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
+| Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, fluid_state, T_s)`, `fluid_state` a `FluidState` with `h`, `T`, `mass_flow_rate` (device), `p` (reserved), positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `fluid_state.T - T_s`; a law's geometry goes to its constructor. | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
 | Device energy | Power, energies, initial state. | `DeviceEnergy` |
 
 ## 3. Variables (DESIGN D12)
@@ -57,26 +75,29 @@ with a default `pybamm.Simulation`. Parameters are not yet listed per submodel (
 
 | Name | Notes |
 |---|---|
-| `Time [s]` | also `[min]`, `[h]` |
+| `Time [s]` | twins `[min]`, `[h]` generated |
 | `Mass flow rate [kg.s-1]` | whole device; a control |
 | `Inlet temperature [K]`, `Outlet temperature [K]` | outlet = value advected out of the last cell |
 | `Inlet specific enthalpy [J.kg-1]`, `Outlet specific enthalpy [J.kg-1]` | zero at the reference temperature |
 | `Power [W]` | `mdot (h_out - h_in)`, positive on discharge |
 | `Discharged energy [J]` | time integral of power (a solver state) |
 | `Storage thermal energy [J]` | storage only (PCM, fins) |
+| `Heat transfer fluid thermal energy [J]` | fluid inventory |
 | `Total thermal energy [J]` | storage + fluid inventory |
 | `Heat loss power [W]` | positive for loss; zero today |
 | `Heat transfer fluid specific enthalpy [J.kg-1]` | along `z`; the fluid state |
 | `Heat transfer fluid temperature [K]` | along `z`; `T(h)` |
 
 **Optional, standard names:** `Average liquid fraction` (weighted by the PCM volume, fins
-and fluid excluded), `Mean storage temperature [K]`, `Pressure drop [Pa]`.
+and fluid excluded).
+
+**Reserved** (no model computes it yet; the first ones must use this name): `Pressure drop
+[Pa]`.
 
 **No state of charge** (DESIGN D13): models provide energies only. The energy between two
 uniform states is `pytes.energy_between(model, T_a, T_b)` (§5).
 
-**Also provided by every current model:** `Power [kW]`, `Discharged energy [kWh]`,
-`Initial uniform temperature [K]`, `Heat transfer fluid thermal energy [J]`.
+**Also provided by every current model:** `Initial uniform temperature [K]`.
 
 **Family-specific:** prefixed (`Fin temperature [K]`). The packed bed adds the device totals
 per unit bed cross-section (`Power per unit area [W.m-2]`, `Discharged energy per unit area
@@ -84,12 +105,12 @@ per unit bed cross-section (`Power per unit area [W.m-2]`, `Discharged energy pe
 area [J.m-2]`) from the `PerAreaTotals` submodel. `Phase-change material ...` names are
 the PCM storage's own (for the sharp-front model, the composite).
 
-**Units:** temperatures in K only; every `[K]` variable gets a `[degC]` twin from
-`pytes.variables.add_temperature_variables`. Temperature differences are K-only (DESIGN
-D12): their names contain "temperature difference" (e.g. `Inlet-outlet temperature
-difference [K]`), they are added with `add_temperature_difference_variables` (which
-`add_temperature_variables` refuses to stand in for), and `check_required_variables` fails
-if one has a `[degC]` twin. No current model provides one.
+**Units** (DESIGN D12): submodels define every variable in SI units. When a model is built,
+`pytes.variables.add_unit_twins` adds twins for every variable in `[K]` (`[degC]`), `[W]`
+(`[kW]`), `[J]` (`[kWh]`) and `[s]` (`[min]`, `[h]`); a twin written by hand is rejected. Temperature differences
+(names containing "temperature difference") get no twin. `check_required_variables` checks
+that every such variable has its twin and no difference has one; `check_unit_twins`
+checks the values.
 
 **Conservation identity** (`check_energy_conservation`, round-off tolerance):
 `Total thermal energy(t) - Total thermal energy(0) = -Discharged energy(t) - int(Heat loss power) dt`.
@@ -118,8 +139,10 @@ rounding of the corners; 0 for exact corners), `Metal density [kg.m-3]`, etc.
 **Surface flux law:** `Heat transfer coefficient [W.m-2.K-1]` (`NewtonCooling`, the
 default).
 
-**Family geometry:** unprefixed for now (`Tube radius [m]`, `Number of tubes`, ...).
-Namespacing is open (DESIGN §4).
+**Family geometry** (DESIGN D1): names start with the geometric object, never a material
+prefix. Finned tube: `Tube radius [m]`, `Tube length [m]`, `Number of tubes`, `Storage
+depth [m]`, `Fin thickness [m]`, `Fin pitch [m]`. Packed bed: `Bed length [m]`, `Bed
+cross-sectional area [m2]`, `Bed porosity`, `Capsule radius [m]`.
 
 `pytes.parameters.validate_parameter_values` checks that the reference and initial
 temperatures are positive and the parameters it is given (e.g. the melting range and the
@@ -174,6 +197,6 @@ adjusts the other (`step.adjusted`), raising unless exactly one is given.
 ## 9. Conformance checks
 
 `check_required_variables`, `check_submodels`, `check_controls`,
-`check_stateless_materials`, `check_celsius_twins`, `check_energy_conservation`,
+`check_stateless_materials`, `check_unit_twins`, `check_energy_conservation`,
 `check_power_from_enthalpy`, `check_initial_state`; and the models have no events.
 Parametrisation: `tests/conftest.py::MODELS` lists every admitted model.

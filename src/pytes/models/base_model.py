@@ -6,7 +6,8 @@
 import pybamm
 
 from .. import compat
-from ..variables import add_temperature_variables
+from ..submodels.base_submodel import parameter_names
+from ..variables import add_unit_twins
 
 
 class WiringError(ValueError):
@@ -150,21 +151,38 @@ class BaseModel(pybamm.BaseModel):
         )
         return mdot * (variables["Outlet specific enthalpy [J.kg-1]"] - fluid.h(T_in))
 
+    @property
+    def geometry_parameters(self):
+        """Names of the parameters in the default geometry (the domain lengths), sorted"""
+        symbols = [
+            bound
+            for domain in self.default_geometry.values()
+            for extent in domain.values()
+            for bound in extent.values()
+            if isinstance(bound, pybamm.Symbol)
+        ]
+        return parameter_names(symbols)
+
     def print_submodel_info(self):
         """
         Print the submodels: for each slot, the class, the variables it requires and
-        provides, and its modelling assumptions (DESIGN D3).
+        provides, the parameters it uses and its modelling assumptions; then the parameters
+        of the model's geometry (DESIGN D3).
         """
         for slot, submodel in self.submodels.items():
             print(f"{slot}: {type(submodel).__name__} ({submodel.name})")
             for heading, names in (
                 ("requires", submodel.requires),
                 ("provides", submodel.provides),
+                ("parameters", submodel.parameters),
                 ("assumptions", submodel.assumptions),
             ):
                 print(f"    {heading}:")
                 for name in names or ("(none)",):
                     print(f"        {name}")
+        print("geometry parameters:")
+        for name in self.geometry_parameters or ("(none)",):
+            print(f"    {name}")
 
     def check_wiring(self):
         """
@@ -240,21 +258,16 @@ class BaseModel(pybamm.BaseModel):
             visit(name)
 
     def build_model(self):
-        """Merge the submodels, check the wiring and resolve the coupled variables"""
+        """
+        Merge the submodels, check the wiring, resolve the coupled variables and add the
+        unit twins (DESIGN D12: the submodels define every quantity in SI units)
+        """
         providers = self.check_wiring()
-        self.variables = {
-            "Time [s]": pybamm.t,
-            "Time [min]": pybamm.t / 60,
-            "Time [h]": pybamm.t / 3600,
-        }
+        self.variables = {"Time [s]": pybamm.t}
         try:
             self.update(*self.submodels.values())
         except pybamm.ModelError as error:
             raise WiringError(str(error)) from None
         compat.resolve_coupled_variables(self)
         self._check_domains(providers)
-
-    @staticmethod
-    def add_temperature_variables(variables, temperatures):
-        """See :func:`pytes.variables.add_temperature_variables`"""
-        return add_temperature_variables(variables, temperatures)
+        self.variables = add_unit_twins(dict(self.variables))

@@ -35,8 +35,8 @@ class BaseFinnedTubeModel(BaseModel):
     Attributes
     ----------
     y : pybamm.SpatialVariable
-        Distance from the tube axis [m], from the tube radius to the PCM outer radius, in
-        the "PCM vertical" domain (cylindrical coordinates), with the "flow path" as its
+        Distance from the tube axis [m], from the tube radius to the storage outer radius ``R_f + D``, in
+        the "storage depth" domain (cylindrical coordinates), with the "flow path" as its
         secondary domain unless the storage is averaged.
     z : pybamm.SpatialVariable
         Distance along the tube from the inlet [m], in the "flow path" domain.
@@ -60,7 +60,7 @@ class BaseFinnedTubeModel(BaseModel):
     def set_spatial_variables(self):
         self.y = pybamm.SpatialVariable(
             "y",
-            domains=self.storage_domains("PCM vertical"),
+            domains=self.storage_domains("storage depth"),
             coord_sys="cylindrical polar",
         )
         self.z = pybamm.SpatialVariable(
@@ -86,12 +86,12 @@ class BaseFinnedTubeModel(BaseModel):
 
     def integrate_over_tube(self, symbol):
         """
-        Integrate a symbol over one tube: for a "PCM vertical" symbol, its integral over the
+        Integrate a symbol over one tube: for a "storage depth" symbol, its integral over the
         annulus around the tube, ``int int symbol 2 pi y dy dz``; for a "flow path" symbol,
         ``int symbol dz``. A storage averaged along the tube is the same at every ``z``,
         so its integral along the tube is the tube length times its value.
         """
-        if symbol.domain == ["PCM vertical"]:
+        if symbol.domain == ["storage depth"]:
             symbol = pybamm.Integral(symbol, self.y)
         if symbol.domain == []:
             return self.param.Z * symbol
@@ -100,12 +100,12 @@ class BaseFinnedTubeModel(BaseModel):
     @property
     def default_geometry(self):
         """
-        The PCM annulus (``y`` from the tube radius to the PCM outer radius) and the tube
+        The PCM annulus (``y`` from the tube radius to the storage outer radius ``R_f + D``) and the tube
         (``z`` from 0 to the tube length)
         """
         return pybamm.Geometry(
             {
-                "PCM vertical": {self.y: {"min": self.param.R_f, "max": self.param.H}},
+                "storage depth": {self.y: {"min": self.param.R_f, "max": self.param.H}},
                 "flow path": {self.z: {"min": pybamm.Scalar(0), "max": self.param.Z}},
             }
         )

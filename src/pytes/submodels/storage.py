@@ -5,7 +5,6 @@
 
 import pybamm
 
-from ..variables import add_temperature_variables
 from .base_submodel import BaseSubModel
 
 INITIAL_TEMPERATURE = "Initial uniform temperature [K]"
@@ -221,15 +220,11 @@ class EnthalpyStorage(BaseSubModel):
                     / geometry.volume,
                 }
             )
-        self.variables = add_temperature_variables(
-            variables,
-            {
-                f"{label} temperature [K]": T,
-                f"{label} surface temperature [K]": pybamm.boundary_value(
-                    T, geometry.inner
-                ),
-            },
+        variables[f"{label} temperature [K]"] = T
+        variables[f"{label} surface temperature [K]"] = pybamm.boundary_value(
+            T, geometry.inner
         )
+        self.variables = variables
 
     def uniform_energy(self, T):
         """

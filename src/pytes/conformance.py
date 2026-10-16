@@ -14,31 +14,27 @@ import pybamm
 
 from .postprocessing import energy_between
 from .submodels import BaseSubModel, EnthalpyStorage
-from .variables import REQUIRED_VARIABLES, is_temperature_difference
+from .variables import REQUIRED_VARIABLES, is_temperature_difference, unit_twins
 
 
 def check_required_variables(model):
     """
-    Every required variable is defined, every [K] temperature has its [degC] twin, and no
-    temperature difference has one (DESIGN D12)
+    Every required variable is defined, and every variable in [K], [W] or [J] has its unit
+    twin, except temperature differences, which have none (DESIGN D12)
     """
     missing = [name for name in REQUIRED_VARIABLES if name not in model.variables]
     assert not missing, f"{model.name}: missing required variables {missing}"
-
-    def twin(name):
-        return name[: -len("[K]")] + "[degC]"
-
-    kelvin = [name for name in model.variables if name.endswith("[K]")]
     no_twin = [
         name
-        for name in kelvin
-        if not is_temperature_difference(name) and twin(name) not in model.variables
+        for name in model.variables
+        if any(twin not in model.variables for twin in unit_twins(name))
     ]
-    assert not no_twin, f"{model.name}: temperatures without a [degC] twin {no_twin}"
+    assert not no_twin, f"{model.name}: variables without a unit twin {no_twin}"
     twinned = [
         name
-        for name in kelvin
-        if is_temperature_difference(name) and twin(name) in model.variables
+        for name in model.variables
+        if is_temperature_difference(name)
+        and name[: -len("[K]")] + "[degC]" in model.variables
     ]
     assert not twinned, (
         f"{model.name}: temperature differences with a [degC] twin {twinned}"
@@ -84,20 +80,19 @@ def check_stateless_materials(model):
         )
 
 
-def check_celsius_twins(solution):
-    """Every [degC] variable is its [K] twin minus 273.15"""
+def check_unit_twins(solution):
+    """Every unit twin equals its SI variable converted (DESIGN D12)"""
     model = solution.all_models[0]
     for name in model.variables:
-        if not name.endswith("[degC]"):
-            continue
-        kelvin = name[: -len("[degC]")] + "[K]"
-        np.testing.assert_allclose(
-            solution[name].entries,
-            solution[kelvin].entries - 273.15,
-            rtol=0,
-            atol=1e-9,
-            err_msg=f"{model.name}: {name}",
-        )
+        for twin, convert in unit_twins(name).items():
+            expected = convert(solution[name].entries)
+            np.testing.assert_allclose(
+                solution[twin].entries,
+                expected,
+                rtol=1e-12,
+                atol=1e-12 * np.max(np.abs(expected)),
+                err_msg=f"{model.name}: {twin}",
+            )
 
 
 def check_energy_conservation(solution, rtol=1e-9):

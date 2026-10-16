@@ -67,7 +67,8 @@ def get_parameter_values(parameter_set=None):
             "Tube radius [m]": 3.25e-3,
             "Tube length [m]": 11.1,
             "Fin thickness [m]": 1.05e-4,
-            "Fin spacing [m]": 1.95e-3,
-            "PCM outer radius [m]": 1e-2,  # roughly tubes 2 cm apart
+            "Fin pitch [m]": 1.95e-3,
+            # Storage outer radius 1 cm: roughly tubes 2 cm apart
+            "Storage depth [m]": 1e-2 - 3.25e-3,
         }
     )

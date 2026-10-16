@@ -20,8 +20,8 @@ def solve(model, mesh_model=None):
 class CubicFlux(SurfaceFluxLaw):
     """A nonlinear law, ``c (T_f - T_s)**3``, with ``c`` from the default coefficient"""
 
-    def heat_flux(self, fluid, h_f, T_f, T_s):
-        return NewtonCooling().coefficient / 25 * (T_f - T_s) ** 3
+    def heat_flux(self, fluid, fluid_state, T_s):
+        return NewtonCooling().coefficient / 25 * (fluid_state.T - T_s) ** 3
 
 
 def with_cubic_flux(base):

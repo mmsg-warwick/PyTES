@@ -14,10 +14,9 @@ surface flux law (:mod:`pytes.submodels.flux_laws`), Newton's law of cooling by 
 
 import pybamm
 
-from ..variables import add_temperature_variables
 from .base_submodel import BaseSubModel
 from .fluid import FLUID_ENTHALPY, FLUID_TEMPERATURE, HEAT_GAIN
-from .flux_laws import NewtonCooling
+from .flux_laws import FluidState, NewtonCooling
 
 
 class LedgerWallCoupling(BaseSubModel):
@@ -87,7 +86,10 @@ class LedgerWallCoupling(BaseSubModel):
             h_f = pybamm.Integral(h_f, path.z) / path.length
             T_f = pybamm.Integral(T_f, path.z) / path.length
             heat_gain = pybamm.PrimaryBroadcast(heat_gain, "flow path")
-        heat_flux = self.flux_law.heat_flux(self.fluid, h_f, T_f, T_s)
+        fluid_state = FluidState(
+            h=h_f, T=T_f, mass_flow_rate=self.coupled("Mass flow rate [kg.s-1]")
+        )
+        heat_flux = self.flux_law.heat_flux(self.fluid, fluid_state, T_s)
         self.variables = {
             HEAT_GAIN: heat_gain,
             f"{label} boundary heat flux [W.m-2]": self.flux_factor * heat_flux,
@@ -173,7 +175,7 @@ class FinPCMCoupling(BaseSubModel):
         fin_source = (
             -2 / self.param.d_c * pybamm.Integral(conduction, geometry.variable)
         )
-        self.variables = add_temperature_variables(
-            {f"{self.fin_label} heat source [W.m-3]": fin_source},
-            {f"{self.pcm_label} boundary temperature [K]": T_c},
-        )
+        self.variables = {
+            f"{self.fin_label} heat source [W.m-3]": fin_source,
+            f"{self.pcm_label} boundary temperature [K]": T_c,
+        }

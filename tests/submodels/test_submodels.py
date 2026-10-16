@@ -48,7 +48,7 @@ class Stub(BaseSubModel):
 z = pybamm.SpatialVariable("z", domains={"primary": "flow path"}, coord_sys="cartesian")
 y = pybamm.SpatialVariable(
     "y",
-    domains={"primary": "PCM vertical", "secondary": "flow path"},
+    domains={"primary": "storage depth", "secondary": "flow path"},
     coord_sys="cylindrical polar",
 )
 
@@ -139,7 +139,7 @@ def test_insulated_storage_keeps_its_energy():
     storage = model.submodels["storage"]
     assert storage.states == [storage.H]
     geometry = {
-        "PCM vertical": {y: {"min": model.param.R_f, "max": model.param.H}},
+        "storage depth": {y: {"min": model.param.R_f, "max": model.param.H}},
         "flow path": {z: {"min": 0, "max": model.param.Z}},
     }
     parameter_values = model.default_parameter_values
@@ -210,3 +210,29 @@ def test_circular_dependency_is_detected():
 
     with pytest.raises(pytes.WiringError, match="Circular dependency"):
         AlteredSharpFront(alter)
+
+
+def test_parameters_are_read_from_the_code():
+    model = pytes.PackedBedModel()
+    submodels = model.submodels
+    assert "PCM latent heat [J.kg-1]" in submodels["storage"].parameters
+    assert "PCM latent heat [J.kg-1]" not in submodels["coupling"].parameters
+    assert "Heat transfer coefficient [W.m-2.K-1]" in submodels["coupling"].parameters
+    assert submodels["device energy"].parameters == ("Initial temperature [K]",)
+    # Domain lengths enter through the geometry, not the equations
+    assert model.geometry_parameters == ("Bed length [m]", "Capsule radius [m]")
+
+
+def test_every_parameter_is_attributed(model_class):
+    # Each parameter of the default set that the model uses belongs to a submodel or to
+    # the geometry
+    model = model_class()
+    attributed = set(model.geometry_parameters).union(
+        *(submodel.parameters for submodel in model.submodels.values())
+    )
+    unused = set(model.default_parameter_values.keys()) - attributed
+    # Parameters kept as hooks, used by no model yet (DESIGN D8, deferred items)
+    assert unused <= {
+        "Heat transfer fluid conductivity [W.m-1.K-1]",
+        "Heat transfer fluid viscosity [Pa.s]",
+    }

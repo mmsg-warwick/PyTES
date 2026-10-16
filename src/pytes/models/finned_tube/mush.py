@@ -18,8 +18,8 @@ from .base_finned_tube import BaseFinnedTubeModel
 class MushModel(BaseFinnedTubeModel):
     """
     Finned-tube model that resolves the fins and the PCM separately. Heat flows from the
-    tube wall along annular fins ("PCM vertical") and from the fins into the PCM between
-    them ("PCM horizontal"), at each point along the tube.
+    tube wall along annular fins ("storage depth") and from the fins into the PCM between
+    them ("fin gap"), at each point along the tube.
 
     The PCM only exchanges heat with the fins: it does not touch the tube wall, and heat
     flows through it only across the gap between two fins (in ``x``), not radially or along
@@ -49,7 +49,7 @@ class MushModel(BaseFinnedTubeModel):
     ----------
     x : pybamm.SpatialVariable
         Distance from the fin centreline [m], from half the fin thickness to half the fin
-        pitch, in the "PCM horizontal" domain.
+        pitch, in the "fin gap" domain.
     """
 
     def __init__(self, name="Mush model", options=None):
@@ -59,7 +59,7 @@ class MushModel(BaseFinnedTubeModel):
         super().set_spatial_variables()
         self.x = pybamm.SpatialVariable(
             "x",
-            domains=self.storage_domains("PCM horizontal", "PCM vertical"),
+            domains=self.storage_domains("fin gap", "storage depth"),
             coord_sys="cartesian",
         )
 
@@ -123,7 +123,7 @@ class MushModel(BaseFinnedTubeModel):
         from half the fin thickness to half the fin pitch)
         """
         geometry = super().default_geometry
-        geometry["PCM horizontal"] = {
+        geometry["fin gap"] = {
             self.x: {"min": self.param.d_c / 2, "max": self.param.d_m / 2}
         }
         return geometry

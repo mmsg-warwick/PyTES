@@ -10,10 +10,10 @@ totals are multiplied by ``N``):
 
 - the HTF flows along a tube of radius ``R_f`` and length ``Z``, with ``z`` the distance from
   the inlet;
-- the PCM fills the annulus around the tube, from the tube wall (``y = R_f``) to an outer
-  radius ``H`` ("PCM outer radius"), with ``y`` the distance from the tube axis. ``H`` is
-  about half the distance between neighbouring tubes, where the heat flux vanishes by
-  symmetry;
+- the PCM fills the storage around the tube, from the tube wall (``y = R_f``) to an outer
+  radius ``H = R_f + D``, with ``y`` the distance from the tube axis and ``D`` the
+  "Storage depth" (its extent from the wall). ``H`` is about half the distance between
+  neighbouring tubes, where the heat flux vanishes by symmetry;
 - metal fins are annular discs around the tube, perpendicular to it, spanning the whole
   annulus. ``d_c`` is the fin thickness and ``d_m`` the fin pitch (the centre-to-centre
   distance between consecutive fins), so the fins take up a volume fraction
@@ -44,14 +44,16 @@ class FinnedTubeParameters(DeviceParameters):
         "Tube radius [m]".
     Z : pybamm.Parameter
         "Tube length [m]".
-    H : pybamm.Parameter
-        "PCM outer radius [m]": the outer radius of the PCM annulus, measured from the tube
-        axis (not the thickness of the PCM layer, which is ``H - R_f``).
+    H : pybamm.Symbol
+        The outer radius of the storage around a tube [m], ``R_f + D``.
+    D : pybamm.Parameter
+        "Storage depth [m]": the extent of the storage from the tube wall (the length of the
+        "storage depth" domain), so that the storage outer radius is about half the
+        distance between neighbouring tubes.
     d_c : pybamm.Parameter
         "Fin thickness [m]".
     d_m : pybamm.Parameter
-        "Fin spacing [m]": the fin pitch, i.e. the centre-to-centre distance between
-        consecutive fins.
+        "Fin pitch [m]": the centre-to-centre distance between consecutive fins.
     delta : pybamm.Symbol
         Volume fraction of the fins, ``d_c / d_m``.
     N_tubes : pybamm.Parameter
@@ -76,9 +78,10 @@ class FinnedTubeParameters(DeviceParameters):
         super().__init__()
         self.R_f = pybamm.Parameter("Tube radius [m]")
         self.Z = pybamm.Parameter("Tube length [m]")
-        self.H = pybamm.Parameter("PCM outer radius [m]")
+        self.D = pybamm.Parameter("Storage depth [m]")
+        self.H = self.R_f + self.D
         self.d_c = pybamm.Parameter("Fin thickness [m]")
-        self.d_m = pybamm.Parameter("Fin spacing [m]")
+        self.d_m = pybamm.Parameter("Fin pitch [m]")
         self.delta = self.d_c / self.d_m
         self.N_tubes = pybamm.Parameter("Number of tubes")
         self.area = np.pi * self.R_f**2

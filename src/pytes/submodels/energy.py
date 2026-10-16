@@ -5,7 +5,6 @@
 
 import pybamm
 
-from ..variables import add_temperature_variables
 from .base_submodel import BaseSubModel
 from .storage import INITIAL_TEMPERATURE
 
@@ -79,16 +78,13 @@ class DeviceEnergy(BaseSubModel):
         E_total = E_storage + self.coupled(self.fluid_component.energy_variable)
         variables = {
             "Power [W]": power,
-            "Power [kW]": power / 1e3,
             "Discharged energy [J]": E_out,
-            "Discharged energy [kWh]": E_out / 3.6e6,
             "Storage thermal energy [J]": E_storage,
             "Total thermal energy [J]": E_total,
             "Heat loss power [W]": pybamm.Scalar(0),
+            INITIAL_TEMPERATURE: param.T_init,
         }
-        self.variables = add_temperature_variables(
-            variables, {INITIAL_TEMPERATURE: param.T_init}
-        )
+        self.variables = variables
 
 
 class PerAreaTotals(BaseSubModel):

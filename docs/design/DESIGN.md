@@ -37,7 +37,12 @@ it. Passing the suite is necessary, not sufficient.
   temperature and controls, HTF, PCM, other materials such as the fin metal, family geometry), so that
   e.g. a PCM can be swapped without touching the rest. Each material and fluid layer has its
   own name prefix so layers merge without clashes. Today each family has one flat default
-  set; the hook that must exist now is the prefixes (namespacing is still open, §4).
+  set; the hook that must exist now is the prefixes.
+- **Parameter names** (maintainer, 2026-10-16): material and fluid properties start with
+  their layer's prefix (`PCM ...`, `Metal ...`, `Heat transfer fluid ...`); geometry starts
+  with the geometric object (`Tube ...`, `Fin ...`, `Bed ...`, `Capsule ...`, `Storage
+  ...`), never with a material prefix. Geometry names are distinct across families without
+  a family prefix, and stay family-specific (D4).
 - **Validation case:** an analytical benchmark (Stefan, Schumann) or a comparison with
   measurements. Experimental data is often unavailable, so an analytical case suffices.
 
@@ -58,8 +63,10 @@ for arbitrary physics (composing PyTES submodels through the submodel interface 
 
 ### D3. Submodel structure, visible and inspectable
 Models are fixed compositions **for a given set of options**. `model.submodels` lists them.
-Each submodel exposes the variables it requires and provides, read from its equations (F-028),
-so wiring can be checked automatically and model cards can be generated later. Submodels are
+Each submodel exposes the variables it requires and provides and the parameters it uses,
+all read from its code (F-028, F-045), and declares its assumptions; the model exposes the
+parameters of its geometry (domain lengths). So wiring can be checked automatically and
+model cards can be generated later. Submodels are
 testable in isolation.
 - **Options** (PyBaMM style): a model's `options` dict selects among submodels, e.g. the
   fluid (dynamic or quasi-steady, D5) or the film coefficient. `operating_mode` and
@@ -99,6 +106,15 @@ testable in isolation.
     so it is an option, not a model class per family (it replaces the planned
     `AverageCapsuleModel`, F-019). In the mush model the fin-PCM unit is averaged, with
     the fins and the PCM still separate submodels.
+  - *Averaged coupling* (maintainer, 2026-10-15): one flux from the fluid averaged along
+    the flow path, taken uniformly from the fluid, as in the maintainer's published reduced
+    model. Rationale: reproduces the published model. Known artefact: early in a charge the
+    fluid near the outlet can be driven outside its inlet and initial temperatures (the
+    default bed's outlet dips to 27 °C from 32 °C); energy stays exact. Recorded
+    alternative, if ever needed: the local flux `q(z) = h (T_f(z) - T_s)` against the
+    averaged storage surface, the storage receiving its mean and the fluid the exact ledger
+    total plus `-S (q(z) - mean q)`, with `S` the storage surface per unit length of flow
+    path; a prototype removed the dip and kept conservation exact (F-041).
 - **Across families:** same device-level interface: the contract's required outputs,
   experiments, and a small shared device description (reference and initial temperature, HTF,
   controls: mass flow rate and inlet temperature). Geometry parameters stay in
@@ -157,7 +173,11 @@ as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no 
   `h (T_f - T_s)` with `h` from the fluid-property object, is the default. Others (series
   wall or contact resistance, a nonlinear or radiative law) need no change to the
   conservation logic. Built-in laws are chosen through `options` (D3); a custom law is passed
-  to the coupling through the composition API.
+  to the coupling through the composition API. Interface (maintainer, 2026-10-16):
+  `heat_flux(fluid, fluid_state, T_s)`, with `fluid_state` a `FluidState` (`h`, `T`,
+  `mass_flow_rate` of the whole device, `p` reserved) so that new fields never break existing
+  laws; geometry a law needs (e.g. a hydraulic diameter) goes to its constructor, from the
+  family.
 - **Upstream:** face boundary values (PyBaMM #5094, which the maintainer plans to implement)
   would let a flux be imposed directly. The ledger stays exact either way; it may then become
   an option if the direct flux is measurably faster. It is not to be retired for its own
@@ -264,12 +284,22 @@ from the inputs (inlet state against storage state), and the sign of the power s
     collide with the shared set.
 - **One standard name for the flow path** across families: domain `"flow path"`,
   coordinate `z` (maintainer, 2026-10-15; was `"pipe"`, which does not fit a bed).
-- **K canonical.** Models define temperatures in K only. A shared helper generates the Celsius
-  twins, tagged `[degC]`. This departs from PyBaMM's `[C]` deliberately: `[C]` is also the
-  coulomb, and TES users have no reason to know PyBaMM's habit. Differences are K-only and
-  get no twin: any name containing "temperature difference" (e.g.
-  `"Inlet-outlet temperature difference [K]"`) is exempt from the twin check (maintainer,
-  2026-10-14).
+- **Storage domains** (maintainer, 2026-10-15), named by geometry, not by a figure, so that
+  they also fit a future Cartesian channel: `"storage depth"` (coordinate `y`), the distance
+  into the storage from the heat-exchange wall (not along the flow); `"fin gap"`
+  (coordinate `x`), across the gap between two resolved fins; `"capsule"` (coordinate `r`),
+  from a capsule's centre. Were `"PCM vertical"` and `"PCM horizontal"`.
+- **SI canonical** (maintainer, 2026-10-16, extending "K canonical"). Models define every
+  quantity in SI units: K, W, J, kg.s-1, and so on. For reading, one shared helper
+  (`pytes.variables.add_unit_twins`, run when a model is built) generates unit twins as model
+  variables: `[K]` → `[degC]`, `[W]` → `[kW]`, `[J]` → `[kWh]`, `[s]` → `[min]` and `[h]`. Twins are never written by
+  hand; a model that does is rejected. Rationale: one place for every conversion, no
+  computational cost (PyBaMM evaluates a variable only when it is requested; measured), and
+  the twins work everywhere, `QuickPlot` included. `[degC]` departs from PyBaMM's `[C]`
+  deliberately: `[C]` is also the coulomb, and TES users have no reason to know PyBaMM's
+  habit. Differences are K-only and get no twin: any name containing "temperature
+  difference" (e.g. `"Inlet-outlet temperature difference [K]"`) (maintainer, 2026-10-14).
+  Time is in seconds by default; `Time [min]` and `Time [h]` are generated twins.
 - **Power positive on discharge.** Charging gives negative power.
 - **Heat loss power** is a required variable, positive for loss, identically zero for now
   (no casing yet). Conservation identity, which is the conformance check:
@@ -338,6 +368,13 @@ versus discharged energy is the key comparison plot.
 
 ### D17. Housekeeping
 Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `slow` marker.
+Settled at the end of Stage B (maintainer, 2026-10-15):
+- **Repository layout:** one package, one subpackage per family (`pytes.models.finned_tube`,
+  `pytes.models.packed_bed`).
+- **Conformance parametrisation:** importable checks in `pytes.conformance`, run by
+  `tests/conformance/` over every admitted model with every combination of its options
+  (`tests/conftest.py::MODELS`).
+- **Options:** shape as in D3 (F-041).
 
 ## 3. Deferred, with the hook that must exist now
 
@@ -345,6 +382,7 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
 |---|---|
 | Refrigerant HTF (PCM unit as condenser/evaporator) | Power from enthalpy; fluid-property object; controls declared by model; fluid slot not defined as an advection PDE; outlet state concept; operating mode by heat flow |
 | Kinetic undercooling, hysteresis, subcooling | Storage state list; material maps `(H, states) -> T` and declares state names; states evolved by a kinetics submodel (D7); conservation tests unchanged; "T = f(H)" test only for stateless materials |
+| Axial dispersion in the fluid (maintainer, 2026-10-15) | The fluid equation keeps an optional axial term (D5); `"Heat transfer fluid conductivity [W.m-1.K-1]"` is kept for it |
 | Capsule shell (packed bed) | Resistance only: a series-resistance surface flux law (D6), no new state. Thermal mass too: the shell as a second `EnthalpyStorage` of a sensible material on a spherical shell domain, coupled to the fluid and to the PCM like the fins in the mush model; needs `EnthalpyStorage` boundary conditions from couplings on both sides (today the outer side is zero flux). `"Capsule radius [m]"` is the outer radius, so `"Capsule shell thickness [m]"` (default 0) adds without renames |
 | Casing and heat losses | Heat loss power variable (zero); total energy includes everything that holds heat in the model |
 | Flow-dependent film coefficient (Nusselt/Reynolds) | The coefficient lives in the coupling's replaceable surface flux law (D6), constant for now, using properties from the fluid-property object and the family geometry (D8) |
@@ -360,47 +398,15 @@ Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `sl
 
 ## 4. Open
 
-- Exact variable tier lists and names. *Stage A draft: `contract.md` §3 and
-  `pytes.variables`. Settled since: temperature-difference naming, fluid enthalpy required,
-  no SOC or capacity (D12, D13).*
-- Parameter naming details and namespacing scheme for family-specific geometry. *Stage A:
-  materials are prefixed (`PCM ...`, `Metal ...`); finned-tube geometry is unprefixed for
-  now. The prefixes are the hook for parameter layering (D1); geometry stays family-specific
-  (D4). The smoothing width is `"PCM smoothing width [K]"` (D7).*
-- Exact submodel metadata format (requires / provides / parameters / assumptions). *Stage A
-  draft: submodels are small PyBaMM models coupled through `pybamm.CoupledVariable`;
-  `requires` and `provides` are read from the code, `assumptions` declared, wiring checked at
-  build (`contract.md` §2). Still open: per-submodel parameter lists. The display API (D3)
-  shows this metadata.*
-- Shape of the options (D3). *Settled with the first option, `"storage"` (D3, F-041).*
-- How an averaged storage exchanges heat with the fluid (D4; parked by the maintainer,
-  2026-10-15). *Today (a), as PB's `ReducedModel`: one flux from the fluid averaged along
-  the flow path, taken uniformly from the fluid. It conserves energy exactly but can drive
-  the fluid outside its inlet and initial temperatures (the default bed's outlet dips to
-  27 °C from 32 °C). Candidate (b): the local flux `h (T_f(z) - T_s)` against the averaged
-  storage surface; the storage receives its mean, the fluid the exact ledger total plus a
-  zero-sum redistribution `-S (q(z) - mean q)`, with `S` the storage surface per unit
-  length of flow path (a new geometric quantity per family). A prototype on the bed removed
-  the dip and kept conservation exact (2e-14).*
-- Interface of the surface flux law (D6): its arguments (states on both sides, properties,
-  geometry, `mdot`) and how a custom law is passed in.
-- Domain and coordinate naming for the capsule radius and the fin domains. *Settled: the
-  shared flow domain is `"flow path"`, coordinate `z`, in every family (D12); the finned
-  family uses "tube" (maintainer, 2026-10-15).*
-- How the conformance suite parametrises over models and families. *Stage A draft:
-  importable checks in `pytes.conformance`, run over `tests/conftest.py::MODELS`. Must also
-  cover every admitted option combination (D3).*
-- Repository layout (one package with family subpackages is the leading option). *Stage A:
-  one package, `pytes.models.finned_tube` as the first family subpackage.*
-- Axial dispersion: include in the first bed port or defer. *The fluid equation keeps it as
-  an optional term (D5); `k_f` is kept for it.*
+Nothing open at the end of Stage B (2026-10-16). New questions are added here as they
+arise.
 
 ## 5. Stage plan
 
 | Stage | Contents |
 |---|---|
 | **A. Skeleton** | Submodel refactor of `heat_batteries`; draft contract (a page or two); conformance tests ported from the existing 72 |
-| **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch |
+| **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch. **Closed 2026-10-16**: all acceptance criteria met (F-039 to F-041), §4 Open emptied (F-042 to F-046) |
 | **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, PyBOP example using a second measurement |
 | **D. Gap filling** | Lumped capsule, flow-dependent HTC, advection scheme improvements tied to upstream |
 | **E. v1.0** | Contract freeze, deprecation policy, one experimental validation per family, docs, admission guide |
