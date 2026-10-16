@@ -1,0 +1,63 @@
+# Tests (CLAUDE.md): every Python version PyBaMM supports, against the latest PyBaMM
+# release (blocking) and PyBaMM main (non-blocking), plus pre-commit and the slow tests.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly, to catch new PyBaMM releases and changes on PyBaMM main
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uvx pre-commit run --all-files --show-diff-on-failure
+
+  tests:
+    name: Python ${{ matrix.python-version }}, latest PyBaMM release
+    runs-on: ubuntu-latest
+    # 3.15: some of PyBaMM's dependencies publish no wheels yet (e.g. PyYAML); promote
+    # to blocking once they install
+    continue-on-error: ${{ matrix.python-version == '3.15' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      # The latest PyBaMM release the constraints allow, not the locked one
+      - run: uv sync --upgrade-package pybamm
+      - run: uv run pytest
+
+  slow-tests:
+    name: Slow tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --upgrade-package pybamm
+      - run: uv run pytest -m slow
+
+  pybamm-main:
+    name: PyBaMM main (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - run: uv pip install "pybamm @ git+https://github.com/pybamm-team/PyBaMM.git@main"
+      - run: uv run --no-sync pytest

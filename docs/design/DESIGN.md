@@ -351,13 +351,18 @@ identity needs only differences.
 ### D15. KPIs and standard plots live in the toolkit
 KPIs are post-processing on a `Solution`, not model outputs. The KPI set is chosen after the
 alpha has users, since it does not constrain the models. Default quick-plot variables: inlet
-and outlet temperature, power, discharged energy, fluid temperature profile snapshots. Power
+and outlet temperature, power, discharged energy, fluid temperature profile snapshots
+(`pytes.plotting`, in the `plot` extra: `plot_summary`, `plot_power_against_energy`,
+`plot_fluid_profiles`). Power
 versus discharged energy is the key comparison plot.
 
 ### D16. Relationship with PyBaMM
 - Workarounds only in `compat`, each tagged with the upstream issue and removal condition.
 - Support PyBaMM releases from the last 3 months (CalVer). CI against the latest release is
   blocking, against `main` non-blocking.
+- Support every Python version PyBaMM supports (maintainer, 2026-10-16; today 3.10 to
+  3.15), tested in CI. A version whose dependencies do not install yet (3.15: no PyYAML
+  wheel) runs non-blocking until they do.
 - Known upstream items: `pybamm.upwind` inflow uses a ghost node (`2*T_bc - T_1`) and can draw
   in fluid colder than the inlet (workaround in `compat`); first-order upwinding is diffusive
   (matters most for packed-bed thermoclines); face boundary values (#5094, assigned to the
@@ -407,7 +412,7 @@ arise.
 |---|---|
 | **A. Skeleton** | Submodel refactor of `heat_batteries`; draft contract (a page or two); conformance tests ported from the existing 72 |
 | **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch. **Closed 2026-10-16**: all acceptance criteria met (F-039 to F-041), §4 Open emptied (F-042 to F-046) |
-| **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, PyBOP example using a second measurement |
+| **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, CI and packaging. (The PyBOP example is dropped: maintainer, 2026-10-16.) |
 | **D. Gap filling** | Lumped capsule, flow-dependent HTC, advection scheme improvements tied to upstream |
 | **E. v1.0** | Contract freeze, deprecation policy, one experimental validation per family, docs, admission guide |
 

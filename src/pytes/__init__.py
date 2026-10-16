@@ -5,6 +5,7 @@ PyTES: models and tools for heat batteries (thermal energy storage), built on Py
   submodels, listed in ``model.submodels``.
 - Toolkit (permissive): materials (:mod:`pytes.materials`), fluids (:mod:`pytes.fluids`),
   experiments (:mod:`pytes.experiments`), post-processing (:mod:`pytes.postprocessing`),
+  standard plots (:mod:`pytes.plotting`, with the ``plot`` extra),
   the conformance checks (:mod:`pytes.conformance`) and analytical solutions for validation
   (:mod:`pytes.validation`).
 """
