@@ -38,8 +38,9 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      # The latest PyBaMM release the constraints allow, not the locked one
-      - run: uv sync --upgrade-package pybamm
+      # The latest PyBaMM release the constraints allow, not the locked one, with its
+      # compiled solvers (whose new releases add wheels for new Python versions)
+      - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
       - run: uv run pytest
 
   slow-tests:
@@ -48,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --upgrade-package pybamm
+      - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
       - run: uv run pytest -m slow
 
   pybamm-main:

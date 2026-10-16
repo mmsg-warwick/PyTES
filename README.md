@@ -19,7 +19,7 @@ ordinary PyBaMM model, so PyBaMM's simulations, solvers and plots work on it dir
 > **Alpha.** The model contract may still change; every change is logged in
 > [`docs/design/findings.md`](docs/design/findings.md).
 
-## Installation
+## 📦 Installation
 
 ```bash
 pip install pytes            # models and toolkit
@@ -28,7 +28,7 @@ pip install "pytes[plot]"    # plus the standard plots (matplotlib)
 
 PyTES supports every Python version PyBaMM supports (3.10 to 3.15).
 
-## Quick start
+## 🚀 Quick start
 
 ```python
 import pybamm
@@ -39,7 +39,7 @@ solution = pybamm.Simulation(model).solve([0, 3600])
 print(solution["Outlet temperature [degC]"].entries[-1])
 ```
 
-## Models
+## 🔥 Models
 
 | Family | Models | Storage |
 |---|---|---|
@@ -51,7 +51,7 @@ cross-section standing for the average along the flow. All models share their ou
 (power, energies, inlet and outlet temperatures, all in SI units with °C, kW and kWh twins),
 their experiments, and an exact energy balance, checked by a common conformance suite.
 
-## Toolkit
+## 🧰 Toolkit
 
 - **Experiments** (`pytes.experiments`): constant inputs or constant power, with
   terminations and cycles.
@@ -61,16 +61,21 @@ their experiments, and an exact energy balance, checked by a common conformance 
 - **Composition** (`pytes.ComposedModel`): build a model from PyTES submodels, e.g. to try
   a new heat transfer law.
 
-## Examples
+## 📓 Examples
 
 Notebooks in [`examples/`](examples): the finned-tube and packed-bed models, experiments,
 composing models, analytical validation, and a design study comparing the two families.
 
-## Design
+## 📐 Design
 
 The design decisions, the model contract and the log of changes are in
 [`docs/design/`](docs/design).
 
-## Licence
+## 🤝 Contributing
+
+Contributions are welcome: see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow, the
+conventions and how to add a model.
+
+## ⚖️ Licence
 
 BSD 3-Clause, see [`LICENSE`](LICENSE).
