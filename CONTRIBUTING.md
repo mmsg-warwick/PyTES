@@ -253,7 +253,8 @@ For maintainers. PyTES uses [semantic versioning](https://semver.org), with pre-
 such as `0.1.0a1` before 1.0.
 
 1. Make sure CI is green on `main`.
-2. Set the new version in `pyproject.toml` (`version`) and in `CITATION.cff` (`version`).
+2. Set the new version in `pyproject.toml` (`version`) and in `CITATION.cff` (`version`
+   and `date-released`).
 3. Build the changelog: `uv run towncrier build --version <version>`. It writes the new
    section into `CHANGELOG.md` and deletes the fragments; check it and edit if needed.
 4. Commit, push, and wait for CI.

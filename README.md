@@ -24,9 +24,11 @@ ordinary PyBaMM model, so PyBaMM's simulations, solvers and plots work on it dir
 
 ## 📦 Installation
 
+PyTES is not on PyPI yet; install a release from GitHub:
+
 ```bash
-pip install pytes            # models and toolkit
-pip install "pytes[plot]"    # plus the standard plots (matplotlib)
+pip install "pytes @ git+https://github.com/mmsg-warwick/PyTES@v0.1.0a1"          # models and toolkit
+pip install "pytes[plot] @ git+https://github.com/mmsg-warwick/PyTES@v0.1.0a1"    # plus the standard plots (matplotlib)
 ```
 
 PyTES supports every Python version PyBaMM supports (3.10 to 3.15).

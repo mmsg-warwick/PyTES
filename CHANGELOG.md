@@ -8,7 +8,7 @@ until 1.0 the model contract may change, and every change to it is also logged i
 
 <!-- towncrier release notes start -->
 
-## [0.1.0a1] - unreleased, the first alpha
+## [0.1.0a1] - 2026-10-17
 
 ### Models
 
