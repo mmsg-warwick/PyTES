@@ -13,10 +13,10 @@ until 1.0 the model contract may change, and every change to it is also logged i
 ### Models
 
 - Finned-tube family (`pytes.models.finned_tube`): `SharpFrontModel` (PCM and fins
-  homogenised) and `MushModel` (fins and PCM resolved), reproducing the original
-  `heat_batteries` models to solver tolerance.
+  homogenised) and `MushModel` (fins and PCM resolved), reproducing the finned-tube code
+  prototype to solver tolerance.
 - Packed-bed family (`pytes.models.packed_bed`): `PackedBedModel`, a bed of spherical PCM
-  capsules, with the Nallusamy et al. (2007) experiments as the default parameters and the
+  capsules, ported from [encapsulated-LTES](https://github.com/mmsg-warwick/encapsulated-LTES), with the Nallusamy et al. (2007) experiments as the default parameters and the
   Raul et al. (2018) set.
 - Option `"storage": "averaged"` on every model: one storage cross-section standing for the
   average along the flow path.

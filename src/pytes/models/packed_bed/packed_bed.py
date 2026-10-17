@@ -45,7 +45,7 @@ class PackedBedModel(BaseModel):
     - "storage": "resolved" (default), a capsule at every point along the bed; or
       "averaged", one capsule standing for the average along the bed, exchanging heat with
       the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
-      ``encapsulated-LTES`` repository).
+      `encapsulated-LTES <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository).
 
     Parameters
     ----------

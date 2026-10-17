@@ -17,9 +17,9 @@ Two public layers:
   maintainer's review (D1).
 - **Toolkit (permissive):** materials, experiments, KPIs, plots, conformance tests.
 
-Origin: `heat_batteries` (composite finned-tube family, then called finned pipe: sharp-front
-and mush models) and a
-separate packed-bed repo (encapsulated family, enthalpy method, resolved radial conduction in
+Origin: the finned-tube code prototype (composite finned-tube family, then called finned
+pipe: sharp-front and mush models) and a separate packed-bed repo,
+[encapsulated-LTES](https://github.com/mmsg-warwick/encapsulated-LTES) (encapsulated family, enthalpy method, resolved radial conduction in
 the capsule, constant film coefficient, temperature as fluid state). Both are by the
 maintainer and are PyBaMM models with the same physics (enthalpy method, upwinded fluid),
 but they share neither code nor the conservation approach: the material classes are separate
@@ -429,7 +429,7 @@ arise.
 
 | Stage | Contents |
 |---|---|
-| **A. Skeleton** | Submodel refactor of `heat_batteries`; draft contract (a page or two); conformance tests ported from the existing 72 |
+| **A. Skeleton** | Submodel refactor of the finned-tube code prototype; draft contract (a page or two); conformance tests ported from the existing 72 |
 | **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch. **Closed 2026-10-16**: all acceptance criteria met (F-039 to F-041), §4 Open emptied (F-042 to F-046) |
 | **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, CI and packaging. (The PyBOP example is dropped: maintainer, 2026-10-16.) |
 | **D. Gap filling** | Lumped capsule, flow-dependent HTC, advection scheme improvements tied to upstream |
@@ -438,7 +438,7 @@ arise.
 Do not call any API stable before the end of Stage B. Time-box stages. If A overruns, cut
 scope in C rather than extend.
 
-### Stage A brief: refactor `heat_batteries` into submodels
+### Stage A brief: refactor the finned-tube code prototype into submodels
 **Goal:** both existing models become fixed compositions of fluid, storage and coupling
 submodels, with `model.submodels` populated and the draft contract written.
 **In scope:** the working copy in this repo; the draft `docs/design/contract.md`; porting the

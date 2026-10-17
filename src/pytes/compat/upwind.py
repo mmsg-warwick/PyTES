@@ -2,8 +2,7 @@
 Inflow value of :func:`pybamm.upwind`.
 
 Upstream: pybamm-team/PyBaMM#3526 and PR #3979 (upwinding in finite volumes). The inflow bug
-below is not yet filed as its own issue; the write-up is in the ``heat_batteries`` repository,
-``notes/pybamm_upwind_handoff.md``.
+below is not yet filed as its own issue.
 
 Problem: upwinding imposes a Dirichlet condition ``T_bc`` through a ghost node of value
 ``2 T_bc - T_1`` (``T_1`` is the value in the first cell) and advects that ghost value into

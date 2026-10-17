@@ -13,13 +13,15 @@ def get_parameter_values(parameter_set="Nallusamy2007"):
 
     - "Nallusamy2007" (default): the experiments of Nallusamy, Sampath and Velraj (2007),
       a 47 l stainless-steel tank (360 mm diameter, 460 mm high) of paraffin in spherical
-      capsules (55 mm diameter), charged with water at 70 °C and about 2 l/min from 32 °C. Measured temperatures are in the ``encapsulated-LTES`` repository.
+      capsules (55 mm diameter), charged with water at 70 °C and about 2 l/min from 32 °C.
+      The measured temperatures are in ``examples/data``.
     - "Raul2018": a bed of capsules of a PCM melting at 168.7 °C, charged with a thermal
       oil. The source gives no cross-section, so "Bed cross-sectional area [m2]" is a 1 m2
       placeholder: per-area results are meaningful, device totals scale with it.
 
-    Both sets come from the ``encapsulated-LTES`` repository (DESIGN, F-002), converted to
-    PyTES parameters: the flow is the mass flow rate ``rho_f eps A u`` of the interstitial
+    Both sets come from the `encapsulated-LTES
+    <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository (DESIGN, F-002),
+    converted to PyTES parameters: the flow is the mass flow rate ``rho_f eps A u`` of the interstitial
     velocity ``u``, and the PCM melts sharply with corners smoothed over 0.5 K (DESIGN D7).
     Energies are zero at the initial temperature.
 

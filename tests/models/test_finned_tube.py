@@ -9,9 +9,9 @@ from conftest import COARSE_MESH, var_pts
 
 import pytes
 
-#: Outputs of heat_batteries at d391da0 (tests/data/make_reference.py)
+#: Outputs of the finned-tube code prototype at d391da0 (DESIGN findings, F-027)
 REFERENCE = np.load(
-    Path(__file__).parents[1] / "data" / "reference_heat_batteries_d391da0.npz"
+    Path(__file__).parents[1] / "data" / "reference_prototype_d391da0.npz"
 )
 
 

@@ -1,4 +1,4 @@
-"""The experiment runner reproduces the reference runner (heat_batteries at d391da0)."""
+"""The experiment runner reproduces the finned-tube code prototype's runner (d391da0)."""
 
 from pathlib import Path
 
@@ -9,7 +9,7 @@ from pytes.experiments import Experiment, run_experiment, step_description
 from pytes.experiments import step as s
 
 REFERENCE = np.load(
-    Path(__file__).parents[1] / "data" / "reference_heat_batteries_d391da0.npz"
+    Path(__file__).parents[1] / "data" / "reference_prototype_d391da0.npz"
 )
 MDOT = 1000 * 20 / 6e4  # [kg.s-1]
 T_COLD = 273.15 + 10
