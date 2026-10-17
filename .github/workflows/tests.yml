@@ -44,6 +44,10 @@ jobs:
   coverage:
     name: Coverage (all tests, slow ones included)
     runs-on: ubuntu-latest
+    # The upload authenticates with GitHub's OIDC token, so no Codecov secret is needed
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -54,7 +58,7 @@ jobs:
       - uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
-          token: ${{ secrets.CODECOV_TOKEN }}
+          use_oidc: true
           # A Codecov outage should not fail the tests
           fail_ci_if_error: false
 
