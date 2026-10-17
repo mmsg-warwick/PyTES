@@ -133,6 +133,13 @@ PyTES follows [PEP 8](https://peps.python.org/pep-0008/), checked and formatted 
 Its configuration is in `pyproject.toml`; the ruff version in `.pre-commit-config.yaml`
 matches the one in the development environment.
 
+### Language
+
+Write prose in British English: docstrings, comments, documentation, notebooks and the names
+of variables and parameters (behaviour, colour, centre, licence, modelling; -ise endings such
+as discretise). Identifiers from Python and other libraries keep their own spelling
+(matplotlib's `color=`, pytest's `parametrize`).
+
 ### Naming
 
 Naming is hard. Aim for descriptive names, and avoid abbreviations where this does not make
@@ -211,7 +218,9 @@ marker separates the expensive ones.
 
 ### Writing tests
 
-Every new feature needs its own tests. Look for a test of something similar and start from
+Every new feature needs its own tests, and coverage stays at 100 % of lines and branches
+(`uv run pytest -m "" --cov` fails below it): if a line cannot be reached, it is probably
+dead code to remove rather than test. Look for a test of something similar and start from
 it. Check behaviour, not only that the code runs: compare with an exact or analytical value
 where there is one, and state the tolerance and why it is what it is. Keep regular tests
 fast (coarse meshes, `tests/conftest.py`), and mark long ones `@pytest.mark.slow`.
@@ -269,7 +278,8 @@ Every push and pull request runs, with [GitHub Actions](https://docs.github.com/
 (`.github/workflows/tests.yml`):
 
 - the pre-commit hooks;
-- the tests on every Python version PyBaMM supports, against the latest PyBaMM release;
+- the tests against the latest PyBaMM release: on Linux with every Python version PyBaMM
+  supports, and on macOS and Windows with the oldest and newest;
 - coverage: every test, slow ones included, reported to
   [Codecov](https://codecov.io/gh/mmsg-warwick/PyTES) (configured in `codecov.yml`);
 - the example notebooks;

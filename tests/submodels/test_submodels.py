@@ -1,10 +1,13 @@
 """Submodels in isolation, and the automatic wiring checks (DESIGN D3)."""
 
+import copy
+
 import numpy as np
 import pybamm
 import pytest
 
 import pytes
+from pytes import conformance
 from pytes.models.finned_tube import FinnedTubeParameters
 from pytes.submodels import (
     AdvectedFluid,
@@ -236,3 +239,52 @@ def test_every_parameter_is_attributed(model_class):
         "Heat transfer fluid conductivity [W.m-1.K-1]",
         "Heat transfer fluid viscosity [Pa.s]",
     }
+
+
+def test_coupled_variable_is_created_once():
+    stub = Stub(FinnedTubeParameters(), lambda p, s: {"A [W]": s.coupled("B [W]")})
+    assert stub.coupled("B [W]") is stub.coupled("B [W]")
+    assert stub.requires == ("B [W]",)
+    assert repr(stub) == "Stub(name='stub')"
+
+
+def test_invalid_inner_condition():
+    model = pytes.SharpFrontModel()
+    geometry = model.submodels["storage"].storage_geometry
+    with pytest.raises(ValueError, match="Inner condition 'radiation' not recognised"):
+        EnthalpyStorage(
+            model.param, model.param.composite, geometry, inner_condition="radiation"
+        )
+
+
+class SecondEquation(BaseSubModel):
+    """Sets an equation for a variable that another submodel already owns"""
+
+    def __init__(self, param, variable):
+        self.variable = variable
+        super().__init__(param, "Second equation")
+
+    def build(self):
+        self.rhs = {self.variable: pybamm.Scalar(0)}
+        self.variables = {"Second equation [W]": pybamm.Scalar(0)}
+
+
+def test_two_equations_for_one_variable_are_detected():
+    def alter(submodels, param):
+        submodels["extra"] = SecondEquation(param, submodels["storage"].H)
+
+    with pytest.raises(pytes.WiringError):
+        AlteredSharpFront(alter)
+
+
+def test_conformance_skips_materials_with_internal_states():
+    # A material with internal states may make the temperature depend on more than the
+    # enthalpy, so the "T depends on H alone" check does not apply (DESIGN D7)
+    model = pytes.SharpFrontModel()
+    storage = model.submodels["storage"]
+    storage.T = storage.T + pybamm.Variable("Internal state")
+    with pytest.raises(AssertionError):
+        conformance.check_stateless_materials(model)
+    storage.material = copy.copy(storage.material)
+    storage.material.internal_states = ("Internal state",)
+    conformance.check_stateless_materials(model)

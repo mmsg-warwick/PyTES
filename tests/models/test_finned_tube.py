@@ -130,3 +130,44 @@ def test_matches_reference(model_class, key, mesh, dT_m):
     E = solution["Total thermal energy [J]"].entries
     E_ref = ref("Thermal energy [J]")
     np.testing.assert_allclose(E - E[0], E_ref - E_ref[0], rtol=1e-4)
+
+
+def test_unknown_parameter_set():
+    with pytest.raises(ValueError, match="not recognised"):
+        pytes.models.finned_tube.get_parameter_values("Large unit")
+
+
+def evaluate_on_mesh(model, symbol, var_pts):
+    """A symbol with parameters, discretised on the model's default geometry and evaluated"""
+    parameter_values = model.default_parameter_values
+    geometry = model.default_geometry
+    parameter_values.process_geometry(geometry)
+    mesh = pybamm.Mesh(geometry, model.default_submesh_types, var_pts)
+    disc = pybamm.Discretisation(mesh, model.default_spatial_methods)
+    value = disc.process_symbol(parameter_values.process_symbol(symbol)).evaluate()
+    return np.asarray(value).ravel(), parameter_values
+
+
+def test_integral_of_a_flow_path_quantity_over_a_tube():
+    model = pytes.SharpFrontModel()
+    ones = pybamm.PrimaryBroadcast(1, "flow path")
+    length, values = evaluate_on_mesh(
+        model, model.integrate_over_tube(ones), var_pts(model)
+    )
+    assert length == pytest.approx([values["Tube length [m]"]])
+
+
+def test_mush_pcm_cross_section():
+    # The PCM between the fins, per unit tube length, at every point along the tube: the
+    # annulus area without the fins
+    model = pytes.MushModel()
+    geometry = model.submodels["storage"].storage_geometry
+    ones = pybamm.FullBroadcast(1, broadcast_domains=geometry.domains)
+    area, values = evaluate_on_mesh(
+        model, geometry.cross_section_integral(ones), var_pts(model)
+    )
+    R = values["Tube radius [m]"]
+    H = R + values["Storage depth [m]"]
+    pcm_fraction = 1 - values["Fin thickness [m]"] / values["Fin pitch [m]"]
+    expected = pcm_fraction * np.pi * (H**2 - R**2)
+    np.testing.assert_allclose(area, expected, rtol=1e-12)

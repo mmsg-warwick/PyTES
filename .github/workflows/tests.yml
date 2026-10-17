@@ -1,6 +1,7 @@
-# Tests (CLAUDE.md): every Python version PyBaMM supports, against the latest PyBaMM
-# release (blocking) and PyBaMM main (non-blocking), plus pre-commit and coverage (all
-# tests, slow ones included, uploaded to Codecov).
+# Tests (CLAUDE.md): on Linux, every Python version PyBaMM supports, and on macOS and
+# Windows the oldest and newest, against the latest PyBaMM release (blocking); PyBaMM main
+# (non-blocking); pre-commit, coverage (all tests, slow ones included, uploaded to Codecov)
+# and the example notebooks, on Linux.
 name: Tests
 
 on:
@@ -25,12 +26,21 @@ jobs:
       - run: uvx pre-commit run --all-files --show-diff-on-failure
 
   tests:
-    name: Python ${{ matrix.python-version }}, latest PyBaMM release
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }}, Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        # Linux is the reference platform: every Python version PyBaMM supports. macOS
+        # (Apple silicon) and Windows run the oldest and newest, where platform problems
+        # show; coverage, notebooks and PyBaMM main run on Linux only
+        os: [ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+        include:
+          - {os: macos-latest, python-version: "3.10"}
+          - {os: macos-latest, python-version: "3.15"}
+          - {os: windows-latest, python-version: "3.10"}
+          - {os: windows-latest, python-version: "3.15"}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

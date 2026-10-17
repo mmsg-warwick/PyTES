@@ -58,6 +58,11 @@ tanks, thermochemical storage, system-level models (heat pump, building).
   flaw*, or *family-specific difference*.
 - Do not write code for something marked **deferred** unless asked. Do keep its hook intact.
 - Documentation is part of done: one short example notebook per capability.
+- **British English** in all prose: docstrings, comments, documentation, notebooks, commit
+  messages and variable or parameter names (behaviour, colour, centre, licence as a noun,
+  modelling, -ise endings: discretise, initialise). Identifiers from Python and other
+  libraries keep their own spelling (`color=`, `pytest.mark.parametrize`, `figsize`, the
+  `license` field), as do proper names (SIL Open Font License).
 - User-visible changes add a changelog fragment in `changelog.d/` (see `CONTRIBUTING.md`).
 
 ## Layout and tooling
@@ -66,5 +71,7 @@ tanks, thermochemical storage, system-level models (heat pump, building).
   `slow` and use a reduced mesh in the regular run.
 - Tooling: `uv`, `ruff`, pre-commit, pytest, towncrier.
 - Supported Python: every version PyBaMM supports, tested in CI (`.github/workflows/tests.yml`).
+  Linux is the reference platform (every version, coverage, notebooks); macOS and Windows run
+  the oldest and newest version.
 - Supported PyBaMM: releases of the last 3 months (CalVer). CI against the latest release is
   blocking; CI against PyBaMM `main` is non-blocking.

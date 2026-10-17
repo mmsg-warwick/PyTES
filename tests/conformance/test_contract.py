@@ -84,3 +84,18 @@ def test_initial_state(model_class, melting_range):
     parameter_values = model.default_parameter_values
     parameter_values["PCM melting range [K]"] = melting_range
     conformance.check_initial_state(model, parameter_values, var_pts(model))
+
+
+def test_default_quick_plot_variables_exist(model_class):
+    model = model_class()
+    names = [
+        name
+        for entry in model.default_quick_plot_variables
+        for name in (entry if isinstance(entry, list) else [entry])
+    ]
+    assert names and set(names) <= set(model.variables)
+
+
+def test_builds_with_its_defaults(model_class):
+    # The default geometry, mesh, spatial methods and parameter values fit together
+    pybamm.Simulation(model_class()).build()

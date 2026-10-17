@@ -361,7 +361,9 @@ versus discharged energy is the key comparison plot.
 - Support PyBaMM releases from the last 3 months (CalVer). CI against the latest release is
   blocking, against `main` non-blocking.
 - Support every Python version PyBaMM supports (maintainer, 2026-10-16; today 3.10 to
-  3.15), tested in CI, all blocking. A version whose dependencies do not install yet runs
+  3.15), tested in CI, all blocking. Platforms (maintainer, 2026-10-17): Linux is the
+  reference, with every Python version, coverage, notebooks and PyBaMM `main`; macOS and
+  Windows run the tests on the oldest and newest Python version. A version whose dependencies do not install yet runs
   non-blocking until they do (3.15 did, until `pybammsolvers` 0.11.1 shipped its wheels).
 - Testing layout (maintainer, 2026-10-16): tests grouped by what they test (`conformance/`,
   `models/`, `submodels/`, `experiments/`, `toolkit/`, `validation/`), with a `slow` marker

@@ -126,3 +126,9 @@ def test_print_submodel_info(capsys):
     assert "fins: EnthalpyStorage (Fin storage)" in out
     assert "        Fin enthalpy [J.m-3]" in out
     assert "    assumptions:" in out
+
+
+def test_quick_plot_variables_come_from_defaults_from():
+    base = pytes.PackedBedModel()
+    model = pytes.ComposedModel(base.submodels, base.param, defaults_from=base)
+    assert model.default_quick_plot_variables == base.default_quick_plot_variables

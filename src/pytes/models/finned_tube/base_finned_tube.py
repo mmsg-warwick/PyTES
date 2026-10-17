@@ -119,11 +119,6 @@ class BaseFinnedTubeModel(BaseModel):
         }
 
     @property
-    def default_var_pts(self):
-        """Number of mesh points in each spatial variable"""
-        return {self.y: 20, self.z: 20}
-
-    @property
     def default_spatial_methods(self):
         """Finite volumes in every domain; the tube uses the fluid's spatial method"""
         spatial_methods = {

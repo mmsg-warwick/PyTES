@@ -293,3 +293,105 @@ def test_power_step_after_rest_with_no_flow(power_step):
     np.testing.assert_allclose(
         all_steps(solution)[1]["Power [W]"].entries, 10e3, rtol=1e-4
     )
+
+
+def test_custom_termination():
+    # Ends the step when the outlet has cooled by 5 K from 70 degC
+    def cooled(variables):
+        return variables["Outlet temperature [K]"] - (273.15 + 65)
+
+    termination = s.Termination("Outlet cooled by 5 K", cooled)
+    assert repr(termination) == "Termination('Outlet cooled by 5 K')"
+    assert termination.key.startswith("Outlet cooled by 5 K@")
+    solution = run(
+        [s.ConstantInputs(T_COLD, Q0, duration=3600, termination=[termination])]
+    )
+    assert solution["Outlet temperature [degC]"].entries[-1] == pytest.approx(
+        65, abs=0.1
+    )
+    assert solution.t[-1] < 3600
+
+
+def ramp(start, slope):
+    """Inlet temperature [K] rising (or falling) linearly from ``start`` [degC]"""
+    return lambda t: 273.15 + start + slope * t
+
+
+T_70 = 273.15 + 70
+
+
+@pytest.mark.parametrize(
+    "termination, variable, threshold, inlet, initial",
+    [
+        # The inlet ramps down from 25 degC, or up
+        (
+            s.inlet_temperature_below(273.15 + 20),
+            "Inlet temperature [K]",
+            293.15,
+            ramp(25, -1 / 60),
+            T_70,
+        ),
+        (
+            s.inlet_temperature_above(273.15 + 30),
+            "Inlet temperature [K]",
+            303.15,
+            ramp(25, 1 / 60),
+            T_70,
+        ),
+        # A discharge from liquid freezes the PCM; a charge from solid melts it
+        (
+            s.average_liquid_fraction_below(0.5),
+            "Average liquid fraction",
+            0.5,
+            T_COLD,
+            T_70,
+        ),
+        (
+            s.average_liquid_fraction_above(0.9),
+            "Average liquid fraction",
+            0.9,
+            T_HOT,
+            T_COLD,
+        ),
+    ],
+)
+def test_threshold_terminations(termination, variable, threshold, inlet, initial):
+    # Each ends the step where its variable crosses the threshold
+    model = pytes.SharpFrontModel()
+    parameter_values = model.default_parameter_values
+    parameter_values["Initial temperature [K]"] = initial
+    step = s.ConstantInputs(inlet, Q0, duration=6 * 3600, termination=termination)
+    solution = run_experiment(
+        model,
+        Experiment([step]),
+        parameter_values=parameter_values,
+        var_pts=mesh(model),
+    )
+    assert solution.t[-1] < 6 * 3600
+    assert solution[variable].entries[-1] == pytest.approx(threshold, rel=1e-3)
+
+
+def test_failure_hints():
+    from pytes.experiments.experiment import _failure_hint
+
+    assert "mass_flow_rate_above" in _failure_hint(
+        s.ConstantPower(1e3, inlet_temperature=T_COLD)
+    )
+    assert "inlet_temperature_below" in _failure_hint(
+        s.ConstantPower(1e3, mass_flow_rate=Q0)
+    )
+    assert _failure_hint(s.ConstantInputs(T_COLD, Q0)) == ""
+
+
+def test_experiment_where_no_step_can_run():
+    # The only step is over before it starts: the outlet is already above 40 degC
+    with pytest.warns(UserWarning), pytest.raises(pybamm.SolverError, match="No step"):
+        run(
+            [
+                s.ConstantInputs(
+                    T_COLD,
+                    Q0,
+                    termination=s.outlet_temperature_above(273.15 + 40),
+                )
+            ]
+        )

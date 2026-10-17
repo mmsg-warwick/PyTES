@@ -80,6 +80,8 @@ source = ["pytes"]
 branch = true
 
 [tool.coverage.report]
+# Every line and branch is tested (all tests, slow ones included); CI fails below this
+fail_under = 100
 show_missing = true
 skip_covered = true
 exclude_also = ["raise NotImplementedError"]
