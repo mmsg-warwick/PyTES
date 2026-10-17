@@ -10,6 +10,7 @@
 [![Tests](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml/badge.svg)](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/pytes-thermal)](https://pypi.org/project/pytes-thermal/)
 [![Coverage](https://codecov.io/gh/mmsg-warwick/PyTES/branch/main/graph/badge.svg)](https://codecov.io/gh/mmsg-warwick/PyTES)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23438443.svg)](https://doi.org/10.5281/zenodo.23438443)
 
 PyTES (Python Thermal Energy Storage) is a library of models and tools for thermal energy storage (also known as heat batteries), built on
 [PyBaMM](https://pybamm.org). What PyBaMM is to electrochemical batteries, PyTES aims to be to thermal
@@ -84,7 +85,8 @@ The design decisions, the model contract and the log of changes are in
 If you use PyTES in your work, please cite it: the metadata are in
 [`CITATION.cff`](https://github.com/mmsg-warwick/PyTES/blob/main/CITATION.cff), and GitHub's
 "Cite this repository" button gives the reference in BibTeX or APA. Each release is archived
-on Zenodo with its own DOI.
+on Zenodo with its own DOI; [10.5281/zenodo.23438443](https://doi.org/10.5281/zenodo.23438443)
+cites all versions and resolves to the latest.
 
 ## 🤝 Contributing
 
