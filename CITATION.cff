@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use PyTES, please cite it as below."
+title: "PyTES: Python Thermal Energy Storage"
+abstract: >-
+  PyTES is a library of models and tools for thermal energy storage (heat batteries),
+  built on PyBaMM. It covers storage in which a heat transfer fluid flows through or
+  around a separate storage medium, such as finned-tube phase-change material units and
+  packed beds of encapsulated phase-change material, with models that share one
+  interface, conserve energy exactly and are validated against analytical solutions and
+  measurements.
+type: software
+authors:
+  - family-names: "Brosa Planella"
+    given-names: "Ferran"
+    orcid: "https://orcid.org/0000-0001-6363-2812"
+    affiliation: "University of Warwick"
+repository-code: "https://github.com/mmsg-warwick/PyTES"
+license: BSD-3-Clause
+version: 0.1.0a1
+keywords:
+  - thermal energy storage
+  - heat battery
+  - phase-change material
+  - packed bed
+  - PyBaMM
+  - Python

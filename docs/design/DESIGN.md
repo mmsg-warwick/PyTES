@@ -395,6 +395,10 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
   `no changelog`. Rationale: no conflicts between pull requests and no forgotten entries,
   the two problems of a hand-edited changelog. `CONTRIBUTING.md` adapted from PyBaMM's
   (itself from PINTS); licence BSD 3-Clause, "the PyTES developers".
+- **Releases** (maintainer, 2026-10-17): versions in `pyproject.toml` and `CITATION.cff`;
+  a GitHub release `v<version>` runs `release.yml` (build, check, attach) and Zenodo mints
+  its DOI. PyPI publishing is wired (trusted publishing) but off until the repository
+  variable `PUBLISH_TO_PYPI` is set; the source distribution lists its contents.
 
 ## 3. Deferred, with the hook that must exist now
 

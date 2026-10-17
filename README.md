@@ -74,6 +74,12 @@ composing models, analytical validation, and a design study comparing the two fa
 The design decisions, the model contract and the log of changes are in
 [`docs/design/`](docs/design).
 
+## 📖 Citing PyTES
+
+If you use PyTES in your work, please cite it: the metadata are in
+[`CITATION.cff`](CITATION.cff), and GitHub's "Cite this repository" button gives the
+reference in BibTeX or APA. Each release is archived on Zenodo with its own DOI.
+
 ## 🤝 Contributing
 
 Contributions are welcome: see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the workflow, the

@@ -238,6 +238,24 @@ Each capability has a short example notebook in [`examples/`](examples). Noteboo
 committed with their outputs, so run them before committing, and keep them short. CI
 executes every notebook (`uv run pytest --nbmake examples/`) and fails if a cell raises.
 
+## Releasing
+
+For maintainers. PyTES uses [semantic versioning](https://semver.org), with pre-releases
+such as `0.1.0a1` before 1.0.
+
+1. Make sure CI is green on `main`.
+2. Set the new version in `pyproject.toml` (`version`) and in `CITATION.cff` (`version`).
+3. Build the changelog: `uv run towncrier build --version <version>`. It writes the new
+   section into `CHANGELOG.md` and deletes the fragments; check it and edit if needed.
+4. Commit, push, and wait for CI.
+5. Create a GitHub release with the tag `v<version>` (e.g. `v0.1.0a1`), mark pre-releases as
+   such, and paste the new changelog section as its notes.
+
+Publishing the release runs `.github/workflows/release.yml`: it checks that the tag matches
+the version, builds the package, and attaches it to the release. Zenodo archives the release
+and mints its DOI. The upload to PyPI runs only when the repository variable
+`PUBLISH_TO_PYPI` is `true`, with PyPI's trusted publishing set up for the workflow.
+
 ## Infrastructure
 
 ### Installation
@@ -257,6 +275,9 @@ Every push and pull request runs, with [GitHub Actions](https://docs.github.com/
 - the example notebooks;
 - the tests against PyBaMM's `main` branch (non-blocking, to catch upstream changes early);
 - on pull requests, the check for a changelog fragment.
+
+Publishing a GitHub release runs `.github/workflows/release.yml` (see
+[Releasing](#releasing)).
 
 ### GitHub
 

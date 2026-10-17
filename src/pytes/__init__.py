@@ -10,6 +10,8 @@ PyTES: models and tools for heat batteries (thermal energy storage), built on Py
   (:mod:`pytes.validation`).
 """
 
+from importlib.metadata import version as _version
+
 from . import (
     compat,
     experiments,
@@ -27,7 +29,11 @@ from .models.finned_tube import MushModel, SharpFrontModel
 from .models.packed_bed import PackedBedModel
 from .postprocessing import energy_between
 
+#: The installed version of PyTES
+__version__ = _version("pytes")
+
 __all__ = [
+    "__version__",
     "BaseModel",
     "ComposedModel",
     "MushModel",

@@ -61,3 +61,9 @@ def test_validate_parameter_values(name, value):
     parameter_values[name] = value
     with pytest.raises(ValueError, match="must"):
         validate_parameter_values(parameter_values, NON_NEGATIVE)
+
+
+def test_version_is_the_installed_one():
+    from importlib.metadata import version
+
+    assert pytes.__version__ == version("pytes")

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pytes"
-version = "0.0.1"
+version = "0.1.0a1"
 description = "Models and tools for heat batteries (thermal energy storage), built on PyBaMM"
 readme = "README.md"
 license = "BSD-3-Clause"
@@ -51,6 +51,21 @@ notebooks = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/pytes"]
+
+# The source distribution lists what it contains, so that untracked local files (editor or
+# shell settings in the working directory) never end up in it
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/pytes",
+  "tests",
+  "examples",
+  "docs/design",
+  "README.md",
+  "CHANGELOG.md",
+  "CONTRIBUTING.md",
+  "CITATION.cff",
+  "LICENSE",
+]
 
 [tool.uv]
 default-groups = ["dev", "notebooks"]

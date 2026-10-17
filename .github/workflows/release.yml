@@ -1,0 +1,59 @@
+# Release (CONTRIBUTING.md, "Releasing"): on a published GitHub release, build the package,
+# check it, and attach it to the release. Zenodo archives the release and mints its DOI.
+# Publishing to PyPI (trusted publishing) runs only once the repository variable
+# PUBLISH_TO_PYPI is "true" and PyPI has this workflow as a trusted publisher.
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Check that the version matches the release tag
+        if: github.event_name == 'release'
+        run: test "v$(uv version --short)" = "${{ github.event.release.tag_name }}"
+      - run: uv build
+      - run: uvx twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  attach:
+    name: Attach to the GitHub release
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - run: gh release upload "${{ github.event.release.tag_name }}" dist/* --repo "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    if: github.event_name == 'release' && vars.PUBLISH_TO_PYPI == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pytes
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
