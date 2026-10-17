@@ -18,3 +18,5 @@ docs/upstream/
 # Coverage
 .coverage
 coverage.xml
+# Windows download markers copied through WSL
+*:Zone.Identifier
