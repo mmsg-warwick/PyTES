@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "pytes"
+name = "pytes-thermal"
 version = "0.1.0a1"
 description = "Models and tools for heat batteries (thermal energy storage), built on PyBaMM"
 readme = "README.md"
@@ -46,7 +46,7 @@ dev = [
 # Running the example notebooks (also in VS Code)
 notebooks = [
   "ipykernel",
-  "pytes[plot]",
+  "pytes-thermal[plot]",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -257,8 +257,10 @@ such as `0.1.0a1` before 1.0.
    and `date-released`).
 3. Build the changelog: `uv run towncrier build --version <version>`. It writes the new
    section into `CHANGELOG.md` and deletes the fragments; check it and edit if needed.
-4. Commit, push, and wait for CI.
-5. Create a GitHub release with the tag `v<version>` (e.g. `v0.1.0a1`), mark pre-releases as
+4. The README is also the PyPI project page: keep its links absolute (relative links break
+   there), and drop `--pre` from the installation commands at the first stable release.
+5. Commit, push, and wait for CI.
+6. Create a GitHub release with the tag `v<version>` (e.g. `v0.1.0a1`), mark pre-releases as
    such, and paste the new changelog section as its notes.
 
 Publishing the release runs `.github/workflows/release.yml`: it checks that the tag matches

@@ -66,4 +66,4 @@ def test_validate_parameter_values(name, value):
 def test_version_is_the_installed_one():
     from importlib.metadata import version
 
-    assert pytes.__version__ == version("pytes")
+    assert pytes.__version__ == version("pytes-thermal")

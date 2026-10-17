@@ -400,7 +400,9 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
 - **Releases** (maintainer, 2026-10-17): versions in `pyproject.toml` and `CITATION.cff`;
   a GitHub release `v<version>` runs `release.yml` (build, check, attach) and Zenodo mints
   its DOI. PyPI publishing is wired (trusted publishing) but off until the repository
-  variable `PUBLISH_TO_PYPI` is set; the source distribution lists its contents.
+  variable `PUBLISH_TO_PYPI` is set; the source distribution lists its contents. The PyPI
+  name is `pytes-thermal` (maintainer, 2026-10-17): `pytes` is an empty project held since
+  about 2010 to protect `pytest` from typosquatting. The import name stays `pytes`.
 
 ## 3. Deferred, with the hook that must exist now
 

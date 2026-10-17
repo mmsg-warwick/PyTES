@@ -2682,7 +2682,7 @@ wheels = [
 ]
 
 [[package]]
-name = "pytes"
+name = "pytes-thermal"
 version = "0.1.0a1"
 source = { editable = "." }
 dependencies = [
@@ -2714,7 +2714,7 @@ dev = [
 notebooks = [
     { name = "ipykernel", version = "7.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ipykernel", version = "7.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "pytes", extra = ["plot"] },
+    { name = "pytes-thermal", extra = ["plot"] },
 ]
 
 [package.metadata]
@@ -2738,7 +2738,7 @@ dev = [
 ]
 notebooks = [
     { name = "ipykernel" },
-    { name = "pytes", extras = ["plot"] },
+    { name = "pytes-thermal", extras = ["plot"] },
 ]
 
 [[package]]

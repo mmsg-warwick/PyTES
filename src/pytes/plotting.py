@@ -24,7 +24,7 @@ def _pyplot():
     except ImportError as error:  # pragma: no cover - depends on the environment
         raise ImportError(
             "pytes.plotting needs matplotlib: install the plot extra, "
-            "pip install 'pytes[plot]'"
+            "pip install 'pytes-thermal[plot]'"
         ) from error
     return plt
 

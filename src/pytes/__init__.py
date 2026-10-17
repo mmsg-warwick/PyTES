@@ -30,7 +30,7 @@ from .models.packed_bed import PackedBedModel
 from .postprocessing import energy_between
 
 #: The installed version of PyTES
-__version__ = _version("pytes")
+__version__ = _version("pytes-thermal")
 
 __all__ = [
     "__version__",
