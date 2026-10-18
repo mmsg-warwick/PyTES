@@ -33,11 +33,26 @@ Rationale: cross-compatibility is the product. A model is admitted when it (a) p
 conformance suite, (b) uses the shared parameter layering and materials library, (c) has at
 least one validation case, (d) sits in a declared family, and (e) the maintainer has reviewed
 it. Passing the suite is necessary, not sufficient.
-- **Parameter layering:** a parameter set is composed of independent layers (device reference
-  temperature and controls, HTF, PCM, other materials such as the fin metal, family geometry), so that
-  e.g. a PCM can be swapped without touching the rest. Each material and fluid layer has its
-  own name prefix so layers merge without clashes. Today each family has one flat default
-  set; the hook that must exist now is the prefixes.
+- **Parameter layering:** a parameter set is composed of independent layers (operation:
+  reference and initial temperatures and controls; coupling; HTF; PCM; other materials such
+  as the fin metal; family geometry), so that e.g. a PCM can be swapped without touching
+  the rest. The family geometry is in two layers (maintainer, 2026-10-18): the *flow path*,
+  which sets the size of the device (number, radius and length of the tubes; length and
+  cross-section of the bed), and the *storage element*, the repeating unit, whose names are
+  all per unit length or per tube (fin thickness, fin pitch and storage depth, i.e. the fin
+  height; capsule radius and porosity). So a standard fin or capsule design is chosen once
+  and the device is sized around it. Operation is apart from the hardware, so that one
+  device can be run under several operations (charge, discharge). The tube radius stays in
+  the flow path, although a fin design fits one tube size; a compatibility check between
+  the two can come later. Each material and fluid layer has its
+  own name prefix so layers merge without clashes. `pytes.parameter_layers` (issue #3)
+  defines the kinds and the names each holds, and composes layers into a plain
+  `pybamm.ParameterValues`; named sets list one layer per kind and replace the families'
+  flat default sets once their values are added from cited sources. Decided with it
+  (maintainer, 2026-10-18): `"Heat transfer coefficient [W.m-2.K-1]"` is in its own
+  *coupling* layer, which will hold the parameters of other surface flux laws (#6);
+  `"PCM smoothing width [K]"` stays in the PCM layer, although it is numerical; one `Metal`
+  layer per device, with a prefix argument added when a second metal appears.
 - **Parameter names** (maintainer, 2026-10-16): material and fluid properties start with
   their layer's prefix (`PCM ...`, `Metal ...`, `Heat transfer fluid ...`); geometry starts
   with the geometric object (`Tube ...`, `Fin ...`, `Bed ...`, `Capsule ...`, `Storage

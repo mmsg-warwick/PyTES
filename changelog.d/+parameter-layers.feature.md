@@ -1,0 +1,1 @@
+New `pytes.parameter_layers`, which composes parameter sets from layers (operation, coupling, heat transfer fluid, PCM, metal, and the family geometry as a flow path and a storage element), so that one part, such as the PCM or the fins, can be swapped without touching the rest. The layers are scaffolded, and their values are still to be added.
