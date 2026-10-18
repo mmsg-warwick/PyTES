@@ -1,0 +1,46 @@
+name: New model
+description: Propose a model for the PyTES catalogue
+labels: ["enhancement", "new model"]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        PyTES is a curated catalogue. Before writing code, please read
+        [Contributing a model](https://github.com/mmsg-warwick/PyTES/blob/main/CONTRIBUTING.md#contributing-a-model)
+        and the scope in
+        [DESIGN.md](https://github.com/mmsg-warwick/PyTES/blob/main/docs/design/DESIGN.md) (D2).
+  - type: textarea
+    id: device
+    attributes:
+      label: Device and physics
+      description: >-
+        What device does the model describe, and how does the heat transfer fluid pass through
+        or around the storage medium? Main assumptions and equations, with references.
+    validations:
+      required: true
+  - type: textarea
+    id: family
+    attributes:
+      label: Family
+      description: >-
+        Which family does it belong to (an existing one, e.g. finned tube or packed bed, or a
+        new one)? If it is a different fidelity of an existing model, which one?
+    validations:
+      required: true
+  - type: textarea
+    id: submodels
+    attributes:
+      label: Submodels
+      description: Which existing submodels does it reuse, and which new ones (fluid, storage, coupling, flux law) does it need?
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation case
+      description: An analytical benchmark or measured data to validate it against, with the source.
+    validations:
+      required: true
+  - type: textarea
+    id: parameters
+    attributes:
+      label: Parameter values
+      description: The source of a default parameter set.
