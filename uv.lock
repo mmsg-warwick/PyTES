@@ -2722,7 +2722,7 @@ requires-dist = [
     { name = "ipywidgets", marker = "extra == 'plot'" },
     { name = "matplotlib", marker = "extra == 'plot'" },
     { name = "numpy" },
-    { name = "pybamm", specifier = ">=26.7" },
+    { name = "pybamm", specifier = ">=26.9" },
     { name = "scipy" },
 ]
 provides-extras = ["plot"]
