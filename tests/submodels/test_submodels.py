@@ -233,7 +233,8 @@ def test_every_parameter_is_attributed(model_class):
     attributed = set(model.geometry_parameters).union(
         *(submodel.parameters for submodel in model.submodels.values())
     )
-    unused = set(model.default_parameter_values.keys()) - attributed
+    # "citations" lists the sources of the values, as in PyBaMM's own parameter sets
+    unused = set(model.default_parameter_values.keys()) - attributed - {"citations"}
     # Parameters kept as hooks, used by no model yet (DESIGN D8, deferred items)
     assert unused <= {
         "Heat transfer fluid conductivity [W.m-1.K-1]",

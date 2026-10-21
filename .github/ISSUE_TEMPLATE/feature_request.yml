@@ -1,0 +1,35 @@
+name: Feature request
+description: Propose a new capability or an improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What problem does this solve, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What should PyTES do? Code sketches of the intended use are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other ways to get the same result, including doing it directly with PyBaMM.
+  - type: checkboxes
+    id: design
+    attributes:
+      label: Design
+      description: >-
+        [`docs/design/DESIGN.md`](https://github.com/mmsg-warwick/PyTES/blob/main/docs/design/DESIGN.md)
+        records what is decided, deferred and open.
+      options:
+        - label: I have read DESIGN.md, and this fits its scope (D2).
+          required: true
+        - label: This changes the model contract (variable names, units, signs, parameter names or submodel interfaces).
+        - label: This reopens or changes a decided point (say which in the proposal).

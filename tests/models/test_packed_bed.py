@@ -35,7 +35,7 @@ def test_charge_melts_the_pcm(charge):
     assert np.all(charge["Power [W]"].entries[1:] < 0)
     assert np.all(np.diff(charge["Total thermal energy [J]"].entries) > 0)
     liquid_fraction = charge["Average liquid fraction"].entries
-    # 0 up to the tail of the 0.5 K smoothing, 28 K below the melting temperature
+    # 0 up to the tail of the smoothing of the melting point, 28 K below it
     assert liquid_fraction[0] == pytest.approx(0, abs=1e-4)
     assert liquid_fraction[-1] > 0.5
     T_out = charge["Outlet temperature [degC]"].entries

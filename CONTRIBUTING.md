@@ -295,7 +295,10 @@ Publishing a GitHub release runs `.github/workflows/release.yml` (see
 ### GitHub
 
 GitHub shows [`README.md`](README.md) on the repository's front page, links the licence in
-[`LICENSE`](LICENSE), and links this file when new issues and pull requests are opened.
+[`LICENSE`](LICENSE), and links this file when new issues and pull requests are opened. New
+issues offer the forms in [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE) (bug report,
+feature request, new model), and new pull requests start from the checklist in
+[`.github/pull_request_template.md`](.github/pull_request_template.md).
 
 ## Acknowledgements
 
