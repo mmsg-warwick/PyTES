@@ -126,8 +126,15 @@ def test_matches_reference(model_class, key, mesh, dT_m):
         rtol=0,
         atol=1e-5,
     )
-    E = solution["Total thermal energy [J]"].entries
-    np.testing.assert_allclose(E, ref("Total thermal energy [J]"), rtol=1e-4)
+    # Energies are zero at the inlet temperature, which the battery approaches by the end,
+    # so the tolerance is relative to the largest energy, not to each value
+    E_ref = ref("Total thermal energy [J]")
+    np.testing.assert_allclose(
+        solution["Total thermal energy [J]"].entries,
+        E_ref,
+        rtol=0,
+        atol=1e-4 * np.max(np.abs(E_ref)),
+    )
 
 
 def test_unknown_parameter_set():
