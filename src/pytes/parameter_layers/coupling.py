@@ -5,53 +5,36 @@
 Coupling layers: the parameters of the surface flux law between the fluid and the storage
 (DESIGN D6, D8). Today, the constant coefficient of :class:`pytes.submodels.NewtonCooling`.
 
-Each layer is a function returning a fresh dict, registered in :data:`LAYERS`. Values and
-citations are to be added, from cited sources.
+Each layer is a function returning a fresh dict, registered in :data:`LAYERS`.
 """
 
 
 def finned_tube_default():
     """
-    The coefficient of the default finned-tube battery. Stands in for the coupling part of
-    the finned-tube default set.
+    The coefficient of the default finned-tube battery.
 
-    Source: to be added.
+    The value is an estimate, not based on any source.
     """
     return {
         "citations": [],
-        "Heat transfer coefficient [W.m-2.K-1]": None,
+        "Heat transfer coefficient [W.m-2.K-1]": 1000,
     }
 
 
-def nallusamy2007():
+def packed_bed_default():
     """
-    The coefficient of the Nallusamy (2007) bed. Stands in for the coupling part of the
-    packed-bed "Nallusamy2007" set.
+    The coefficient of the packed beds ("Nallusamy2007" and "Raul2018" sets).
 
-    Source: to be added.
-    """
-    return {
-        "citations": [],
-        "Heat transfer coefficient [W.m-2.K-1]": None,
-    }
-
-
-def raul2018():
-    """
-    The coefficient of the "Raul2018" bed. Stands in for the coupling part of the
-    packed-bed "Raul2018" set.
-
-    Source: to be added.
+    The value is an estimate, not based on any source.
     """
     return {
         "citations": [],
-        "Heat transfer coefficient [W.m-2.K-1]": None,
+        "Heat transfer coefficient [W.m-2.K-1]": 100,
     }
 
 
 #: The coupling layers, by name
 LAYERS = {
     "Finned tube default": finned_tube_default,
-    "Nallusamy2007": nallusamy2007,
-    "Raul2018": raul2018,
+    "Packed bed default": packed_bed_default,
 }

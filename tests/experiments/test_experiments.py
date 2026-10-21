@@ -10,7 +10,7 @@ import pytes
 from pytes.experiments import Experiment, run_experiment
 from pytes.experiments import step as s
 
-Q0 = 1000 * 20 / 6e4  # mass flow rate [kg.s-1] (20 l/min of water in total)
+Q0 = 0.02  # mass flow rate [kg.s-1], the default
 T_COLD = 273.15 + 10
 T_HOT = 273.15 + 80
 MESH = {"x": 3, "y": 4, "z": 5}
@@ -49,16 +49,16 @@ def test_constant_power_adjusting_flow_rate_as_first_step(inlet_temperature):
     # The first step starts from guesses for the controls, which must not make the
     # power independent of the flow rate
     solution = run(
-        [s.ConstantPower(15e3, inlet_temperature=inlet_temperature, duration=300)]
+        [s.ConstantPower(900, inlet_temperature=inlet_temperature, duration=300)]
     )
-    np.testing.assert_allclose(solution["Power [W]"].entries, 15e3, rtol=1e-4)
+    np.testing.assert_allclose(solution["Power [W]"].entries, 900, rtol=1e-4)
 
 
 @pytest.mark.parametrize(
     "step",
     [
-        s.ConstantPower(20e3, mass_flow_rate=Q0, duration=300),
-        s.ConstantPower(15e3, inlet_temperature=T_COLD, duration=300),
+        s.ConstantPower(1200, mass_flow_rate=Q0, duration=300),
+        s.ConstantPower(900, inlet_temperature=T_COLD, duration=300),
     ],
 )
 def test_constant_power(step):
@@ -86,7 +86,7 @@ def test_termination_ends_step_and_next_step_continues():
     solution = run(
         [
             s.ConstantPower(
-                20e3,
+                1200,
                 mass_flow_rate=Q0,
                 termination=s.outlet_temperature_below(threshold),
             ),
@@ -112,7 +112,7 @@ def test_mass_flow_rate_limit():
     solution = run(
         [
             s.ConstantPower(
-                30e3,
+                1800,
                 inlet_temperature=T_COLD,
                 termination=s.mass_flow_rate_above(2 * Q0),
             )
@@ -127,8 +127,8 @@ def test_mass_flow_rate_limit():
 def test_energy_conservation_over_experiment(model_class):
     solution = run(
         [
-            s.ConstantPower(20e3, mass_flow_rate=Q0, duration=300),
-            s.ConstantPower(15e3, inlet_temperature=T_COLD, duration=300),
+            s.ConstantPower(1200, mass_flow_rate=Q0, duration=300),
+            s.ConstantPower(900, inlet_temperature=T_COLD, duration=300),
             s.ConstantInputs(T_HOT, Q0, duration=300),
             s.ConstantInputs(T_COLD, 0.0, duration=120),
         ],
@@ -172,9 +172,9 @@ def test_steps_with_constant_values_share_a_branch():
         [
             s.ConstantInputs(T_COLD, Q0),
             s.ConstantInputs(T_HOT, Q0 / 2),
-            s.ConstantPower(20e3, mass_flow_rate=Q0),
-            s.ConstantPower(10e3, mass_flow_rate=Q0 / 2),
-            s.ConstantPower(10e3, inlet_temperature=T_COLD),
+            s.ConstantPower(1200, mass_flow_rate=Q0),
+            s.ConstantPower(600, mass_flow_rate=Q0 / 2),
+            s.ConstantPower(600, inlet_temperature=T_COLD),
             # Different structure: a time series, or a different termination
             s.ConstantInputs(T_COLD, np.array([[0, Q0], [60, 0]])),
             s.ConstantInputs(T_COLD, Q0, termination=s.outlet_temperature_below(300)),
@@ -239,12 +239,12 @@ def test_invalid_targets(value, error):
 )
 def test_constant_power_adjusts_exactly_one_control(controls):
     with pytest.raises(ValueError, match="exactly one"):
-        s.ConstantPower(10e3, **controls)
+        s.ConstantPower(600, **controls)
 
 
 def test_constant_power_adjusts_the_control_left_free():
-    assert s.ConstantPower(10e3, inlet_temperature=T_COLD).adjusted == s.MASS_FLOW_RATE
-    assert s.ConstantPower(10e3, mass_flow_rate=Q0).adjusted == s.INLET_TEMPERATURE
+    assert s.ConstantPower(600, inlet_temperature=T_COLD).adjusted == s.MASS_FLOW_RATE
+    assert s.ConstantPower(600, mass_flow_rate=Q0).adjusted == s.INLET_TEMPERATURE
 
 
 def test_invalid_experiment():
@@ -265,13 +265,13 @@ def test_no_warnings_from_time_series_branches():
 
 
 def test_solver_failure_stops_experiment_with_partial_solution():
-    # Holding 30 kW by the flow rate once the battery has cooled to the inlet
+    # Holding 1.8 kW by the flow rate once the battery has cooled to the inlet
     # temperature needs unbounded flow (no flow limit is given), so the solver fails
     with pytest.warns(UserWarning, match="mass_flow_rate_above"):
         solution = run(
             [
                 s.ConstantInputs(T_COLD, Q0, duration=600),
-                s.ConstantPower(30e3, inlet_temperature=T_COLD, duration=3600),
+                s.ConstantPower(1800, inlet_temperature=T_COLD, duration=3600),
                 s.ConstantInputs(T_COLD, Q0, duration=60),
             ]
         )
@@ -282,8 +282,8 @@ def test_solver_failure_stops_experiment_with_partial_solution():
 @pytest.mark.parametrize(
     "power_step",
     [
-        s.ConstantPower(10e3, mass_flow_rate=Q0, duration=120),
-        s.ConstantPower(10e3, inlet_temperature=T_COLD, duration=120),
+        s.ConstantPower(600, mass_flow_rate=Q0, duration=120),
+        s.ConstantPower(600, inlet_temperature=T_COLD, duration=120),
     ],
 )
 def test_power_step_after_rest_with_no_flow(power_step):
@@ -291,7 +291,7 @@ def test_power_step_after_rest_with_no_flow(power_step):
     # power equation independent of the control it adjusts
     solution = run([s.ConstantInputs(T_COLD, 0.0, duration=60), power_step])
     np.testing.assert_allclose(
-        all_steps(solution)[1]["Power [W]"].entries, 10e3, rtol=1e-4
+        all_steps(solution)[1]["Power [W]"].entries, 600, rtol=1e-4
     )
 
 

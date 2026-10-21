@@ -9,10 +9,9 @@ from conftest import COARSE_MESH, var_pts
 
 import pytes
 
-#: Outputs of the finned-tube code prototype at d391da0 (DESIGN findings, F-027)
-REFERENCE = np.load(
-    Path(__file__).parents[1] / "data" / "reference_prototype_d391da0.npz"
-)
+#: Outputs of PyTES on the default set, from tests/data/make_reference.py (DESIGN
+#: findings, F-048)
+REFERENCE = np.load(Path(__file__).parents[1] / "data" / "reference_regression.npz")
 
 
 def test_can_construct_sharp_front_model():
@@ -53,9 +52,11 @@ def test_one_storage_submodel_for_every_medium():
 
 
 def solve(model_class, mesh, dT_m, t, solver=None):
+    """The default discharge, with smoothing width ``dT_m`` (None for the default)"""
     model = model_class()
     parameter_values = model.default_parameter_values
-    parameter_values["PCM smoothing width [K]"] = dT_m
+    if dT_m is not None:
+        parameter_values["PCM smoothing width [K]"] = dT_m
     sim = pybamm.Simulation(
         model,
         parameter_values=parameter_values,
@@ -73,10 +74,10 @@ def test_discharge_freezes_pcm(model_class):
     # stay positive
     solver = pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10)
     solution = solve(
-        model_class, COARSE_MESH, 0.5, np.linspace(0, 1800, 181), solver=solver
+        model_class, COARSE_MESH, None, np.linspace(0, 3600, 181), solver=solver
     )
     liquid_fraction = solution["Average liquid fraction"].entries
-    # Up to the smoothing of the melting point (default smoothing width 0.5 K)
+    # Up to the smoothing of the melting range
     assert liquid_fraction[0] == pytest.approx(1, abs=1e-3)
     assert liquid_fraction[-1] < 0.1
     assert np.all(np.diff(liquid_fraction) <= 1e-12)
@@ -85,14 +86,14 @@ def test_discharge_freezes_pcm(model_class):
     assert np.all(np.diff(energy) < 0)
 
 
-# The reference ran with PyBaMM 26.7 and the same solver tolerances (rtol=1e-5): the
-# models solve the same discrete equations (they agree to 3e-7 K at rtol=1e-9), so they
-# differ by the solver error only
+# A regression test: the reference is PyTES itself, with the same solver tolerances
+# (rtol=1e-5), so results may differ by the solver error across platforms and PyBaMM
+# versions. Before F-048 these cases matched the finned-tube code prototype (F-027)
 REFERENCE_CASES = [
     pytest.param(pytes.SharpFrontModel, "sharp_front_coarse_sharp", COARSE_MESH, 0.0),
-    pytest.param(pytes.MushModel, "mush_coarse", COARSE_MESH, 0.5),
-    pytest.param(pytes.SharpFrontModel, "sharp_front_default", None, 0.5),
-    pytest.param(pytes.MushModel, "mush_default", None, 0.5, marks=pytest.mark.slow),
+    pytest.param(pytes.MushModel, "mush_coarse", COARSE_MESH, None),
+    pytest.param(pytes.SharpFrontModel, "sharp_front_default", None, None),
+    pytest.param(pytes.MushModel, "mush_default", None, None, marks=pytest.mark.slow),
 ]
 
 
@@ -116,7 +117,7 @@ def test_matches_reference(model_class, key, mesh, dT_m):
     )
     np.testing.assert_allclose(
         solution["Discharged energy [J]"].entries,
-        ref("Released energy [J]"),
+        ref("Discharged energy [J]"),
         rtol=1e-4,
     )
     np.testing.assert_allclose(
@@ -125,11 +126,8 @@ def test_matches_reference(model_class, key, mesh, dT_m):
         rtol=0,
         atol=1e-5,
     )
-    # The thermal energies have different references (0 K before, the lower temperature
-    # limit now), so compare their changes
     E = solution["Total thermal energy [J]"].entries
-    E_ref = ref("Thermal energy [J]")
-    np.testing.assert_allclose(E - E[0], E_ref - E_ref[0], rtol=1e-4)
+    np.testing.assert_allclose(E, ref("Total thermal energy [J]"), rtol=1e-4)
 
 
 def test_unknown_parameter_set():

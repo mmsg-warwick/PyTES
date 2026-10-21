@@ -7,51 +7,52 @@ size of the device. One kind per family (DESIGN D4): ``finned_tube_flow_path`` a
 ``packed_bed_flow_path``.
 
 Each layer is a function returning a fresh dict, registered in
-:data:`FINNED_TUBE_LAYERS` or :data:`PACKED_BED_LAYERS`. Values and citations are to be
-added, from cited sources.
+:data:`FINNED_TUBE_LAYERS` or :data:`PACKED_BED_LAYERS`, with the sources of its values in
+``"citations"``.
 """
+
+import numpy as np
 
 
 def finned_tube_default():
     """
-    The tubes of the default finned-tube battery (14 tubes). Stands in for the tube part of
-    the finned-tube default set.
+    The tube of the default finned-tube battery.
 
-    Source: to be added.
+    These values are illustrative and not based on any source.
     """
     return {
         "citations": [],
-        "Number of tubes": None,
-        "Tube radius [m]": None,
-        "Tube length [m]": None,
+        "Number of tubes": 1,
+        "Tube radius [m]": 3e-3,
+        "Tube length [m]": 10,
     }
 
 
 def nallusamy2007():
     """
-    The tank of Nallusamy, Sampath and Velraj (2007). Stands in for the bed size in the
-    packed-bed "Nallusamy2007" set.
+    The tank of Nallusamy, Sampath and Velraj (2007): 360 mm in diameter, 460 mm high.
 
-    Source: to be added.
+    Source: `Nallusamy, Sampath and Velraj (2007)
+    <https://doi.org/10.1016/j.renene.2006.04.015>`__.
     """
     return {
-        "citations": [],
-        "Bed length [m]": None,
-        "Bed cross-sectional area [m2]": None,
+        "citations": ["Nallusamy2007"],
+        "Bed length [m]": 0.46,
+        "Bed cross-sectional area [m2]": np.pi * 0.18**2,
     }
 
 
 def raul2018():
     """
-    The "Raul2018" bed. Stands in for the bed size in the packed-bed "Raul2018" set, whose
-    source gives no cross-section (the flat set uses a 1 m2 placeholder).
+    The bed of Raul et al. (2018): 170 mm in diameter, 360 mm long.
 
-    Source: to be added.
+    Source: `Raul et al. (2018)
+    <https://doi.org/10.1016/j.applthermaleng.2018.07.123>`__.
     """
     return {
-        "citations": [],
-        "Bed length [m]": None,
-        "Bed cross-sectional area [m2]": None,
+        "citations": ["Raul2018"],
+        "Bed length [m]": 0.36,
+        "Bed cross-sectional area [m2]": np.pi * 0.085**2,
     }
 
 

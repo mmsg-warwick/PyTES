@@ -44,11 +44,23 @@ it. Passing the suite is necessary, not sufficient.
   and the device is sized around it. Operation is apart from the hardware, so that one
   device can be run under several operations (charge, discharge). The tube radius stays in
   the flow path, although a fin design fits one tube size; a compatibility check between
-  the two can come later. Each material and fluid layer has its
+  the two can come later. An operation only makes sense relative to the PCM, so besides
+  the registered operations of the named sets, `operation.charge` and `operation.discharge`
+  build one from a PCM layer's melting range, margins and a mass flow rate, all given by the
+  user; their energy reference is the colder end (the initial state of a charge, the inlet
+  of a discharge). Every layer states its sources: a layer with cited values links each
+  source's DOI in its docstring, and one without says that its values are illustrative, an
+  estimate or representative (tested). The maintainer types in every value, to trace its
+  source; `template(kind)` gives an empty layer to fill in. Each material and fluid layer has its
   own name prefix so layers merge without clashes. `pytes.parameter_layers` (issue #3)
   defines the kinds and the names each holds, and composes layers into a plain
-  `pybamm.ParameterValues`; named sets list one layer per kind and replace the families'
-  flat default sets once their values are added from cited sources. Decided with it
+  `pybamm.ParameterValues`; named sets list one layer per kind. The families' default
+  parameter values are the named sets "Finned tube default", "Nallusamy2007" and
+  "Raul2018" (maintainer, 2026-10-21, F-048): their values were checked against the
+  literature and replace the earlier flat sets, and `swap` adds a new layer's sources to the
+  set's `"citations"`. Docstrings cite sources as reStructuredText links to their DOI;
+  bibliography roles (sphinxcontrib-bibtex, as PyBaMM uses) can follow with the
+  documentation site (#4). Decided with it
   (maintainer, 2026-10-18): `"Heat transfer coefficient [W.m-2.K-1]"` is in its own
   *coupling* layer, which will hold the parameters of other surface flux laws (#6);
   `"PCM smoothing width [K]"` stays in the PCM layer, although it is numerical; one `Metal`
@@ -222,7 +234,9 @@ has a physical melting range, with `H(T)` linear between solidus and liquidus (a
 value users will fit), and a separate small numerical smoothing width for the corners
 (speed-up of 2 to 3 times for about 0.05 K at 0.5 K). The parameters are
 `"PCM melting range [K]"` (physical, solidus to liquidus around the melting temperature;
-default 0, a sharp melting point) and `"PCM smoothing width [K]"` (numerical; default 0.5 K).
+a property of each PCM layer, e.g. 0, a sharp melting point, for the packed-bed PCMs and 2 K
+for PCM 60) and `"PCM smoothing width [K]"` (numerical; 0.01 K in the registered PCM layers
+since 2026-10-21, F-048, and 0.5 K before).
 Either or both may be 0 (F-035). In the mushy zone the enthalpy carries the latent heat plus
 the mean of the solid and liquid heat capacities.
 
@@ -386,12 +400,16 @@ versus discharged energy is the key comparison plot.
   conformance suite is clearest as one folder). The example notebooks run in CI with
   `nbmake`. Coverage (all tests, slow ones included) goes to Codecov.
 - Known upstream items: `pybamm.upwind` inflow uses a ghost node (`2*T_bc - T_1`) and can draw
-  in fluid colder than the inlet (workaround in `compat`); first-order upwinding is diffusive
+  in fluid colder than the inlet (#5860, filed by the maintainer 2026-10-07; workaround in
+  `compat`); first-order upwinding is diffusive
   (matters most for packed-bed thermoclines); face boundary values (#5094, assigned to the
   maintainer); `pybamm.Simulation` does not resolve coupled variables
-  (`Discretisation(resolve_coupled_variables=True)`; workaround in `compat`, F-028).
-- No upstream issue filed yet for the inflow ghost node or the coupled-variable resolution
-  (maintainer's call when to file).
+  by default (`resolve_coupled_variables=True`, or `discretisation_kwargs` in `Simulation`;
+  workaround in `compat`, F-028); `pybamm.Solution` takes no new attributes since 26.10
+  (workaround in `compat`); downstream packages cannot add citation databases.
+- No upstream issue filed yet for the coupled-variable resolution, `Solution` metadata or
+  citations (maintainer's call when to file; drafts with MWEs in the gitignored
+  `docs/upstream/`).
 - `pybamm.QuickPlot` hard-codes its default line colours, although its docstring says it
   follows matplotlib's colour cycle; the maintainer will fix it upstream (2026-10-16). No
   PyTES workaround; pass `colors=` meanwhile.
@@ -433,6 +451,7 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
 | 0D lumped models, reduced-order models | Shared contract; same outputs and parameters within a family |
 | SOC definitions (energy or exergy based), as toolkit post-processing (D13) | Reference temperature is a parameter; `energy_between`; ambient temperature to be added for exergy |
 | Measured DSC enthalpy curves | Material classes expose `H2T`, `T2H`, `k(H)`, liquid fraction |
+| Temperature-dependent properties (maintainer, 2026-10-18) | Models read properties only through the fluid-property object (functions of `(h, p)`) and the material classes (`k(H)`, `H2T`), never as bare parameters. Until then, each parameter layer's docstring records the temperature at which its constant values were taken from the source |
 | Pipe networks, channelling | Single flow path is assumed in D5; revisit if needed |
 | Model card rendering | Keep the submodel metadata complete now; render later |
 | Packaged sensitivity and fitting tools | Keep as notebooks until a second use proves them |

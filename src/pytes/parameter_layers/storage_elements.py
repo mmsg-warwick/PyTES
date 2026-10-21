@@ -8,52 +8,64 @@ D4): ``finned_tube_storage_element`` and ``packed_bed_storage_element``. Every n
 unit length or per tube, so a longer tube or more tubes keep the same element.
 
 Each layer is a function returning a fresh dict, registered in
-:data:`FINNED_TUBE_LAYERS` or :data:`PACKED_BED_LAYERS`. Values and citations are to be
-added, from cited sources.
+:data:`FINNED_TUBE_LAYERS` or :data:`PACKED_BED_LAYERS`, with the sources of its values in
+``"citations"``.
 """
 
 
 def finned_tube_default():
     """
-    The fins of the default finned-tube battery. Stands in for the fin part of the
-    finned-tube default set. "Storage depth [m]" is the height of the fins, which span the
-    storage from the tube wall to about half the distance between tubes.
+    The fins of the default finned-tube battery.
 
-    Source: to be added.
+    These values are illustrative and not based on any source.
     """
     return {
         "citations": [],
-        "Fin thickness [m]": None,
-        "Fin pitch [m]": None,
-        "Storage depth [m]": None,
+        "Fin thickness [m]": 2e-4,
+        "Fin pitch [m]": 3e-3,
+        "Storage depth [m]": 2e-2,
     }
 
 
 def nallusamy2007():
     """
-    The capsules of Nallusamy, Sampath and Velraj (2007), and how they pack. Stands in for
-    the capsule part of the packed-bed "Nallusamy2007" set.
+    The capsules of Nallusamy, Sampath and Velraj (2007), 55 mm in diameter, and how they
+    pack.
 
-    Source: to be added.
+    Source: `Nallusamy, Sampath and Velraj (2007)
+    <https://doi.org/10.1016/j.renene.2006.04.015>`__.
     """
     return {
-        "citations": [],
-        "Capsule radius [m]": None,
-        "Bed porosity": None,
+        "citations": ["Nallusamy2007"],
+        "Capsule radius [m]": 27.5e-3,
+        "Bed porosity": 0.5,
     }
 
 
 def raul2018():
     """
-    The capsules of the "Raul2018" bed, and how they pack. Stands in for the capsule part of
-    the packed-bed "Raul2018" set.
+    The capsules of Raul et al. (2018), 31 mm in diameter, and how they pack.
 
-    Source: to be added.
+    Source: `Raul et al. (2018)
+    <https://doi.org/10.1016/j.applthermaleng.2018.07.123>`__.
+    """
+    return {
+        "citations": ["Raul2018"],
+        "Capsule radius [m]": 1.55e-2,
+        "Bed porosity": 0.6,
+    }
+
+
+def default_capsule():
+    """
+    A generic spherical capsule, randomly packed in a bed large compared with the capsules.
+
+    These values are illustrative and not based on any source.
     """
     return {
         "citations": [],
-        "Capsule radius [m]": None,
-        "Bed porosity": None,
+        "Capsule radius [m]": 2e-2,
+        "Bed porosity": 0.5,
     }
 
 
@@ -66,4 +78,5 @@ FINNED_TUBE_LAYERS = {
 PACKED_BED_LAYERS = {
     "Nallusamy2007": nallusamy2007,
     "Raul2018": raul2018,
+    "Default capsule": default_capsule,
 }

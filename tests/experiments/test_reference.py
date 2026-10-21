@@ -1,4 +1,4 @@
-"""The experiment runner reproduces the finned-tube code prototype's runner (d391da0)."""
+"""The experiment runner reproduces its stored results (DESIGN findings, F-048)."""
 
 from pathlib import Path
 
@@ -8,10 +8,10 @@ import pytes
 from pytes.experiments import Experiment, run_experiment, step_description
 from pytes.experiments import step as s
 
-REFERENCE = np.load(
-    Path(__file__).parents[1] / "data" / "reference_prototype_d391da0.npz"
-)
-MDOT = 1000 * 20 / 6e4  # [kg.s-1]
+#: Outputs of PyTES on the default set, from tests/data/make_reference.py. Before F-048
+#: they matched the runner of the finned-tube code prototype (F-027)
+REFERENCE = np.load(Path(__file__).parents[1] / "data" / "reference_regression.npz")
+MDOT = 0.02  # [kg.s-1], the default
 T_COLD = 273.15 + 10
 
 
@@ -19,24 +19,24 @@ def test_matches_reference_experiment():
     model = pytes.SharpFrontModel()
     steps = [
         s.ConstantInputs(T_COLD, MDOT, duration=60, period=10),
-        s.ConstantPower(15e3, inlet_temperature=T_COLD, duration=300, period=10),
-        s.ConstantPower(20e3, mass_flow_rate=MDOT, duration=300, period=10),
+        s.ConstantPower(900, inlet_temperature=T_COLD, duration=300, period=10),
+        s.ConstantPower(1200, mass_flow_rate=MDOT, duration=300, period=10),
     ]
     solution = run_experiment(
         model, Experiment(steps), var_pts={model.y: 4, model.z: 5}
     )
     np.testing.assert_allclose(solution.t, REFERENCE["experiment/t"])
-    for name in ["Outlet temperature [K]", "Inlet temperature [K]", "Power [W]"]:
+    names = [
+        "Outlet temperature [K]",
+        "Inlet temperature [K]",
+        "Power [W]",
+        "Mass flow rate [kg.s-1]",
+    ]
+    for name in names:
         expected = REFERENCE[f"experiment/{name}"]
         np.testing.assert_allclose(
             solution[name].entries, expected, rtol=0, atol=1e-6 * np.max(abs(expected))
         )
-    # The reference flow rate was per tube, in m3.s-1, with water at 1000 kg.m-3
-    np.testing.assert_allclose(
-        solution["Mass flow rate [kg.s-1]"].entries,
-        REFERENCE["experiment/Inlet flow rate [m3.s-1]"] * 1000 * 14,
-        rtol=1e-6,
-    )
     descriptions = [step_description(st) for c in solution.cycles for st in c.steps]
     assert descriptions == [st.description for st in steps]
 

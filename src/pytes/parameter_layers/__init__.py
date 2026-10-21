@@ -19,7 +19,7 @@ plain :class:`pybamm.ParameterValues`.
 ...     operation="Finned tube discharge",
 ...     coupling="Finned tube default",
 ...     heat_transfer_fluid="Water",
-...     pcm="Finned tube PCM",
+...     pcm="PCM 60",
 ...     metal="Aluminium",
 ...     finned_tube_flow_path="Finned tube default",
 ...     finned_tube_storage_element="Finned tube default",
@@ -54,31 +54,31 @@ LAYERS = {
     "packed_bed_storage_element": storage_elements.PACKED_BED_LAYERS,
 }
 
-#: Named compositions: for each set, the name of the layer of each kind. They stand in for
-#: the flat default sets of the families, which they replace once their values are added
+#: Named compositions: for each set, the name of the layer of each kind. Each family's
+#: default parameter values are one of these sets
 SETS = {
     "Finned tube default": {
         "operation": "Finned tube discharge",
         "coupling": "Finned tube default",
         "heat_transfer_fluid": "Water",
-        "pcm": "Finned tube PCM",
+        "pcm": "PCM 60",
         "metal": "Aluminium",
         "finned_tube_flow_path": "Finned tube default",
         "finned_tube_storage_element": "Finned tube default",
     },
     "Nallusamy2007": {
         "operation": "Nallusamy2007",
-        "coupling": "Nallusamy2007",
+        "coupling": "Packed bed default",
         "heat_transfer_fluid": "Water",
-        "pcm": "Nallusamy2007 paraffin",
+        "pcm": "Paraffin (Nallusamy 2007)",
         "packed_bed_flow_path": "Nallusamy2007",
         "packed_bed_storage_element": "Nallusamy2007",
     },
     "Raul2018": {
         "operation": "Raul2018",
-        "coupling": "Raul2018",
-        "heat_transfer_fluid": "Raul2018 thermal oil",
-        "pcm": "Raul2018 PCM",
+        "coupling": "Packed bed default",
+        "heat_transfer_fluid": "Hytherm 600",
+        "pcm": "A164 (Raul 2018)",
         "packed_bed_flow_path": "Raul2018",
         "packed_bed_storage_element": "Raul2018",
     },
@@ -135,6 +135,23 @@ def get(kind, name):
         ) from None
 
 
+def template(kind):
+    """
+    An empty layer of a kind, to fill in: every name the kind holds, required and optional,
+    with the value None, and no citations.
+
+    Parameters
+    ----------
+    kind : str
+        The kind, e.g. "pcm".
+
+    Returns
+    -------
+    dict
+    """
+    return {"citations": [], **dict.fromkeys(_kind(kind).names)}
+
+
 def check(kind, layer, populated=True):
     """
     Check that a layer holds the names of its kind, and only those.
@@ -182,7 +199,7 @@ def compose(**layers):
     Parameters
     ----------
     **layers : str or dict
-        One layer per kind, keyed by kind (e.g. ``pcm="Finned tube PCM"``): the name of a
+        One layer per kind, keyed by kind (e.g. ``pcm="PCM 60"``): the name of a
         registered layer, or a layer as a dict.
 
     Returns
@@ -234,6 +251,8 @@ def swap(parameter_values, **layers):
     The set must already hold every name of each new layer's kind it holds, so that a swap
     replaces a layer and cannot add stray names. (This is the check that
     ``ParameterValues.update(check_already_exists=True)`` made before PyBaMM deprecated it.)
+    The set's ``"citations"`` gain the sources of the new layers. Those of the replaced
+    layers stay, as another layer of the set may cite them too.
 
     Parameters
     ----------
@@ -251,14 +270,17 @@ def swap(parameter_values, **layers):
     for kind, layer in layers.items():
         layer = _resolve(kind, layer)
         check(kind, layer)
-        for citation in layer.pop("citations", []):
-            pybamm.citations.register(citation)
         absent = sorted(set(_kind(kind).required) - set(parameter_values.keys()))
         if absent:
             raise ValueError(
                 f"The parameter set holds no {kind} layer to swap: it lacks {absent}"
             )
-        parameter_values.update(layer)
+        citations = list(parameter_values.get("citations", []))
+        for citation in layer.pop("citations", []):
+            if citation not in citations:
+                citations.append(citation)
+                pybamm.citations.register(citation)
+        parameter_values.update({**layer, "citations": citations})
 
 
 __all__ = [
@@ -273,4 +295,5 @@ __all__ = [
     "get",
     "kinds",
     "swap",
+    "template",
 ]
