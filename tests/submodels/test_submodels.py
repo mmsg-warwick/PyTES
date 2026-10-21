@@ -235,11 +235,15 @@ def test_every_parameter_is_attributed(model_class):
     )
     # "citations" lists the sources of the values, as in PyBaMM's own parameter sets
     unused = set(model.default_parameter_values.keys()) - attributed - {"citations"}
-    # Parameters kept as hooks, used by no model yet (DESIGN D8, deferred items)
-    assert unused <= {
-        "Heat transfer fluid conductivity [W.m-1.K-1]",
-        "Heat transfer fluid viscosity [Pa.s]",
-    }
+    if model.options["heat transfer coefficient"] == "constant":
+        # Only the flow-dependent coefficients use these (issue #6)
+        assert unused <= {
+            "Heat transfer fluid conductivity [W.m-1.K-1]",
+            "Heat transfer fluid viscosity [Pa.s]",
+        }
+    else:
+        # The constant coefficient stays in the coupling layer of the default sets
+        assert unused == {"Heat transfer coefficient [W.m-2.K-1]"}
 
 
 def test_coupled_variable_is_created_once():

@@ -67,7 +67,7 @@ class SharpFrontModel(BaseFinnedTubeModel):
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage
         self.submodels["coupling"] = LedgerWallCoupling(
-            param, param.fluid, storage.label, geometry
+            param, param.fluid, storage.label, geometry, flux_law=self.flux_law()
         )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])
 

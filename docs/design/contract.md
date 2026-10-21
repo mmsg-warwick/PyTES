@@ -14,8 +14,9 @@ and the tests disagree, the tests win.**
   submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
 - It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance
   suite, with every combination of its options (`allowed_options`; today `"storage":
-  "resolved" | "averaged"` in every model). Unknown options or values raise
-  `pytes.OptionError`.
+  "resolved" | "averaged"` in every model, and `"heat transfer coefficient": "constant" |
+  "Gnielinski"` in the finned tube, `"constant" | "Wakao-Kaguei"` in the packed bed).
+  Unknown options or values raise `pytes.OptionError`.
 
 ## 2. Submodels
 
@@ -66,7 +67,7 @@ averaged one (`"storage": "averaged"`) does not.
 |---|---|---|
 | Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"flow path"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"flow path"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
 | Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy; and, for a phase-change material only, the liquid fraction. | `EnthalpyStorage` (PCM, composite, fin metal, PCM capsule) |
-| Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, fluid_state, T_s)`, `fluid_state` a `FluidState` with `h`, `T`, `mass_flow_rate` (device), `p` (reserved), positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `fluid_state.T - T_s`; a law's geometry goes to its constructor. | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
+| Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, fluid_state, T_s)`, `fluid_state` a `FluidState` with `h`, `T`, `mass_flow_rate` (device), `p` (reserved), positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `fluid_state.T - T_s`; a law's geometry goes to its constructor. Flow-dependent laws are `NusseltCorrelation`s (`Gnielinski`, `WakaoKaguei`, F-049), with no parameters of their own. The coupling also provides the law's own variables, `SurfaceFluxLaw.variables(fluid, fluid_state)` (none by default). | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
 | Device energy | Power, energies, initial state. | `DeviceEnergy` |
 
 ## 3. Variables (DESIGN D12)
@@ -97,7 +98,10 @@ and fluid excluded).
 **No state of charge** (DESIGN D13): models provide energies only. The energy between two
 uniform states is `pytes.energy_between(model, T_a, T_b)` (§5).
 
-**Also provided by every current model:** `Initial uniform temperature [K]`.
+**Also provided by every current model:** `Initial uniform temperature [K]`; `Heat
+transfer coefficient [W.m-2.K-1]` (from the coupling's flux law: the parameter, or the
+correlation's value), plus `Surface Reynolds number`, `Surface Prandtl number` and `Surface
+Nusselt number` with a correlation (F-049).
 
 **Family-specific:** prefixed (`Fin temperature [K]`). The packed bed adds the device totals
 per unit bed cross-section (`Power per unit area [W.m-2]`, `Discharged energy per unit area
@@ -133,11 +137,11 @@ liquidus, physical; 0 for a sharp melting point), `PCM smoothing width [K]` (num
 rounding of the corners; 0 for exact corners), `Metal density [kg.m-3]`, etc.
 
 **Fluid:** `Heat transfer fluid density [kg.m-3]`, `... specific heat capacity
-[J.kg-1.K-1]`, `... conductivity [W.m-1.K-1]` (unused; kept for axial diffusion),
-`... viscosity [Pa.s]` (declared, unused).
+[J.kg-1.K-1]`, `... conductivity [W.m-1.K-1]` and `... viscosity [Pa.s]` (all required in a
+fluid layer; the last two are used only by the correlations).
 
 **Surface flux law:** `Heat transfer coefficient [W.m-2.K-1]` (`NewtonCooling`, the
-default).
+default). The correlations add no parameter (F-049).
 
 **Family geometry** (DESIGN D1): names start with the geometric object, never a material
 prefix. Finned tube: `Tube radius [m]`, `Tube length [m]`, `Number of tubes`, `Storage

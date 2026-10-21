@@ -5,7 +5,14 @@ from .base_submodel import BaseSubModel
 from .coupling import FinPCMCoupling, FinRootCoupling, LedgerWallCoupling
 from .energy import DeviceEnergy, PerAreaTotals
 from .fluid import AdvectedFluid, FlowPath
-from .flux_laws import FluidState, NewtonCooling, SurfaceFluxLaw
+from .flux_laws import (
+    FluidState,
+    Gnielinski,
+    NewtonCooling,
+    NusseltCorrelation,
+    SurfaceFluxLaw,
+    WakaoKaguei,
+)
 from .storage import EnthalpyStorage, StorageGeometry
 
 __all__ = [
@@ -17,9 +24,12 @@ __all__ = [
     "FinRootCoupling",
     "FlowPath",
     "FluidState",
+    "Gnielinski",
     "LedgerWallCoupling",
     "NewtonCooling",
+    "NusseltCorrelation",
     "PerAreaTotals",
     "StorageGeometry",
     "SurfaceFluxLaw",
+    "WakaoKaguei",
 ]

@@ -33,6 +33,9 @@ class LedgerWallCoupling(BaseSubModel):
     slightly, as the storage flux uses the conductivity at the cell face rather than at the
     surface.)
 
+    The coupling also provides the flux law's own variables (e.g. "Heat transfer
+    coefficient [W.m-2.K-1]", see :meth:`pytes.submodels.SurfaceFluxLaw.variables`).
+
     For a storage averaged along the flow path (``geometry.averaged``), the flux law sees
     the fluid state averaged along the flow path, and the heat the fluid gains is spread
     uniformly along it; energy stays exact, as the storage integrates over the flow path
@@ -93,6 +96,7 @@ class LedgerWallCoupling(BaseSubModel):
         self.variables = {
             HEAT_GAIN: heat_gain,
             f"{label} boundary heat flux [W.m-2]": self.flux_factor * heat_flux,
+            **self.flux_law.variables(self.fluid, fluid_state),
         }
 
 

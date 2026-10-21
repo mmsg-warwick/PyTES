@@ -6,7 +6,7 @@
 import pybamm
 
 from ... import compat
-from ...submodels import AdvectedFluid, FlowPath
+from ...submodels import AdvectedFluid, FlowPath, Gnielinski, NewtonCooling
 from ..base_model import BaseModel
 from .parameter_values import get_parameter_values
 from .parameters import FinnedTubeParameters
@@ -24,6 +24,9 @@ class BaseFinnedTubeModel(BaseModel):
     - "storage": "resolved" (default), the storage at every point along the tube; or
       "averaged", one storage cross-section standing for the average along the tube,
       exchanging heat with the fluid averaged along it (DESIGN D3, D4).
+    - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
+      [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or "Gnielinski", from the flow
+      in the tube (:class:`pytes.submodels.Gnielinski`, issue #6).
 
     Parameters
     ----------
@@ -42,7 +45,10 @@ class BaseFinnedTubeModel(BaseModel):
         Distance along the tube from the inlet [m], in the "flow path" domain.
     """
 
-    allowed_options = {"storage": ("resolved", "averaged")}
+    allowed_options = {
+        "storage": ("resolved", "averaged"),
+        "heat transfer coefficient": ("constant", "Gnielinski"),
+    }
 
     def __init__(self, name, options=None):
         super().__init__(name=name, options=options)
@@ -79,6 +85,12 @@ class BaseFinnedTubeModel(BaseModel):
     def fluid_submodel(self):
         """The heat transfer fluid in the tubes"""
         return AdvectedFluid(self.param, self.param.fluid, self.flow_path)
+
+    def flux_law(self):
+        """The surface flux law at the tube wall, from the "heat transfer coefficient" option"""
+        if self.options["heat transfer coefficient"] == "Gnielinski":
+            return Gnielinski(self.param.R_f, self.param.N_tubes)
+        return NewtonCooling()
 
     def storage_flow_path(self):
         """The flow path a storage geometry is averaged along, or None if resolved"""

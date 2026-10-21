@@ -12,8 +12,10 @@ from ...submodels import (
     EnthalpyStorage,
     FlowPath,
     LedgerWallCoupling,
+    NewtonCooling,
     PerAreaTotals,
     StorageGeometry,
+    WakaoKaguei,
 )
 from ..base_model import BaseModel
 from .parameter_values import get_parameter_values
@@ -46,6 +48,9 @@ class PackedBedModel(BaseModel):
       "averaged", one capsule standing for the average along the bed, exchanging heat with
       the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
       `encapsulated-LTES <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository).
+    - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
+      [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or "Wakao-Kaguei", from the
+      flow through the bed (:class:`pytes.submodels.WakaoKaguei`, issue #6).
 
     Parameters
     ----------
@@ -64,7 +69,10 @@ class PackedBedModel(BaseModel):
         Distance along the bed from the inlet [m], in the "flow path" domain.
     """
 
-    allowed_options = {"storage": ("resolved", "averaged")}
+    allowed_options = {
+        "storage": ("resolved", "averaged"),
+        "heat transfer coefficient": ("constant", "Wakao-Kaguei"),
+    }
 
     def __init__(self, name="Packed bed model", options=None):
         super().__init__(name=name, options=options)
@@ -117,10 +125,16 @@ class PackedBedModel(BaseModel):
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage
         self.submodels["coupling"] = LedgerWallCoupling(
-            param, param.fluid, storage.label, geometry
+            param, param.fluid, storage.label, geometry, flux_law=self.flux_law()
         )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])
         self.submodels["per-area totals"] = PerAreaTotals(param, param.A)
+
+    def flux_law(self):
+        """The surface flux law at the capsules, from the "heat transfer coefficient" option"""
+        if self.options["heat transfer coefficient"] == "Wakao-Kaguei":
+            return WakaoKaguei(self.param.R, self.param.A)
+        return NewtonCooling()
 
     @property
     def default_geometry(self):

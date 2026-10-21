@@ -14,8 +14,10 @@ def cls(request):
 
 
 def test_defaults_are_filled_in(cls):
-    assert cls().options == {"storage": "resolved"}
-    assert cls(options={"storage": "averaged"}).options == {"storage": "averaged"}
+    defaults = {"storage": "resolved", "heat transfer coefficient": "constant"}
+    assert cls().options == defaults
+    averaged = cls(options={"storage": "averaged"}).options
+    assert averaged == {**defaults, "storage": "averaged"}
 
 
 @pytest.mark.parametrize(
