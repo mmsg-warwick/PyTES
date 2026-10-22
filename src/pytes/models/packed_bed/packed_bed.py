@@ -43,9 +43,9 @@ class PackedBedModel(BaseModel):
 
     Options:
 
-    - "storage": "resolved" (default), a capsule at every point along the bed; or
-      "averaged", one capsule standing for the average along the bed, exchanging heat with
-      the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
+    - "storage along flow path": "resolved" (default), a capsule at every point along the
+      bed; or "averaged", one capsule standing for the average along the bed, exchanging
+      heat with the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
       `encapsulated-LTES <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository).
     - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
       [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or a Nusselt correlation for
@@ -71,7 +71,7 @@ class PackedBedModel(BaseModel):
     """
 
     allowed_options = {
-        "storage": ("resolved", "averaged"),
+        "storage along flow path": ("resolved", "averaged"),
         "heat transfer coefficient": HeatTransferCoefficientOptions("packed bed"),
     }
 
@@ -81,7 +81,7 @@ class PackedBedModel(BaseModel):
     @property
     def averaged(self):
         """Whether the capsules are averaged along the bed"""
-        return self.options["storage"] == "averaged"
+        return self.options["storage along flow path"] == "averaged"
 
     def set_spatial_variables(self):
         domains = {"primary": "capsule"}

@@ -13,8 +13,8 @@ and the tests disagree, the tests win.**
   `model.print_submodel_info()`. Users call models; advanced users may build their own from
   submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
 - It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance
-  suite, with every combination of its options (`allowed_options`; today `"storage":
-  "resolved" | "averaged"` in every model, and `"heat transfer coefficient": "constant" |
+  suite, with every combination of its options (`allowed_options`; today `"storage along
+  flow path": "resolved" | "averaged"` in every model, and `"heat transfer coefficient": "constant" |
   "Gnielinski"` in the finned tube, `"constant" | "Wakao-Kaguei"` in the packed bed, plus
   any correlation registered for the model's flow with `register_correlation`).
   Unknown options or values raise `pytes.OptionError`.
@@ -60,7 +60,7 @@ with a default `pybamm.Simulation`.
 - `"capsule"`, coordinate `r`: from a capsule's centre (packed bed; spherical).
 
 A storage resolved along the flow path has `"flow path"` as its last secondary domain; an
-averaged one (`"storage": "averaged"`) does not.
+averaged one (`"storage along flow path": "averaged"`) does not.
 
 ### Slots (DESIGN D5)
 

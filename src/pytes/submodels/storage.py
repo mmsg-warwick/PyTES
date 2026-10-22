@@ -33,10 +33,10 @@ class StorageGeometry:
         Side of the primary domain that exchanges heat ("left" or "right", default
         "left"). The other side is a symmetry plane (zero flux).
     flow_path : :class:`pytes.submodels.FlowPath`, optional
-        Given for a storage averaged along the flow path (``"storage": "averaged"``,
-        DESIGN D4): one storage cross-section stands for all of them, exchanging heat with
-        the fluid averaged along the flow path. Its domains then exclude the flow path,
-        and ``integrate`` multiplies by the flow path length.
+        Given for a storage averaged along the flow path (``"storage along flow path":
+        "averaged"``, DESIGN D4): one storage cross-section stands for all of them,
+        exchanging heat with the fluid averaged along the flow path. Its domains then
+        exclude the flow path, and ``integrate`` multiplies by the flow path length.
     """
 
     def __init__(

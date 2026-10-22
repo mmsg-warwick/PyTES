@@ -21,9 +21,9 @@ class BaseFinnedTubeModel(BaseModel):
 
     Options:
 
-    - "storage": "resolved" (default), the storage at every point along the tube; or
-      "averaged", one storage cross-section standing for the average along the tube,
-      exchanging heat with the fluid averaged along it (DESIGN D3, D4).
+    - "storage along flow path": "resolved" (default), the storage at every point along
+      the tube; or "averaged", one storage cross-section standing for the average along
+      the tube, exchanging heat with the fluid averaged along it (DESIGN D3, D4).
     - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
       [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or a Nusselt correlation for
       the flow in the tubes, by name: "Gnielinski" (:class:`pytes.submodels.Gnielinski`,
@@ -48,7 +48,7 @@ class BaseFinnedTubeModel(BaseModel):
     """
 
     allowed_options = {
-        "storage": ("resolved", "averaged"),
+        "storage along flow path": ("resolved", "averaged"),
         "heat transfer coefficient": HeatTransferCoefficientOptions("tube"),
     }
 
@@ -58,7 +58,7 @@ class BaseFinnedTubeModel(BaseModel):
     @property
     def averaged(self):
         """Whether the storage is averaged along the tube"""
-        return self.options["storage"] == "averaged"
+        return self.options["storage along flow path"] == "averaged"
 
     def storage_domains(self, *domains):
         """The given storage domains, then the flow path unless the storage is averaged"""

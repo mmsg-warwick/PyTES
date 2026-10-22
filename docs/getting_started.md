@@ -34,7 +34,7 @@ your own to `pybamm.Simulation` to change them.
 | Finned tube | {class}`~pytes.SharpFrontModel`, {class}`~pytes.MushModel` | PCM around tubes with metal fins (homogenised or resolved) |
 | Packed bed | {class}`~pytes.PackedBedModel` | a bed of spherical PCM capsules |
 
-Every model takes `options={"storage": "averaged"}` for a faster variant with one storage
+Every model takes `options={"storage along flow path": "averaged"}` for a faster variant with one storage
 cross-section standing for the average along the flow. Each model is a fixed composition of
 submodels (a fluid, a storage and a coupling, plus the device-level energy), listed in
 `model.submodels`; `model.print_submodel_info()` describes them.

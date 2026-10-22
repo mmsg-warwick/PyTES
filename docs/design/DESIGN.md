@@ -100,10 +100,15 @@ testable in isolation.
   fluid (dynamic or quasi-steady, D5) or the film coefficient. `operating_mode` and
   `initial_state` are removed (D11, D14). This is the preferred route for variants.
   *Introduced with the first real variant* (maintainer, 2026-10-14), which is
-  `"storage": "resolved" | "averaged"` (D4; maintainer, 2026-10-15). Each model declares
+  `"storage along flow path": "resolved" | "averaged"` (D4; maintainer, 2026-10-15; named
+  `"storage"` until 2026-10-22, F-050). Each model declares
   `allowed_options`, the first value of each being the default; unknown options or values
   raise `pytes.OptionError`, and `check_options` rejects incompatible combinations. Values
   are lower case unless they are names (e.g. `"heat transfer coefficient": "Gnielinski"`).
+  An option is named after what it varies, not after a slot (maintainer, 2026-10-22,
+  F-050): `"storage"` was also the name of a slot in `model.submodels`. A renamed option is
+  listed in `BaseModel.renamed_options`, so that the error for its old name gives the new
+  one.
 - **No silent swaps.** An option combination that is incompatible raises an error naming the
   conflict; a model never replaces a submodel the user did not ask for. Rationale: PyBaMM's
   options grew complicated and it swapped submodels silently to keep combinations working,
@@ -128,7 +133,7 @@ testable in isolation.
   - *Outputs:* a higher-fidelity model provides every variable of the simpler models in its
     family and may add more (e.g. the mush model's fin variables).
   - *Averaged storage* (maintainer, 2026-10-15): every model has the option
-    `"storage": "averaged"`, in which one storage cross-section (a capsule, an annulus, a
+    `"storage along flow path": "averaged"`, in which one storage cross-section (a capsule, an annulus, a
     fin-PCM unit) stands for the average along the flow path and exchanges heat with the
     fluid averaged along it. Averaging is a fidelity choice that applies across families,
     so it is an option, not a model class per family (it replaces the planned

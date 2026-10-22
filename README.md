@@ -58,7 +58,7 @@ notebooks, is at [pytes.readthedocs.io](https://pytes.readthedocs.io).
 | Finned tube | `SharpFrontModel`, `MushModel` | PCM around tubes with metal fins (homogenised or resolved) |
 | Packed bed | `PackedBedModel` | a bed of spherical PCM capsules |
 
-Every model takes `options={"storage": "averaged"}` for a faster variant with one storage
+Every model takes `options={"storage along flow path": "averaged"}` for a faster variant with one storage
 cross-section standing for the average along the flow. All models share their outputs
 (power, energies, inlet and outlet temperatures, all in SI units with °C, kW and kWh twins),
 their experiments, and an exact energy balance, checked by a common conformance suite.
