@@ -43,7 +43,7 @@ FLOW_COORDINATE = "z"
 #: Name of the flow-path domain in every family
 FLOW_DOMAIN = "flow path"
 
-#: Unit twins: for a variable in an SI unit (key), each twin's unit and conversion
+#: The unit twins of a variable in an SI unit (key), each with its unit and conversion
 UNIT_TWINS = {
     "[K]": (("[degC]", lambda T: T - 273.15),),
     "[W]": (("[kW]", lambda P: P / 1e3),),

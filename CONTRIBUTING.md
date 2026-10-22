@@ -249,6 +249,24 @@ changes and discrepancies).
 Each capability has a short example notebook in [`examples/`](examples). Notebooks are
 committed with their outputs, so run them before committing, and keep them short. CI
 executes every notebook (`uv run pytest --nbmake examples/`) and fails if a cell raises.
+Add a new notebook to the list in [`docs/examples/index.md`](docs/examples/index.md), so
+that it appears on the documentation site.
+
+### Documentation site
+
+The documentation site is built with [Sphinx](https://www.sphinx-doc.org) from
+[`docs/`](docs) and hosted on [Read the Docs](https://readthedocs.org) (configured in
+`.readthedocs.yaml`). It has the API reference, generated from the docstrings
+(`docs/api/`), the example notebooks, rendered from their committed outputs, the design
+documents, the changelog and this guide. To build it:
+
+```bash
+uv run --group docs sphinx-build -W --keep-going docs docs/_build/html
+```
+
+and open `docs/_build/html/index.html`. Any warning fails the build, here and in CI: a
+broken cross-reference, a malformed docstring, or a page missing from every table of
+contents. A new public module needs an entry in one of the pages of `docs/api/`.
 
 ## Releasing
 
@@ -289,6 +307,7 @@ Every push and pull request runs, with [GitHub Actions](https://docs.github.com/
 - coverage: every test, slow ones included, reported to
   [Codecov](https://codecov.io/gh/mmsg-warwick/PyTES) (configured in `codecov.yml`);
 - the example notebooks;
+- the documentation site, built with warnings treated as errors;
 - the tests against PyBaMM's `main` branch (non-blocking, to catch upstream changes early);
 - on pull requests, the check for a changelog fragment.
 

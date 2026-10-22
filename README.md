@@ -9,6 +9,7 @@
 
 [![Tests](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml/badge.svg)](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/pytes-thermal)](https://pypi.org/project/pytes-thermal/)
+[![Documentation](https://readthedocs.org/projects/pytes/badge/?version=latest)](https://pytes.readthedocs.io)
 [![Coverage](https://codecov.io/gh/mmsg-warwick/PyTES/branch/main/graph/badge.svg)](https://codecov.io/gh/mmsg-warwick/PyTES)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23438443.svg)](https://doi.org/10.5281/zenodo.23438443)
 
@@ -47,6 +48,9 @@ solution = pybamm.Simulation(model).solve([0, 3600])
 print(solution["Outlet temperature [degC]"].entries[-1])
 ```
 
+The documentation, with a getting-started guide, the API reference and the example
+notebooks, is at [pytes.readthedocs.io](https://pytes.readthedocs.io).
+
 ## 🔥 Models
 
 | Family | Models | Storage |
@@ -73,7 +77,8 @@ their experiments, and an exact energy balance, checked by a common conformance 
 
 Notebooks in [`examples/`](https://github.com/mmsg-warwick/PyTES/tree/main/examples): the finned-tube and
 packed-bed models, experiments, composing models, analytical validation, and a design study
-comparing the two families.
+comparing the two families. They are also
+[rendered in the documentation](https://pytes.readthedocs.io/en/latest/examples/index.html).
 
 ## 📐 Design
 

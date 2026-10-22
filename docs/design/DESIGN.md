@@ -457,6 +457,15 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
   `no changelog`. Rationale: no conflicts between pull requests and no forgotten entries,
   the two problems of a hand-edited changelog. `CONTRIBUTING.md` adapted from PyBaMM's
   (itself from PINTS); licence BSD 3-Clause, "the PyTES developers".
+- **Documentation site** (issue #4, 2026-10-22): Sphinx on Read the Docs, set up as
+  PyBaMM's, so that `intersphinx` links to PyBaMM's classes. The API reference comes from the
+  NumPy docstrings (autodoc and napoleon), with each object documented once, under the name
+  users import it by (`pytes.SharpFrontModel`, `pytes.submodels.EnthalpyStorage`). The
+  example notebooks stay in `examples/` and are rendered with myst-nb from their committed
+  outputs, never executed (CI runs them; myst-nb needs no pandoc). The changelog and
+  `CONTRIBUTING.md` stay at the root for GitHub, and their pages are generated at each
+  build with links into the site. A `docs` dependency group; CI and Read the Docs build with
+  warnings as errors. Bibliography roles (sphinxcontrib-bibtex) can follow (D1).
 - **Releases** (maintainer, 2026-10-17): versions in `pyproject.toml` and `CITATION.cff`;
   a GitHub release `v<version>` runs `release.yml` (build, check, attach) and Zenodo mints
   its DOI. PyPI publishing is wired (trusted publishing) but off until the repository

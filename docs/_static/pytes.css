@@ -1,0 +1,12 @@
+/* The theme's colours, from the logo's palette (docs/_static/LOGO-USAGE.md): the darker
+   shades in light mode and the lighter ones in dark mode, so that links stay readable */
+html[data-theme="light"] {
+  --pst-color-primary: #C2410C;
+  --pst-color-secondary: #E8590C;
+  --pst-color-link-hover: #E8590C;
+}
+html[data-theme="dark"] {
+  --pst-color-primary: #FF922B;
+  --pst-color-secondary: #FFA94D;
+  --pst-color-link-hover: #FFA94D;
+}
