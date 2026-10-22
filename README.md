@@ -48,6 +48,9 @@ solution = pybamm.Simulation(model).solve([0, 3600])
 print(solution["Outlet temperature [degC]"].entries[-1])
 ```
 
+The documentation, with a getting-started guide, the API reference and the example
+notebooks, is at [pytes.readthedocs.io](https://pytes.readthedocs.io).
+
 ## 🔥 Models
 
 | Family | Models | Storage |
@@ -74,7 +77,8 @@ their experiments, and an exact energy balance, checked by a common conformance 
 
 Notebooks in [`examples/`](https://github.com/mmsg-warwick/PyTES/tree/main/examples): the finned-tube and
 packed-bed models, experiments, composing models, analytical validation, and a design study
-comparing the two families.
+comparing the two families. They are also
+[rendered in the documentation](https://pytes.readthedocs.io/en/latest/examples/index.html).
 
 ## 📐 Design
 
