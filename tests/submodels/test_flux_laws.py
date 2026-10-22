@@ -6,13 +6,19 @@ import pytest
 from conftest import var_pts
 
 import pytes
+from pytes import conformance
 from pytes.experiments import Experiment, run_experiment, step
 from pytes.submodels import (
+    CORRELATIONS,
     FluidState,
     Gnielinski,
+    HeatTransferCoefficientOptions,
     NusseltCorrelation,
+    PackedBedCorrelation,
     SurfaceFluxLaw,
+    TubeCorrelation,
     WakaoKaguei,
+    register_correlation,
 )
 
 
@@ -124,3 +130,102 @@ def test_constant_power_adjusts_the_flow_through_the_coefficient():
     np.testing.assert_allclose(solution["Power [W]"].entries, 4000, rtol=1e-4)
     assert np.ptp(mdot) > 0
     assert np.ptp(h) > 0
+
+
+# Registered correlations
+
+
+@pytest.fixture
+def registry(monkeypatch):
+    """The registry, restored after the test"""
+    for flow, correlations in CORRELATIONS.items():
+        monkeypatch.setitem(CORRELATIONS, flow, dict(correlations))
+    return CORRELATIONS
+
+
+def dittus_boelter(Re, Pr):
+    return 0.023 * Re**0.8 * Pr**0.4
+
+
+def test_the_built_in_correlations_are_registered():
+    assert CORRELATIONS == {
+        "tube": {"Gnielinski": Gnielinski},
+        "packed bed": {"Wakao-Kaguei": WakaoKaguei},
+    }
+    assert issubclass(Gnielinski, TubeCorrelation)
+    assert issubclass(WakaoKaguei, PackedBedCorrelation)
+
+
+def test_option_values_follow_the_registry(registry):
+    values = pytes.SharpFrontModel.allowed_options["heat transfer coefficient"]
+    assert list(values) == ["constant", "Gnielinski"]
+    assert values[0] == "constant" and len(values) == 2
+    assert "Gnielinski" in repr(values)
+    register_correlation("Dittus-Boelter", dittus_boelter, flow="tube")
+    assert list(values) == ["constant", "Gnielinski", "Dittus-Boelter"]
+    # Only for its own flow geometry
+    with pytest.raises(pytes.OptionError, match="Wakao-Kaguei"):
+        pytes.PackedBedModel(options={"heat transfer coefficient": "Dittus-Boelter"})
+
+
+def test_a_registered_function_runs_and_conserves_energy(registry):
+    correlation = register_correlation("Dittus-Boelter", dittus_boelter, flow="tube")
+    assert issubclass(correlation, TubeCorrelation)
+    model = pytes.SharpFrontModel(
+        options={"heat transfer coefficient": "Dittus-Boelter"}
+    )
+    assert isinstance(model.submodels["coupling"].flux_law, correlation)
+    solution = conformance.check_model(model, var_pts=var_pts(model))
+    # h = Nu k / d, with Nu from the registered function at the solved Re and Pr
+    Re = solution["Surface Reynolds number"].entries
+    Pr = solution["Surface Prandtl number"].entries
+    pv = model.default_parameter_values
+    k, d = pv["Heat transfer fluid conductivity [W.m-1.K-1]"], 2 * pv["Tube radius [m]"]
+    np.testing.assert_allclose(
+        solution["Heat transfer coefficient [W.m-2.K-1]"].entries,
+        dittus_boelter(Re, Pr) * k / d,
+        rtol=1e-10,
+    )
+
+
+def test_a_registered_class_runs(registry):
+    class Ranz(PackedBedCorrelation):
+        def nusselt(self, Re, Pr):
+            return 2 + 0.6 * Re**0.5 * Pr ** (1 / 3)
+
+    assert register_correlation("Ranz-Marshall", Ranz, flow="packed bed") is Ranz
+    model = pytes.PackedBedModel(options={"heat transfer coefficient": "Ranz-Marshall"})
+    assert isinstance(model.submodels["coupling"].flux_law, Ranz)
+    conformance.check_model(model, var_pts=var_pts(model))
+
+
+def test_registration_replaces_only_when_asked(registry):
+    register_correlation("Mine", dittus_boelter, flow="tube")
+    with pytest.raises(ValueError, match="replace=True"):
+        register_correlation("Mine", dittus_boelter, flow="tube")
+    replaced = register_correlation("Mine", lambda Re, Pr: 4, flow="tube", replace=True)
+    assert registry["tube"]["Mine"] is replaced
+    with pytest.raises(ValueError, match="cannot be replaced"):
+        register_correlation("Gnielinski", dittus_boelter, flow="tube", replace=True)
+
+
+@pytest.mark.parametrize(
+    "name, nusselt, flow, error, match",
+    [
+        ("Mine", dittus_boelter, "duct", ValueError, "Unknown flow 'duct'"),
+        ("", dittus_boelter, "tube", ValueError, "non-empty string"),
+        (3, dittus_boelter, "tube", ValueError, "non-empty string"),
+        ("constant", dittus_boelter, "tube", ValueError, "constant coefficient"),
+        ("Mine", 3.66, "tube", TypeError, "function nusselt"),
+        ("Mine", WakaoKaguei, "tube", TypeError, "must subclass TubeCorrelation"),
+    ],
+)
+def test_invalid_registrations(registry, name, nusselt, flow, error, match):
+    with pytest.raises(error, match=match):
+        register_correlation(name, nusselt, flow=flow)
+    assert registry["tube"] == {"Gnielinski": Gnielinski}
+
+
+def test_options_for_an_unknown_flow():
+    with pytest.raises(ValueError, match="Unknown flow"):
+        HeatTransferCoefficientOptions("duct")

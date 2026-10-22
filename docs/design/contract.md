@@ -15,7 +15,8 @@ and the tests disagree, the tests win.**
 - It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance
   suite, with every combination of its options (`allowed_options`; today `"storage":
   "resolved" | "averaged"` in every model, and `"heat transfer coefficient": "constant" |
-  "Gnielinski"` in the finned tube, `"constant" | "Wakao-Kaguei"` in the packed bed).
+  "Gnielinski"` in the finned tube, `"constant" | "Wakao-Kaguei"` in the packed bed, plus
+  any correlation registered for the model's flow with `register_correlation`).
   Unknown options or values raise `pytes.OptionError`.
 
 ## 2. Submodels

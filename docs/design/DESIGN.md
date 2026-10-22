@@ -200,8 +200,9 @@ as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no 
   fluid-property object and materials, positive into the storage. Newton's law of cooling,
   `h (T_f - T_s)` with `h` from the fluid-property object, is the default. Others (series
   wall or contact resistance, a nonlinear or radiative law) need no change to the
-  conservation logic. Built-in laws are chosen through `options` (D3); a custom law is passed
-  to the coupling through the composition API. Interface (maintainer, 2026-10-16):
+  conservation logic. Built-in laws, and Nusselt correlations registered by users, are
+  chosen through `options` (D3); any other custom law is passed to the coupling through the
+  composition API. Interface (maintainer, 2026-10-16):
   `heat_flux(fluid, fluid_state, T_s)`, with `fluid_state` a `FluidState` (`h`, `T`,
   `mass_flow_rate` of the whole device, `p` reserved) so that new fields never break existing
   laws; geometry a law needs (e.g. a hydraulic diameter) goes to its constructor, from the
@@ -217,6 +218,19 @@ as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no 
   variables: `"Heat transfer coefficient [W.m-2.K-1]"` for every Newton law, plus
   `"Surface Reynolds number"`, `"Surface Prandtl number"` and `"Surface Nusselt number"`
   for a correlation.
+- **Registered correlations** (maintainer, 2026-10-22, F-049): option values stay names
+  (D3), backed by a registry of correlations per flow geometry (`CORRELATIONS`, with
+  `"tube"` and `"packed bed"`). A correlation is only its `Nu(Re, Pr)`: the family's base
+  class (`TubeCorrelation`, `PackedBedCorrelation`) supplies the geometry.
+  `register_correlation(name, nusselt, flow)` adds one, a function or a subclass, and the
+  models of that flow accept its name; PyTES adds its own the same way, and users locally,
+  in their session. Built-in correlations cannot be replaced, a name is registered once
+  unless `replace=True`, and `"constant"` is reserved. `pytes.conformance.check_model`
+  runs the contract on a model that uses one. Rejected: a law object as an option value
+  (options stay strings, so they print, compare and are enumerated by the conformance
+  suite); a `flux_law=` model argument (a second route for variants); one generic
+  `"correlation"` value (a second correlation per family would need a new option). Laws
+  other than a Nusselt correlation still go through the composition API.
 - **Upstream:** face boundary values (PyBaMM #5094, which the maintainer plans to implement)
   would let a flux be imposed directly. The ledger stays exact either way; it may then become
   an option if the direct flux is measurably faster. It is not to be retired for its own

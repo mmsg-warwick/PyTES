@@ -6,7 +6,7 @@
 import pybamm
 
 from ... import compat
-from ...submodels import AdvectedFluid, FlowPath, Gnielinski, NewtonCooling
+from ...submodels import AdvectedFluid, FlowPath, HeatTransferCoefficientOptions
 from ..base_model import BaseModel
 from .parameter_values import get_parameter_values
 from .parameters import FinnedTubeParameters
@@ -25,8 +25,10 @@ class BaseFinnedTubeModel(BaseModel):
       "averaged", one storage cross-section standing for the average along the tube,
       exchanging heat with the fluid averaged along it (DESIGN D3, D4).
     - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
-      [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or "Gnielinski", from the flow
-      in the tube (:class:`pytes.submodels.Gnielinski`, issue #6).
+      [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or a Nusselt correlation for
+      the flow in the tubes, by name: "Gnielinski" (:class:`pytes.submodels.Gnielinski`,
+      issue #6), or any correlation registered for the flow ``"tube"`` with
+      :func:`pytes.submodels.register_correlation`.
 
     Parameters
     ----------
@@ -47,7 +49,7 @@ class BaseFinnedTubeModel(BaseModel):
 
     allowed_options = {
         "storage": ("resolved", "averaged"),
-        "heat transfer coefficient": ("constant", "Gnielinski"),
+        "heat transfer coefficient": HeatTransferCoefficientOptions("tube"),
     }
 
     def __init__(self, name, options=None):
@@ -88,9 +90,12 @@ class BaseFinnedTubeModel(BaseModel):
 
     def flux_law(self):
         """The surface flux law at the tube wall, from the "heat transfer coefficient" option"""
-        if self.options["heat transfer coefficient"] == "Gnielinski":
-            return Gnielinski(self.param.R_f, self.param.N_tubes)
-        return NewtonCooling()
+        values = self.allowed_options["heat transfer coefficient"]
+        return values.flux_law(
+            self.options["heat transfer coefficient"],
+            self.param.R_f,
+            self.param.N_tubes,
+        )
 
     def storage_flow_path(self):
         """The flow path a storage geometry is averaged along, or None if resolved"""

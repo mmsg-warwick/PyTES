@@ -11,11 +11,10 @@ from ...submodels import (
     DeviceEnergy,
     EnthalpyStorage,
     FlowPath,
+    HeatTransferCoefficientOptions,
     LedgerWallCoupling,
-    NewtonCooling,
     PerAreaTotals,
     StorageGeometry,
-    WakaoKaguei,
 )
 from ..base_model import BaseModel
 from .parameter_values import get_parameter_values
@@ -49,8 +48,10 @@ class PackedBedModel(BaseModel):
       the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
       `encapsulated-LTES <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository).
     - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
-      [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or "Wakao-Kaguei", from the
-      flow through the bed (:class:`pytes.submodels.WakaoKaguei`, issue #6).
+      [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or a Nusselt correlation for
+      the flow through the bed, by name: "Wakao-Kaguei"
+      (:class:`pytes.submodels.WakaoKaguei`, issue #6), or any correlation registered for
+      the flow ``"packed bed"`` with :func:`pytes.submodels.register_correlation`.
 
     Parameters
     ----------
@@ -71,7 +72,7 @@ class PackedBedModel(BaseModel):
 
     allowed_options = {
         "storage": ("resolved", "averaged"),
-        "heat transfer coefficient": ("constant", "Wakao-Kaguei"),
+        "heat transfer coefficient": HeatTransferCoefficientOptions("packed bed"),
     }
 
     def __init__(self, name="Packed bed model", options=None):
@@ -132,9 +133,10 @@ class PackedBedModel(BaseModel):
 
     def flux_law(self):
         """The surface flux law at the capsules, from the "heat transfer coefficient" option"""
-        if self.options["heat transfer coefficient"] == "Wakao-Kaguei":
-            return WakaoKaguei(self.param.R, self.param.A)
-        return NewtonCooling()
+        values = self.allowed_options["heat transfer coefficient"]
+        return values.flux_law(
+            self.options["heat transfer coefficient"], self.param.R, self.param.A
+        )
 
     @property
     def default_geometry(self):
