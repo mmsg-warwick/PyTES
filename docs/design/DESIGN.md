@@ -133,12 +133,22 @@ testable in isolation.
   - *Outputs:* a higher-fidelity model provides every variable of the simpler models in its
     family and may add more (e.g. the mush model's fin variables).
   - *Averaged storage* (maintainer, 2026-10-15): every model has the option
-    `"storage along flow path": "averaged"`, in which one storage cross-section (a capsule, an annulus, a
-    fin-PCM unit) stands for the average along the flow path and exchanges heat with the
-    fluid averaged along it. Averaging is a fidelity choice that applies across families,
+    `"storage along flow path": "averaged"`, in which one storage cross-section (a
+    capsule, an annulus, a fin-PCM unit) stands for the average along the flow path and
+    exchanges heat with the fluid averaged along it. Averaging is a fidelity choice that applies across families,
     so it is an option, not a model class per family (it replaces the planned
     `AverageCapsuleModel`, F-019). In the mush model the fin-PCM unit is averaged, with
     the fins and the PCM still separate submodels.
+  - *Lumped storage element* (maintainer, 2026-10-22, issue #5, F-051): the option
+    `"storage element": "resolved" | "lumped"`, separate from `"storage along flow path"`
+    as it is about the variation inside one storage element, not along the flow; the two
+    combine (a lumped, averaged capsule is one well-mixed capsule for the whole bed). Only
+    the packed bed has it for now. A lumped storage (`LumpedStorage`, on a
+    `LumpedGeometry`) has a uniform temperature in each element and provides the same
+    variables as `EnthalpyStorage`, so the couplings, the device energy and the ledger
+    work unchanged. The internal resistance it neglects can be put back in the flux law
+    (D6): `"internal resistance": "Jeffreson"`, only with a lumped element (with a
+    resolved one it would count that resistance twice, so the combination raises).
   - *Averaged coupling* (maintainer, 2026-10-15): one flux from the fluid averaged along
     the flow path, taken uniformly from the fluid, as in the maintainer's published reduced
     model. Rationale: reproduces the published model. Known artefact: early in a charge the
@@ -236,6 +246,13 @@ as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no 
   suite); a `flux_law=` model argument (a second route for variants); one generic
   `"correlation"` value (a second correlation per family would need a new option). Laws
   other than a Nusselt correlation still go through the composition API.
+- **Laws that read the storage** (maintainer, 2026-10-22, F-051): a law may need a
+  variable of another submodel, e.g. Jeffreson's correction for a lumped sphere,
+  `h_eff = h / (1 + Bi / 5)` with `Bi = h R / k`, needs the storage conductivity. The law
+  reads it as a `pybamm.CoupledVariable` listed in `SurfaceFluxLaw.coupled_variables`, and
+  the coupling declares those as its own requirements, so the wiring checks and the
+  resolution see them. The `heat_flux` interface is unchanged. Every storage provides
+  `"<label> thermal conductivity [W.m-1.K-1]"` for this.
 - **Upstream:** face boundary values (PyBaMM #5094, which the maintainer plans to implement)
   would let a flux be imposed directly. The ledger stays exact either way; it may then become
   an option if the direct flux is measurably faster. It is not to be retired for its own
@@ -487,7 +504,7 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
 | Axial dispersion in the fluid (maintainer, 2026-10-15) | The fluid equation keeps an optional axial term (D5); `"Heat transfer fluid conductivity [W.m-1.K-1]"` is kept for it |
 | Capsule shell (packed bed) | Resistance only: a series-resistance surface flux law (D6), no new state. Thermal mass too: the shell as a second `EnthalpyStorage` of a sensible material on a spherical shell domain, coupled to the fluid and to the PCM like the fins in the mush model; needs `EnthalpyStorage` boundary conditions from couplings on both sides (today the outer side is zero flux). `"Capsule radius [m]"` is the outer radius, so `"Capsule shell thickness [m]"` (default 0) adds without renames |
 | Casing and heat losses | Heat loss power variable (zero); total energy includes everything that holds heat in the model |
-| Lumped capsule fidelity | Storage geometry switch and shared parameters |
+| Lumped storage element in the finned tube | The `"storage element"` option (D4), `LumpedGeometry` and `LumpedStorage`, which are not specific to capsules; the surface-to-volume ratio and the internal-resistance correction of an annulus come from the family |
 | 0D lumped models, reduced-order models | Shared contract; same outputs and parameters within a family |
 | SOC definitions (energy or exergy based), as toolkit post-processing (D13) | Reference temperature is a parameter; `energy_between`; ambient temperature to be added for exergy |
 | Measured DSC enthalpy curves | Material classes expose `H2T`, `T2H`, `k(H)`, liquid fraction |
@@ -510,7 +527,7 @@ arise.
 | **A. Skeleton** | Submodel refactor of the finned-tube code prototype; draft contract (a page or two); conformance tests ported from the existing 72 |
 | **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch. **Closed 2026-10-16**: all acceptance criteria met (F-039 to F-041), §4 Open emptied (F-042 to F-046) |
 | **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, CI and packaging. (The PyBOP example is dropped: maintainer, 2026-10-16.) **Closed 2026-10-22**: 0.1.0a1 (2026-10-17) and 0.1.0a2 (2026-10-22) released, CI running (F-047) |
-| **D. Gap filling** | Lumped capsule, flow-dependent HTC (done early: D6, F-049), advection scheme improvements tied to upstream |
+| **D. Gap filling** | Lumped capsule (done: D4, F-051), flow-dependent HTC (done early: D6, F-049), advection scheme improvements tied to upstream |
 | **E. v1.0** | Contract freeze, deprecation policy, one experimental validation per family, docs, admission guide |
 
 Do not call any API stable before the end of Stage B. Time-box stages. If A overruns, cut

@@ -9,6 +9,7 @@ repository; download them to run them yourself.
 
 finned_tube_models
 packed_bed_models
+lumped_capsule
 experiments
 parameter_layers
 heat_transfer_coefficient

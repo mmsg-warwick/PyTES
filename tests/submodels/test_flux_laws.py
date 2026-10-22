@@ -13,6 +13,8 @@ from pytes.submodels import (
     FluidState,
     Gnielinski,
     HeatTransferCoefficientOptions,
+    Jeffreson,
+    NewtonCooling,
     NusseltCorrelation,
     PackedBedCorrelation,
     SurfaceFluxLaw,
@@ -229,3 +231,35 @@ def test_invalid_registrations(registry, name, nusselt, flow, error, match):
 def test_options_for_an_unknown_flow():
     with pytest.raises(ValueError, match="Unknown flow"):
         HeatTransferCoefficientOptions("duct")
+
+
+def test_jeffreson_coefficient():
+    # h_eff = h / (1 + Bi / 5), Bi = h R / k: Bi = 100 * 0.02 / 0.5 = 4
+    law = Jeffreson(NewtonCooling(), pybamm.Scalar(0.02), "Sphere conductivity")
+    assert list(law.coupled_variables) == ["Sphere conductivity"]
+    # The coupled conductivity, as the model would resolve it
+    law.conductivity = pybamm.Scalar(0.5)
+    values = pybamm.ParameterValues({"Heat transfer coefficient [W.m-2.K-1]": 100})
+
+    def evaluate(symbol):
+        return values.process_symbol(symbol).evaluate()
+
+    state = FluidState(h=pybamm.Scalar(0), T=pybamm.Scalar(310), mass_flow_rate=1)
+    assert evaluate(law.biot(None, state)) == pytest.approx(4)
+    assert evaluate(law.heat_transfer_coefficient(None, state)) == pytest.approx(
+        100 / 1.8
+    )
+    assert evaluate(law.heat_flux(None, state, pybamm.Scalar(300))) == pytest.approx(
+        1000 / 1.8
+    )
+    variables = law.variables(None, state)
+    assert set(variables) == {
+        "Heat transfer coefficient [W.m-2.K-1]",
+        "Effective heat transfer coefficient [W.m-2.K-1]",
+        "Surface Biot number",
+    }
+
+
+def test_jeffreson_needs_a_coefficient():
+    with pytest.raises(TypeError, match="NewtonCooling"):
+        Jeffreson(SurfaceFluxLaw(), 1, "Sphere conductivity")

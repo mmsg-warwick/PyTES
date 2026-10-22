@@ -58,10 +58,12 @@ notebooks, is at [pytes.readthedocs.io](https://pytes.readthedocs.io).
 | Finned tube | `SharpFrontModel`, `MushModel` | PCM around tubes with metal fins (homogenised or resolved) |
 | Packed bed | `PackedBedModel` | a bed of spherical PCM capsules |
 
-Every model takes `options={"storage along flow path": "averaged"}` for a faster variant with one storage
-cross-section standing for the average along the flow. All models share their outputs
-(power, energies, inlet and outlet temperatures, all in SI units with °C, kW and kWh twins),
-their experiments, and an exact energy balance, checked by a common conformance suite.
+Every model takes `options={"storage along flow path": "averaged"}` for a faster variant
+with one storage cross-section standing for the average along the flow, and the packed bed
+takes `options={"storage element": "lumped"}` for capsules at a uniform temperature. All
+models share their outputs (power, energies, inlet and outlet temperatures, all in SI units
+with °C, kW and kWh twins), their experiments, and an exact energy balance, checked by a
+common conformance suite.
 
 ## 🧰 Toolkit
 
@@ -76,7 +78,7 @@ their experiments, and an exact energy balance, checked by a common conformance 
 ## 📓 Examples
 
 Notebooks in [`examples/`](https://github.com/mmsg-warwick/PyTES/tree/main/examples): the finned-tube and
-packed-bed models, experiments, composing models, analytical validation, and a design study
+packed-bed models, the lumped capsule, experiments, composing models, analytical validation, and a design study
 comparing the two families. They are also
 [rendered in the documentation](https://pytes.readthedocs.io/en/latest/examples/index.html).
 

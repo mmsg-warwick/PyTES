@@ -10,6 +10,7 @@ from .flux_laws import (
     FluidState,
     Gnielinski,
     HeatTransferCoefficientOptions,
+    Jeffreson,
     NewtonCooling,
     NusseltCorrelation,
     PackedBedCorrelation,
@@ -18,7 +19,7 @@ from .flux_laws import (
     WakaoKaguei,
     register_correlation,
 )
-from .storage import EnthalpyStorage, StorageGeometry
+from .storage import EnthalpyStorage, LumpedGeometry, LumpedStorage, StorageGeometry
 
 __all__ = [
     "AdvectedFluid",
@@ -32,7 +33,10 @@ __all__ = [
     "FluidState",
     "Gnielinski",
     "HeatTransferCoefficientOptions",
+    "Jeffreson",
     "LedgerWallCoupling",
+    "LumpedGeometry",
+    "LumpedStorage",
     "NewtonCooling",
     "NusseltCorrelation",
     "PackedBedCorrelation",

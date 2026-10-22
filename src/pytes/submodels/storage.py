@@ -86,6 +86,69 @@ class StorageGeometry:
         return gradient if self.inner == "left" else -gradient
 
 
+class LumpedGeometry:
+    """
+    Geometry of a lumped storage: each storage element (e.g. a capsule) has a uniform
+    temperature, so the storage has no spatial variable of its own (issue #5). It lives on
+    the flow path, or nowhere when it is averaged along the flow path too.
+
+    Parameters
+    ----------
+    integrate : callable
+        Maps a symbol on the storage domains to its integral over the storage in the whole
+        device [symbol units times m3].
+    cross_section_integral : callable
+        Maps a symbol on the storage domains to its integral over the storage per unit
+        length of flow path, for one flow path [symbol units times m2]. Used by ledger
+        couplings.
+    surface_to_volume : pybamm.Symbol
+        Surface area of a storage element over its volume [m-1], e.g. ``3 / R`` for a
+        sphere of radius ``R``.
+    flow_path : :class:`pytes.submodels.FlowPath`
+        The flow path.
+    averaged : bool, optional
+        Whether the storage is also averaged along the flow path (``"storage along flow
+        path": "averaged"``, DESIGN D4; default False): one element then stands for all of
+        them, exchanging heat with the fluid averaged along the flow path.
+    """
+
+    def __init__(
+        self,
+        integrate,
+        cross_section_integral,
+        surface_to_volume,
+        flow_path,
+        averaged=False,
+    ):
+        self.integrate = integrate
+        self.cross_section_integral = cross_section_integral
+        self.surface_to_volume = surface_to_volume
+        self.flow_path = flow_path if averaged else None
+        self.domains = {} if averaged else {"primary": "flow path"}
+
+    @property
+    def averaged(self):
+        """Whether the storage is averaged along the flow path"""
+        return self.flow_path is not None
+
+    @property
+    def primary_domain(self):
+        """The domain of the storage variables: the flow path, or none when averaged"""
+        return self.domains.get("primary", [])
+
+    @property
+    def boundary_domain(self):
+        """The domain of quantities on the element surface, that of the storage"""
+        return self.primary_domain
+
+    @property
+    def volume(self):
+        """Volume of the storage in the whole device [m3]"""
+        if self.averaged:
+            return self.integrate(pybamm.Scalar(1))
+        return self.integrate(pybamm.PrimaryBroadcast(1, self.primary_domain))
+
+
 class EnthalpyStorage(BaseSubModel):
     """
     Conduction in a storage material, by the enthalpy method.
@@ -102,6 +165,8 @@ class EnthalpyStorage(BaseSubModel):
     The same submodel holds phase-change and sensible materials (DESIGN D5); only the
     former provide liquid-fraction variables. The state list is ``[H]`` plus the
     material's internal states (none for the current materials, DESIGN D7).
+
+    It also provides its conductivity, "<label> thermal conductivity [W.m-1.K-1]".
 
     Ledger couplings (DESIGN D6) take the heat that crossed the storage's boundaries from
     ``"<label> conduction heating rate [W.m-3]"``, ``div(k grad T)``: its integral over the
@@ -176,7 +241,8 @@ class EnthalpyStorage(BaseSubModel):
         self.internal_states = ()
         T = material.H2T(H, self.internal_states)
         self.T = T
-        conduction = pybamm.div(material.k(H, self.internal_states) * pybamm.grad(T))
+        k = material.k(H, self.internal_states)
+        conduction = pybamm.div(k * pybamm.grad(T))
         dHdt = conduction
         if self.heat_source:
             dHdt = dHdt + self.coupled(
@@ -224,6 +290,7 @@ class EnthalpyStorage(BaseSubModel):
         variables[f"{label} surface temperature [K]"] = pybamm.boundary_value(
             T, geometry.inner
         )
+        variables[f"{label} thermal conductivity [W.m-1.K-1]"] = k
         self.variables = variables
 
     def uniform_energy(self, T):
@@ -234,3 +301,101 @@ class EnthalpyStorage(BaseSubModel):
         material = self.material
         H_ref = material.T2H(self.param.T_ref)
         return self.storage_geometry.volume * (material.T2H(T) - H_ref)
+
+
+class LumpedStorage(EnthalpyStorage):
+    """
+    A storage whose elements each have a uniform temperature (a lumped capacitance, issue
+    #5), by the enthalpy method.
+
+    Enthalpy ``H`` per unit volume, one value per element, with ``T = H2T(H, states)`` from
+    the material: ``dH/dt = (S / V) q``, with ``q`` the heat flux into an element through
+    its surface, ``"<label> boundary heat flux [W.m-2]"``, from a coupling, and ``S / V``
+    the element's surface area over its volume.
+
+    It provides the same variables as :class:`EnthalpyStorage`, so that the couplings and
+    the device energy work on either. Its "conduction heating rate" is ``(S / V) q``, the
+    volume average of ``div(k grad T)`` over an element, so a ledger coupling (DESIGN D6)
+    takes exactly the heat the storage gains. The surface temperature is the element's
+    temperature. A surface flux law may use its conductivity, "<label> thermal
+    conductivity [W.m-1.K-1]", to correct for the conduction inside the element (e.g.
+    :class:`pytes.submodels.Jeffreson`).
+
+    Parameters
+    ----------
+    param : object
+        The model's parameters. Uses ``T_ref`` (reference temperature).
+    material : :class:`pytes.materials.PhaseChangeMaterial` or \
+:class:`pytes.materials.SensibleMaterial`
+        The storage material.
+    geometry : :class:`LumpedGeometry`
+        The geometry of the storage.
+    label : str, optional
+        Name of the material in variable names (default "Phase-change material").
+    H_scale, H_reference : pybamm.Symbol, optional
+        Scale and reference of the enthalpy variable (default: the material's).
+    """
+
+    def __init__(
+        self,
+        param,
+        material,
+        geometry,
+        label="Phase-change material",
+        H_scale=None,
+        H_reference=None,
+    ):
+        super().__init__(
+            param, material, geometry, label, H_scale=H_scale, H_reference=H_reference
+        )
+        self.assumptions = (
+            "Each storage element has a uniform temperature (no conduction resistance "
+            "inside it).",
+            *self.assumptions[1:],
+        )
+
+    def build(self):
+        material = self.material
+        geometry = self.storage_geometry
+        label = self.label
+        H = pybamm.Variable(
+            f"{label} enthalpy [J.m-3]",
+            domains=geometry.domains,
+            scale=self.H_scale,
+            reference=self.H_reference,
+        )
+        self.H = H
+        self.internal_states = ()
+        T = material.H2T(H, self.internal_states)
+        self.T = T
+        heat_flux = self.coupled(
+            f"{label} boundary heat flux [W.m-2]", geometry.boundary_domain
+        )
+        heating = geometry.surface_to_volume * heat_flux
+
+        self.rhs = {H: heating}
+        self.initial_conditions = {H: material.T2H(self.coupled(INITIAL_TEMPERATURE))}
+
+        H_ref = material.T2H(self.param.T_ref)
+        variables = {
+            f"{label} enthalpy [J.m-3]": H,
+            f"{label} enthalpy rate of change [W.m-3]": heating,
+            f"{label} conduction heating rate [W.m-3]": heating,
+            self.energy_variable: geometry.integrate(H - H_ref),
+        }
+        if material.changes_phase:
+            liquid_fraction = material.liquid_fraction(H, self.internal_states)
+            variables.update(
+                {
+                    "Liquid fraction": liquid_fraction,
+                    "Phase": liquid_fraction >= 0.5,
+                    "Average liquid fraction": geometry.integrate(liquid_fraction)
+                    / geometry.volume,
+                }
+            )
+        variables[f"{label} temperature [K]"] = T
+        variables[f"{label} surface temperature [K]"] = T
+        variables[f"{label} thermal conductivity [W.m-1.K-1]"] = material.k(
+            H, self.internal_states
+        )
+        self.variables = variables

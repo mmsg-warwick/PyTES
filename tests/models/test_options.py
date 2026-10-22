@@ -14,13 +14,18 @@ def cls(request):
 
 
 def test_defaults_are_filled_in(cls):
-    defaults = {
-        "storage along flow path": "resolved",
-        "heat transfer coefficient": "constant",
-    }
+    defaults = {key: values[0] for key, values in cls.allowed_options.items()}
+    # Every model has these, with these defaults
+    assert defaults["storage along flow path"] == "resolved"
+    assert defaults["heat transfer coefficient"] == "constant"
     assert cls().options == defaults
     averaged = cls(options={"storage along flow path": "averaged"}).options
     assert averaged == {**defaults, "storage along flow path": "averaged"}
+
+
+def test_internal_resistance_needs_a_lumped_capsule():
+    with pytest.raises(pytes.OptionError, match="needs 'storage element': 'lumped'"):
+        pytes.PackedBedModel(options={"internal resistance": "Jeffreson"})
 
 
 @pytest.mark.parametrize(

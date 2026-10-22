@@ -13,11 +13,14 @@ and the tests disagree, the tests win.**
   `model.print_submodel_info()`. Users call models; advanced users may build their own from
   submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
 - It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance
-  suite, with every combination of its options (`allowed_options`; today `"storage along
-  flow path": "resolved" | "averaged"` in every model, and `"heat transfer coefficient": "constant" |
-  "Gnielinski"` in the finned tube, `"constant" | "Wakao-Kaguei"` in the packed bed, plus
-  any correlation registered for the model's flow with `register_correlation`).
-  Unknown options or values raise `pytes.OptionError`.
+  suite, with every combination of its options that it admits (`allowed_options`, less
+  those `check_options` rejects; today `"storage along flow path": "resolved" |
+  "averaged"` in every model; `"heat transfer coefficient": "constant" | "Gnielinski"` in
+  the finned tube, `"constant" | "Wakao-Kaguei"` in the packed bed, plus any correlation
+  registered for the model's flow with `register_correlation`; and in the packed bed
+  `"storage element": "resolved" | "lumped"` and `"internal resistance": "none" |
+  "Jeffreson"`, the latter only with a lumped capsule). Unknown options or values, and
+  rejected combinations, raise `pytes.OptionError`.
 
 ## 2. Submodels
 
@@ -60,15 +63,17 @@ with a default `pybamm.Simulation`.
 - `"capsule"`, coordinate `r`: from a capsule's centre (packed bed; spherical).
 
 A storage resolved along the flow path has `"flow path"` as its last secondary domain; an
-averaged one (`"storage along flow path": "averaged"`) does not.
+averaged one (`"storage along flow path": "averaged"`) does not. A lumped storage element
+(`"storage element": "lumped"`, packed bed) has no domain of its own: its variables are on
+`"flow path"`, or on none when it is also averaged.
 
 ### Slots (DESIGN D5)
 
 | Slot | Contract | Current submodels |
 |---|---|---|
 | Fluid | State: fluid specific enthalpy `"Heat transfer fluid specific enthalpy [J.kg-1]"` on domain `"flow path"`, coordinate `z`; its temperature is `T(h)` from the fluid-property object. Requires `"Heat transfer fluid heat gain per unit length [W.m-1]"` (per flow path) and the initial temperature. Provides the fluid enthalpy and temperature, the inlet/outlet temperatures and specific enthalpies (outlet temperature `T(h_out)`), the mass flow rate and its thermal energy. Its spatial method on `"flow path"` is `compat.fluid_spatial_method()`. | `AdvectedFluid` |
-| Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy; and, for a phase-change material only, the liquid fraction. | `EnthalpyStorage` (PCM, composite, fin metal, PCM capsule) |
-| Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, fluid_state, T_s)`, `fluid_state` a `FluidState` with `h`, `T`, `mass_flow_rate` (device), `p` (reserved), positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `fluid_state.T - T_s`; a law's geometry goes to its constructor. Flow-dependent laws are `NusseltCorrelation`s (`Gnielinski`, `WakaoKaguei`, F-049), with no parameters of their own. The coupling also provides the law's own variables, `SurfaceFluxLaw.variables(fluid, fluid_state)` (none by default). | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
+| Storage | Enthalpy method, one submodel for every medium (phase-change or sensible, D5); state list `[H, *material.internal_states]`. Geometry switch = coordinate system of its primary domain. Sets zero flux on its outer side and, on its inner side, applies `"<label> boundary heat flux [W.m-2]"` (into the storage) or `"<label> boundary temperature [K]"`; optionally a volumetric `"<label> heat source [W.m-3]"`. Provides its enthalpy, `dH/dt`, its conduction heating rate `div(k grad T)` (`"<label> conduction heating rate [W.m-3]"`), temperature, surface temperature and thermal energy, its conductivity `"<label> thermal conductivity [W.m-1.K-1]"`; and, for a phase-change material only, the liquid fraction. A lumped storage (issue #5) has one enthalpy per storage element, `dH/dt = (S / V) q` with `q` the boundary heat flux and `S / V` the element's surface over its volume, and provides the same variables, its conduction heating rate being `(S / V) q` and its surface temperature its temperature. | `EnthalpyStorage` (PCM, composite, fin metal, PCM capsule), `LumpedStorage` (lumped PCM capsule) |
+| Coupling | Joins fluid to storage or storage to storage. Given the states on both sides: provides the heat gain per unit length (fluid side) and the storage's boundary heat flux or temperature, or a heat source. Every coupling is a ledger (D6): the heat crossing the interface is minus the integral of a storage side's conduction heating rate. The heat flux across a fluid-storage surface comes from a replaceable surface flux law (`SurfaceFluxLaw.heat_flux(fluid, fluid_state, T_s)`, `fluid_state` a `FluidState` with `h`, `T`, `mass_flow_rate` (device), `p` (reserved), positive into the storage); default `NewtonCooling`, `"Heat transfer coefficient [W.m-2.K-1]"` times `fluid_state.T - T_s`; a law's geometry goes to its constructor. Flow-dependent laws are `NusseltCorrelation`s (`Gnielinski`, `WakaoKaguei`, F-049), with no parameters of their own. The coupling also provides the law's own variables, `SurfaceFluxLaw.variables(fluid, fluid_state)` (none by default), and requires those the law reads, `SurfaceFluxLaw.coupled_variables` (none by default; F-051). `Jeffreson` corrects a Newton law for the conduction inside a lumped sphere, reading the storage's conductivity. | `LedgerWallCoupling`, `FinRootCoupling` (a `LedgerWallCoupling` with flux factor `d_m / d_c`), `FinPCMCoupling` |
 | Device energy | Power, energies, initial state. | `DeviceEnergy` |
 
 ## 3. Variables (DESIGN D12)
@@ -102,7 +107,8 @@ uniform states is `pytes.energy_between(model, T_a, T_b)` (§5).
 **Also provided by every current model:** `Initial uniform temperature [K]`; `Heat
 transfer coefficient [W.m-2.K-1]` (from the coupling's flux law: the parameter, or the
 correlation's value), plus `Surface Reynolds number`, `Surface Prandtl number` and `Surface
-Nusselt number` with a correlation (F-049).
+Nusselt number` with a correlation (F-049), and `Effective heat transfer coefficient
+[W.m-2.K-1]` and `Surface Biot number` with Jeffreson's correction (F-051).
 
 **Family-specific:** prefixed (`Fin temperature [K]`). The packed bed adds the device totals
 per unit bed cross-section (`Power per unit area [W.m-2]`, `Discharged energy per unit area
