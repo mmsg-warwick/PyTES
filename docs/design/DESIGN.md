@@ -450,8 +450,9 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
   (`tests/conftest.py::MODELS`).
 - **Options:** shape as in D3 (F-041).
 - **Changelog** (maintainer, 2026-10-16): towncrier fragments in `changelog.d/`
-  (`<PR>.<type>.md`; types breaking, deprecated, feature, improvement, fix; a PR may add
-  several), assembled
+  (`<PR>.<type>.md`; types breaking, contract, deprecated, feature, improvement, fix; a PR
+  may add several; `contract`, for any change to the model contract with its finding, added
+  by the maintainer on 2026-10-22), assembled
   into `CHANGELOG.md` at release; CI requires a fragment on pull requests unless labelled
   `no changelog`. Rationale: no conflicts between pull requests and no forgotten entries,
   the two problems of a hand-edited changelog. `CONTRIBUTING.md` adapted from PyBaMM's

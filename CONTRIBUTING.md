@@ -96,9 +96,12 @@ each release they are assembled into `CHANGELOG.md` and deleted.
 The types, in the order they appear in the changelog:
 
 - `breaking` (**Breaking changes**): anything existing code or results would notice, such as
-  a change to the model contract (variable names, units, signs, parameter names, submodel
-  interfaces), a removal, or a new default that moves results. Say how to adapt; a contract
-  change is also logged in [`docs/design/findings.md`](docs/design/findings.md).
+  a renamed or removed variable or parameter, a removal, or a new default that moves
+  results. Say how to adapt.
+- `contract` (**Model contract changes**): any change to the model contract (variable
+  names, units, signs, parameter names, submodel interfaces), additions included. Name the
+  entry in [`docs/design/findings.md`](docs/design/findings.md) that logs it (e.g. F-049). A
+  contract change that existing code would notice also has a `breaking` fragment.
 - `deprecated` (**Deprecations**): an API that now warns and will be removed in a later
   release; say when.
 - `feature` (**New features**): a model, an option, a submodel, a toolkit function.
