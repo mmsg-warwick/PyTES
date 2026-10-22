@@ -11,6 +11,7 @@ from ...submodels import (
     DeviceEnergy,
     EnthalpyStorage,
     FlowPath,
+    HeatTransferCoefficientOptions,
     LedgerWallCoupling,
     PerAreaTotals,
     StorageGeometry,
@@ -46,6 +47,11 @@ class PackedBedModel(BaseModel):
       "averaged", one capsule standing for the average along the bed, exchanging heat with
       the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
       `encapsulated-LTES <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository).
+    - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
+      [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or a Nusselt correlation for
+      the flow through the bed, by name: "Wakao-Kaguei"
+      (:class:`pytes.submodels.WakaoKaguei`, issue #6), or any correlation registered for
+      the flow ``"packed bed"`` with :func:`pytes.submodels.register_correlation`.
 
     Parameters
     ----------
@@ -64,7 +70,10 @@ class PackedBedModel(BaseModel):
         Distance along the bed from the inlet [m], in the "flow path" domain.
     """
 
-    allowed_options = {"storage": ("resolved", "averaged")}
+    allowed_options = {
+        "storage": ("resolved", "averaged"),
+        "heat transfer coefficient": HeatTransferCoefficientOptions("packed bed"),
+    }
 
     def __init__(self, name="Packed bed model", options=None):
         super().__init__(name=name, options=options)
@@ -117,10 +126,17 @@ class PackedBedModel(BaseModel):
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage
         self.submodels["coupling"] = LedgerWallCoupling(
-            param, param.fluid, storage.label, geometry
+            param, param.fluid, storage.label, geometry, flux_law=self.flux_law()
         )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])
         self.submodels["per-area totals"] = PerAreaTotals(param, param.A)
+
+    def flux_law(self):
+        """The surface flux law at the capsules, from the "heat transfer coefficient" option"""
+        values = self.allowed_options["heat transfer coefficient"]
+        return values.flux_law(
+            self.options["heat transfer coefficient"], self.param.R, self.param.A
+        )
 
     @property
     def default_geometry(self):

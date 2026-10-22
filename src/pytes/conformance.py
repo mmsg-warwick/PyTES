@@ -169,3 +169,46 @@ def check_initial_state(model, parameter_values=None, var_pts=None):
             atol=1e-12 * scale,
             err_msg=f"{model.name}: initial energy at {T} K",
         )
+
+
+def check_model(model, parameter_values=None, var_pts=None, t_end=600):
+    """
+    Run every check on a model: its structure, then a solve of ``t_end`` seconds from its
+    initial state for the conservation, power and unit-twin checks, then its initial state.
+    For a model built from submodels or options of your own, e.g. with a correlation added
+    by :func:`pytes.submodels.register_correlation`.
+
+    Parameters
+    ----------
+    model : :class:`pytes.BaseModel`
+        The model.
+    parameter_values : :class:`pybamm.ParameterValues`, optional
+        The parameter values (default: the model's).
+    var_pts : dict, optional
+        The mesh (default: the model's).
+    t_end : float, optional
+        The duration of the solve [s] (default 600).
+
+    Returns
+    -------
+    :class:`pybamm.Solution`
+        The solution of the solve, to inspect further.
+
+    Raises
+    ------
+    AssertionError
+        If a check fails.
+    """
+    check_required_variables(model)
+    check_submodels(model)
+    check_controls(model)
+    check_stateless_materials(model)
+    parameter_values = parameter_values or model.default_parameter_values
+    solution = pybamm.Simulation(
+        model, parameter_values=parameter_values, var_pts=var_pts
+    ).solve([0, t_end])
+    check_energy_conservation(solution)
+    check_power_from_enthalpy(solution)
+    check_unit_twins(solution)
+    check_initial_state(model, parameter_values, var_pts)
+    return solution

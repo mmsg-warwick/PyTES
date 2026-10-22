@@ -109,7 +109,7 @@ class MushModel(BaseFinnedTubeModel):
         self.submodels["storage"] = pcm
         self.submodels["fins"] = fins
         self.submodels["coupling"] = FinRootCoupling(
-            param, param.fluid, fins.label, fin_geometry
+            param, param.fluid, fins.label, fin_geometry, flux_law=self.flux_law()
         )
         self.submodels["fin-PCM coupling"] = FinPCMCoupling(
             param, pcm.label, pcm_geometry, fins.label

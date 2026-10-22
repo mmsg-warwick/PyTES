@@ -5,9 +5,9 @@
 Heat transfer fluid layers, as read by :class:`pytes.fluids.ConstantPropertyLiquid`.
 
 Each layer is a function returning a fresh dict, registered in :data:`LAYERS`, with the
-sources of its values in ``"citations"``. "Heat transfer fluid viscosity [Pa.s]" is
-optional (no model uses it yet, issue #6). Each docstring records the temperature at which
-the constant values were taken (DESIGN, deferred: temperature-dependent properties).
+sources of its values in ``"citations"``. The conductivity and the viscosity are used by
+the flow-dependent heat transfer coefficients (issue #6). Each docstring records the
+temperature at which the constant values were taken (DESIGN, deferred: temperature-dependent properties).
 """
 
 

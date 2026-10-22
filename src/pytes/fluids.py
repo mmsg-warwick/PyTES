@@ -39,8 +39,9 @@ class ConstantPropertyLiquid:
     rho_param, c_p_param, k_param, mu_param : pybamm.Parameter
         "<prefix> density [kg.m-3]", "<prefix> specific heat capacity [J.kg-1.K-1]",
         "<prefix> conductivity [W.m-1.K-1]" and "<prefix> viscosity [Pa.s]". The
-        conductivity and the viscosity are not used by the current models; they are the hook
-        for axial diffusion and for flow-dependent heat transfer coefficients.
+        conductivity and the viscosity are used by the flow-dependent heat transfer
+        coefficients (:class:`pytes.submodels.NusseltCorrelation`); the conductivity is also
+        the hook for axial diffusion.
     """
 
     def __init__(self, prefix="Heat transfer fluid", T_ref=0):

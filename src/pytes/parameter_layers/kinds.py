@@ -26,8 +26,8 @@ class LayerKind:
     required : tuple of str
         Parameter names every layer of this kind holds.
     optional : tuple of str
-        Parameter names a layer of this kind may hold, used by no model yet (hooks, e.g. the
-        fluid viscosity for a flow-dependent heat transfer coefficient).
+        Parameter names a layer of this kind may hold, used by no model yet (hooks). No kind
+        has any today.
     """
 
     key: str
@@ -66,8 +66,8 @@ HEAT_TRANSFER_FLUID = LayerKind(
         "Heat transfer fluid density [kg.m-3]",
         "Heat transfer fluid specific heat capacity [J.kg-1.K-1]",
         "Heat transfer fluid conductivity [W.m-1.K-1]",
+        "Heat transfer fluid viscosity [Pa.s]",
     ),
-    ("Heat transfer fluid viscosity [Pa.s]",),
 )
 
 PCM = LayerKind(

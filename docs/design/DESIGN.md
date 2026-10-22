@@ -62,7 +62,8 @@ it. Passing the suite is necessary, not sufficient.
   bibliography roles (sphinxcontrib-bibtex, as PyBaMM uses) can follow with the
   documentation site (#4). Decided with it
   (maintainer, 2026-10-18): `"Heat transfer coefficient [W.m-2.K-1]"` is in its own
-  *coupling* layer, which will hold the parameters of other surface flux laws (#6);
+  *coupling* layer, which will hold the parameters of other surface flux laws (the
+  correlations of #6 have none: F-049);
   `"PCM smoothing width [K]"` stays in the PCM layer, although it is numerical; one `Metal`
   layer per device, with a prefix argument added when a second metal appears.
 - **Parameter names** (maintainer, 2026-10-16): material and fluid properties start with
@@ -102,7 +103,7 @@ testable in isolation.
   `"storage": "resolved" | "averaged"` (D4; maintainer, 2026-10-15). Each model declares
   `allowed_options`, the first value of each being the default; unknown options or values
   raise `pytes.OptionError`, and `check_options` rejects incompatible combinations. Values
-  are lower case unless they are names (e.g. `"surface heat flux": "Newton"`).
+  are lower case unless they are names (e.g. `"heat transfer coefficient": "Gnielinski"`).
 - **No silent swaps.** An option combination that is incompatible raises an error naming the
   conflict; a model never replaces a submodel the user did not ask for. Rationale: PyBaMM's
   options grew complicated and it swapped submodels silently to keep combinations working,
@@ -181,7 +182,7 @@ testable in isolation.
   one side is the fluid) and a boundary heat flux or temperature to each storage side
   (`"<label> boundary heat flux [W.m-2]"` or `"<label> boundary temperature [K]"`). The
   storage owns its boundary conditions and reads these (F-028). Flow-dependent HTC lives
-  here, fed by the fluid-property object.
+  here, fed by the fluid-property object (D6, F-049).
 
 ### D6. Ledger-style exact energy conservation
 The heat crossing an interface is one discrete quantity, counted once on each side with
@@ -199,12 +200,37 @@ as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no 
   fluid-property object and materials, positive into the storage. Newton's law of cooling,
   `h (T_f - T_s)` with `h` from the fluid-property object, is the default. Others (series
   wall or contact resistance, a nonlinear or radiative law) need no change to the
-  conservation logic. Built-in laws are chosen through `options` (D3); a custom law is passed
-  to the coupling through the composition API. Interface (maintainer, 2026-10-16):
+  conservation logic. Built-in laws, and Nusselt correlations registered by users, are
+  chosen through `options` (D3); any other custom law is passed to the coupling through the
+  composition API. Interface (maintainer, 2026-10-16):
   `heat_flux(fluid, fluid_state, T_s)`, with `fluid_state` a `FluidState` (`h`, `T`,
   `mass_flow_rate` of the whole device, `p` reserved) so that new fields never break existing
   laws; geometry a law needs (e.g. a hydraulic diameter) goes to its constructor, from the
   family.
+- **Flow-dependent coefficients** (issue #6, F-049): Newton's law with `h = Nu k / L` from a
+  Nusselt correlation (`NusseltCorrelation`, with `Re` from `|mdot|` per flow path and `mu`,
+  `c_p`, `k` from the fluid-property object). Chosen by the option
+  `"heat transfer coefficient"`, `"constant"` by default so results do not change:
+  `"Gnielinski"` in the finned tube (laminar 3.66 below `Re` 2300, VDI interpolation to
+  `Re` 10^4), `"Wakao-Kaguei"` in the packed bed (`Nu = 2 + 1.1 Re^0.6 Pr^(1/3)`,
+  superficial velocity, capsule diameter). The correlation's constants belong to it, so it
+  adds no parameter; its geometry comes from the family. The coupling provides the law's
+  variables: `"Heat transfer coefficient [W.m-2.K-1]"` for every Newton law, plus
+  `"Surface Reynolds number"`, `"Surface Prandtl number"` and `"Surface Nusselt number"`
+  for a correlation.
+- **Registered correlations** (maintainer, 2026-10-22, F-049): option values stay names
+  (D3), backed by a registry of correlations per flow geometry (`CORRELATIONS`, with
+  `"tube"` and `"packed bed"`). A correlation is only its `Nu(Re, Pr)`: the family's base
+  class (`TubeCorrelation`, `PackedBedCorrelation`) supplies the geometry.
+  `register_correlation(name, nusselt, flow)` adds one, a function or a subclass, and the
+  models of that flow accept its name; PyTES adds its own the same way, and users locally,
+  in their session. Built-in correlations cannot be replaced, a name is registered once
+  unless `replace=True`, and `"constant"` is reserved. `pytes.conformance.check_model`
+  runs the contract on a model that uses one. Rejected: a law object as an option value
+  (options stay strings, so they print, compare and are enumerated by the conformance
+  suite); a `flux_law=` model argument (a second route for variants); one generic
+  `"correlation"` value (a second correlation per family would need a new option). Laws
+  other than a Nusselt correlation still go through the composition API.
 - **Upstream:** face boundary values (PyBaMM #5094, which the maintainer plans to implement)
   would let a flux be imposed directly. The ledger stays exact either way; it may then become
   an option if the direct flux is measurably faster. It is not to be retired for its own
@@ -424,8 +450,9 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
   (`tests/conftest.py::MODELS`).
 - **Options:** shape as in D3 (F-041).
 - **Changelog** (maintainer, 2026-10-16): towncrier fragments in `changelog.d/`
-  (`<PR>.<type>.md`; types breaking, deprecated, feature, improvement, fix; a PR may add
-  several), assembled
+  (`<PR>.<type>.md`; types breaking, contract, deprecated, feature, improvement, fix; a PR
+  may add several; `contract`, for any change to the model contract with its finding, added
+  by the maintainer on 2026-10-22), assembled
   into `CHANGELOG.md` at release; CI requires a fragment on pull requests unless labelled
   `no changelog`. Rationale: no conflicts between pull requests and no forgotten entries,
   the two problems of a hand-edited changelog. `CONTRIBUTING.md` adapted from PyBaMM's
@@ -446,7 +473,6 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
 | Axial dispersion in the fluid (maintainer, 2026-10-15) | The fluid equation keeps an optional axial term (D5); `"Heat transfer fluid conductivity [W.m-1.K-1]"` is kept for it |
 | Capsule shell (packed bed) | Resistance only: a series-resistance surface flux law (D6), no new state. Thermal mass too: the shell as a second `EnthalpyStorage` of a sensible material on a spherical shell domain, coupled to the fluid and to the PCM like the fins in the mush model; needs `EnthalpyStorage` boundary conditions from couplings on both sides (today the outer side is zero flux). `"Capsule radius [m]"` is the outer radius, so `"Capsule shell thickness [m]"` (default 0) adds without renames |
 | Casing and heat losses | Heat loss power variable (zero); total energy includes everything that holds heat in the model |
-| Flow-dependent film coefficient (Nusselt/Reynolds) | The coefficient lives in the coupling's replaceable surface flux law (D6), constant for now, using properties from the fluid-property object and the family geometry (D8) |
 | Lumped capsule fidelity | Storage geometry switch and shared parameters |
 | 0D lumped models, reduced-order models | Shared contract; same outputs and parameters within a family |
 | SOC definitions (energy or exergy based), as toolkit post-processing (D13) | Reference temperature is a parameter; `energy_between`; ambient temperature to be added for exergy |
@@ -470,7 +496,7 @@ arise.
 | **A. Skeleton** | Submodel refactor of the finned-tube code prototype; draft contract (a page or two); conformance tests ported from the existing 72 |
 | **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch. **Closed 2026-10-16**: all acceptance criteria met (F-039 to F-041), §4 Open emptied (F-042 to F-046) |
 | **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, CI and packaging. (The PyBOP example is dropped: maintainer, 2026-10-16.) |
-| **D. Gap filling** | Lumped capsule, flow-dependent HTC, advection scheme improvements tied to upstream |
+| **D. Gap filling** | Lumped capsule, flow-dependent HTC (done early: D6, F-049), advection scheme improvements tied to upstream |
 | **E. v1.0** | Contract freeze, deprecation policy, one experimental validation per family, docs, admission guide |
 
 Do not call any API stable before the end of Stage B. Time-box stages. If A overruns, cut

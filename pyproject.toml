@@ -110,6 +110,11 @@ name = "Breaking changes"
 showcontent = true
 
 [[tool.towncrier.type]]
+directory = "contract"
+name = "Model contract changes"
+showcontent = true
+
+[[tool.towncrier.type]]
 directory = "deprecated"
 name = "Deprecations"
 showcontent = true
