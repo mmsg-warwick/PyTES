@@ -41,7 +41,7 @@ from . import (
 )
 from .kinds import KINDS, LayerKind
 
-#: The registered layers: for each kind, the functions returning them, by name
+#: The registered layers, for each kind the functions returning them, by name
 LAYERS = {
     "operation": operation.LAYERS,
     "coupling": coupling.LAYERS,
@@ -54,7 +54,7 @@ LAYERS = {
     "packed_bed_storage_element": storage_elements.PACKED_BED_LAYERS,
 }
 
-#: Named compositions: for each set, the name of the layer of each kind. Each family's
+#: Named compositions, for each set the name of the layer of each kind. Each family's
 #: default parameter values are one of these sets
 SETS = {
     "Finned tube default": {

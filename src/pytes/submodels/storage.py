@@ -158,7 +158,7 @@ class EnthalpyStorage(BaseSubModel):
 
     @property
     def states(self):
-        """The state variables: the enthalpy, then the material's internal states"""
+        """The state variables, the enthalpy and then the material's internal states"""
         return [self.H, *self.internal_states]
 
     def build(self):

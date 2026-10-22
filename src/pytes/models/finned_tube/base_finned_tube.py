@@ -80,7 +80,7 @@ class BaseFinnedTubeModel(BaseModel):
 
     @property
     def flow_path(self):
-        """The flow paths: one per tube"""
+        """The flow paths, one per tube"""
         param = self.param
         return FlowPath(self.z, param.Z, param.area, param.N_tubes)
 

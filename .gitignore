@@ -20,3 +20,9 @@ docs/upstream/
 coverage.xml
 # Windows download markers copied through WSL
 *:Zone.Identifier
+
+# Documentation: the build, and the pages generated at each build (docs/conf.py)
+docs/_build/
+docs/examples/*.ipynb
+docs/changelog.md
+docs/contributing.md

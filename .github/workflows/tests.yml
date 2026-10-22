@@ -1,7 +1,7 @@
 # Tests (CLAUDE.md): on Linux, every Python version PyBaMM supports, and on macOS and
 # Windows the oldest and newest, against the latest PyBaMM release (blocking); PyBaMM main
-# (non-blocking); pre-commit, coverage (all tests, slow ones included, uploaded to Codecov)
-# and the example notebooks, on Linux.
+# (non-blocking); pre-commit, coverage (all tests, slow ones included, uploaded to Codecov),
+# the example notebooks and the documentation, on Linux.
 name: Tests
 
 on:
@@ -83,6 +83,18 @@ jobs:
       - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
       # Executes every notebook in examples/ and fails if a cell raises
       - run: uv run pytest --nbmake examples/
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+      - run: uv sync --no-default-groups --group docs
+      # As on Read the Docs: any warning (a broken reference, a bad docstring) fails
+      - run: uv run --no-sync sphinx-build -W --keep-going docs docs/_build/html
 
   pybamm-main:
     name: PyBaMM main (non-blocking)

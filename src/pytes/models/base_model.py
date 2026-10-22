@@ -121,7 +121,7 @@ class BaseModel(pybamm.BaseModel):
     @property
     def controls(self):
         """
-        The controls: inlet temperature and mass flow rate, as parameter symbols, keyed by
+        The controls, inlet temperature and mass flow rate, as parameter symbols, keyed by
         the names of the matching variables
         """
         return {

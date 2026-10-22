@@ -45,6 +45,9 @@ class BaseSubModel(pybamm.BaseModel):
     ``boundary_conditions``, ``initial_conditions`` and ``events``. A variable set by another
     submodel is read with :meth:`coupled`, never by reaching into that submodel.
 
+    Besides the attributes below, the metadata is read from the code (DESIGN D3):
+    :attr:`requires`, :attr:`provides` and :attr:`parameters`.
+
     Parameters
     ----------
     param : object
@@ -61,9 +64,6 @@ class BaseSubModel(pybamm.BaseModel):
         (PyBaMM's own record of the variables a model needs from other models).
     assumptions : tuple of str
         Modelling assumptions, in a sentence each (for model cards).
-
-    The other metadata is read from the code (DESIGN D3): :attr:`requires`,
-    :attr:`provides` and :attr:`parameters`.
     """
 
     assumptions = ()

@@ -9,6 +9,7 @@
 
 [![Tests](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml/badge.svg)](https://github.com/mmsg-warwick/PyTES/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/pytes-thermal)](https://pypi.org/project/pytes-thermal/)
+[![Documentation](https://readthedocs.org/projects/pytes/badge/?version=latest)](https://pytes.readthedocs.io)
 [![Coverage](https://codecov.io/gh/mmsg-warwick/PyTES/branch/main/graph/badge.svg)](https://codecov.io/gh/mmsg-warwick/PyTES)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23438443.svg)](https://doi.org/10.5281/zenodo.23438443)
 

@@ -49,7 +49,7 @@ class DeviceEnergy(BaseSubModel):
 
     @property
     def components(self):
-        """All the parts that hold heat: the storage components, then the fluid"""
+        """All the parts that hold heat, the storage components and then the fluid"""
         return [*self.storage_components, self.fluid_component]
 
     def uniform_energy(self, T):
