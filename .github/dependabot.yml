@@ -1,6 +1,7 @@
 # Dependabot (CONTRIBUTING.md): a monthly pull request bumping the GitHub Actions the
 # workflows use, all in one, so that they keep up with the runners (e.g. the move to
-# Node.js 24). Labelled "no changelog": these are internal changes.
+# Node.js 24). Labelled "no changelog": these are internal changes. setup-uv publishes
+# exact versions only (no moving major tag), so it is pinned to one and bumped here.
 version: 2
 updates:
   - package-ecosystem: "github-actions"

@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
       - run: uvx pre-commit run --all-files --show-diff-on-failure
 
   tests:
@@ -43,7 +43,7 @@ jobs:
           - {os: windows-latest, python-version: "3.15"}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: ${{ matrix.python-version }}
       # The latest PyBaMM release the constraints allow, not the locked one, with its
@@ -60,7 +60,7 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: "3.14"
       - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
@@ -77,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: "3.14"
       - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
@@ -89,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: "3.14"
       - run: uv sync --no-default-groups --group docs
@@ -102,7 +102,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
       - run: uv sync
       # PyBaMM main is a uv workspace (packages/pybamm, packages/pybammsolvers, ...); install
       # the pybamm package only. Its workspace source for pybammsolvers would compile the
@@ -125,5 +125,5 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.2
       - run: uv run towncrier check --compare-with origin/${{ github.base_ref }}
