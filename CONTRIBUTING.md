@@ -334,6 +334,9 @@ Every push and pull request runs, with [GitHub Actions](https://docs.github.com/
 - the tests against PyBaMM's `main` branch (non-blocking, to catch upstream changes early);
 - on pull requests, the check for a changelog fragment.
 
+Dependabot (`.github/dependabot.yml`) opens a pull request each month that bumps the
+GitHub Actions the workflows use, labelled `no changelog`.
+
 Publishing a GitHub release runs `.github/workflows/release.yml` (see
 [Releasing](#releasing)).
 

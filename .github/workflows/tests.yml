@@ -21,8 +21,8 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.2
       - run: uvx pre-commit run --all-files --show-diff-on-failure
 
   tests:
@@ -42,8 +42,8 @@ jobs:
           - {os: windows-latest, python-version: "3.10"}
           - {os: windows-latest, python-version: "3.15"}
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: ${{ matrix.python-version }}
       # The latest PyBaMM release the constraints allow, not the locked one, with its
@@ -59,13 +59,13 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: "3.14"
       - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
       - run: uv run pytest -m "" --cov --cov-report=xml
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v7
         with:
           files: coverage.xml
           use_oidc: true
@@ -76,8 +76,8 @@ jobs:
     name: Example notebooks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: "3.14"
       - run: uv sync --upgrade-package pybamm --upgrade-package pybammsolvers
@@ -88,8 +88,8 @@ jobs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           python-version: "3.14"
       - run: uv sync --no-default-groups --group docs
@@ -101,8 +101,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.2
       - run: uv sync
       # PyBaMM main is a uv workspace (packages/pybamm, packages/pybammsolvers, ...); install
       # the pybamm package only. Its workspace source for pybammsolvers would compile the
@@ -122,8 +122,8 @@ jobs:
       !contains(github.event.pull_request.labels.*.name, 'no changelog')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.3.2
       - run: uv run towncrier check --compare-with origin/${{ github.base_ref }}
