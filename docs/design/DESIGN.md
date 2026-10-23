@@ -107,7 +107,7 @@ testable in isolation.
   are lower case unless they are names (e.g. `"heat transfer coefficient": "Gnielinski"`).
   An option is named after what it varies, not after a slot (maintainer, 2026-10-22,
   F-050): `"storage"` was also the name of a slot in `model.submodels`. A renamed option is
-  listed in `BaseModel.renamed_options`, so that the error for its old name gives the new
+  an entry of the rename registry (D17), so that its old name warns or raises with the new
   one.
 - **No silent swaps.** An option combination that is incompatible raises an error naming the
   conflict; a model never replaces a submodel the user did not ask for. Rationale: PyBaMM's
@@ -507,6 +507,19 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
   variable `PUBLISH_TO_PYPI` is set; the source distribution lists its contents. The PyPI
   name is `pytes-thermal` (maintainer, 2026-10-17): `pytes` is an empty project held since
   about 2010 to protect `pytest` from typosquatting. The import name stays `pytes`.
+- **Renames and deprecation** (maintainer, 2026-10-23, issue #17, F-053): every rename of
+  a public name is one entry of `pytes.deprecation.RENAMES` (old and new name, finding,
+  release that renamed it, release that removes the alias). While the alias is active the
+  old name works and warns with `PyTESDeprecationWarning`, pointing to the user's line; once
+  retired it raises an error giving the new name, and the entry stays. Covered: classes and
+  functions (the old module sets `__getattr__ = module_getattr(__name__)`) and option names.
+  Policy before 1.0: an alias lives for at least one release and is removed in the next
+  minor release; a rename without an alias (as F-050) needs the maintainer's agreement. The
+  tests enforce it: each entry warns or raises, a test fails once the version reaches an
+  active alias's removal release (then set `alias=False`), PyTES's own tests turn the
+  warning into an error, and the example notebooks and user documentation must not use old
+  names. Rationale: one place to rename, consistent messages, and no alias that outlives
+  its deadline. The policy after 1.0 is part of Stage E.
 
 ## 3. Deferred, with the hook that must exist now
 
@@ -527,6 +540,8 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
 | Packaged sensitivity and fitting tools | Keep as notebooks until a second use proves them |
 | Upstream experiment generalisation, #5094 follow-up | `compat` isolation; runner free of battery assumptions |
 | KPI set | Variable tiers (D12) |
+| Deprecating option values (issue #17) | A new `kind` in the rename registry (D17), checked in `process_options` next to option names; no value has been renamed yet |
+| Deprecating variable and parameter names (issue #17) | A new `kind` in the rename registry (D17). PyBaMM looks both up itself (`FuzzyDict`, whose renames are hard-coded battery cases, and solutions use `dict.get`), so it needs a rename hook upstream, or a `compat` shim |
 
 ## 4. Open
 
@@ -546,8 +561,8 @@ arise.
 | **A. Skeleton** | Submodel refactor of the finned-tube code prototype; draft contract (a page or two); conformance tests ported from the existing 72 |
 | **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch. **Closed 2026-10-16**: all acceptance criteria met (F-039 to F-041), §4 Open emptied (F-042 to F-046) |
 | **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, CI and packaging. (The PyBOP example is dropped: maintainer, 2026-10-16.) **Closed 2026-10-22**: 0.1.0a1 (2026-10-17) and 0.1.0a2 (2026-10-22) released, CI running (F-047) |
-| **D. Gap filling** | Lumped capsule (done: D4, F-051), flow-dependent HTC (done early: D6, F-049), advection scheme improvements tied to upstream (a second-order scheme, the default: D16, F-052) |
-| **E. v1.0** | Contract freeze, deprecation policy, one experimental validation per family, docs, admission guide |
+| **D. Gap filling** | Lumped capsule (done: D4, F-051), flow-dependent HTC (done early: D6, F-049), advection scheme improvements tied to upstream (a second-order scheme, the default: D16, F-052) **Closed 2026-10-23**: all three done (PRs #11, #15, #16) |
+| **E. v1.0** | Contract freeze, deprecation policy after 1.0 (the mechanism and the alpha policy are in D17), one experimental validation per family, docs, admission guide |
 
 Do not call any API stable before the end of Stage B. Time-box stages. If A overruns, cut
 scope in C rather than extend.
