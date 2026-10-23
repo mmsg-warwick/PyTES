@@ -1,8 +1,9 @@
 """Submodels: the fluid, storage and coupling slots, the device-level energy, and the
 surface flux laws of the couplings."""
 
+from .. import deprecation
 from .base_submodel import BaseSubModel
-from .coupling import FinPCMCoupling, FinRootCoupling, LedgerWallCoupling
+from .coupling import FinRootCoupling, FinStorageCoupling, WallCoupling
 from .energy import DeviceEnergy, PerAreaTotals
 from .fluid import AdvectedFluid, FlowPath
 from .flux_laws import (
@@ -27,14 +28,13 @@ __all__ = [
     "CORRELATIONS",
     "DeviceEnergy",
     "EnthalpyStorage",
-    "FinPCMCoupling",
     "FinRootCoupling",
+    "FinStorageCoupling",
     "FlowPath",
     "FluidState",
     "Gnielinski",
     "HeatTransferCoefficientOptions",
     "Jeffreson",
-    "LedgerWallCoupling",
     "LumpedGeometry",
     "LumpedStorage",
     "NewtonCooling",
@@ -45,5 +45,10 @@ __all__ = [
     "SurfaceFluxLaw",
     "TubeCorrelation",
     "WakaoKaguei",
+    "WallCoupling",
     "register_correlation",
 ]
+
+# The old names of the couplings (LedgerWallCoupling, FinPCMCoupling) warn and give the
+# new ones
+__getattr__ = deprecation.module_getattr(__name__)

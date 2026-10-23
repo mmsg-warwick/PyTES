@@ -12,8 +12,8 @@ from pytes.submodels import (
     BaseSubModel,
     DeviceEnergy,
     EnthalpyStorage,
-    LedgerWallCoupling,
     LumpedStorage,
+    WallCoupling,
 )
 from pytes.submodels.storage import INITIAL_TEMPERATURE
 
@@ -52,7 +52,7 @@ def sensible_bed(storage_element="resolved"):
         {
             "fluid": fluid,
             "storage": storage,
-            "coupling": LedgerWallCoupling(param, param.fluid, "Capsule", geometry),
+            "coupling": WallCoupling(param, param.fluid, "Capsule", geometry),
             "device energy": DeviceEnergy(param, fluid, [storage]),
         },
         param,

@@ -7,7 +7,7 @@ from conftest import var_pts
 
 import pytes
 from pytes import conformance
-from pytes.submodels import LedgerWallCoupling, NewtonCooling, SurfaceFluxLaw
+from pytes.submodels import NewtonCooling, SurfaceFluxLaw, WallCoupling
 
 T = np.linspace(0, 1800, 7)
 
@@ -26,7 +26,7 @@ class CubicFlux(SurfaceFluxLaw):
 
 def with_cubic_flux(base):
     storage = base.submodels["storage"]
-    coupling = LedgerWallCoupling(
+    coupling = WallCoupling(
         base.param,
         base.param.fluid,
         storage.label,

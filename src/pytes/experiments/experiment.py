@@ -21,9 +21,10 @@ from .. import compat
 from .step import (
     INLET_TEMPERATURE,
     MASS_FLOW_RATE,
+    PREVIOUS_INLET_TEMPERATURE,
     START_TIME,
     BaseStep,
-    ConstantPower,
+    Power,
 )
 
 #: Input parameter selecting the active branch of the experiment model (1-based)
@@ -177,7 +178,7 @@ def build_experiment_model(model, experiment, parameter_values):
     parameter_values[INLET_TEMPERATURE] = T_in
     parameter_values[MASS_FLOW_RATE] = mdot
 
-    input_names = {STEP_INDEX.name, START_TIME.name}
+    input_names = {STEP_INDEX.name, START_TIME.name, PREVIOUS_INLET_TEMPERATURE.name}
     for step in unique_steps:
         input_names.update(t.input_name for t in step.targets.values() if t.is_constant)
     return model, parameter_values, branch_index, sorted(input_names)
@@ -185,13 +186,13 @@ def build_experiment_model(model, experiment, parameter_values):
 
 def _failure_hint(step):
     """Likely cause of a solver failure in a step, for the warning"""
-    if isinstance(step, ConstantPower) and step.adjusted == MASS_FLOW_RATE:
+    if isinstance(step, Power) and step.adjusted == MASS_FLOW_RATE:
         return (
             " The mass flow rate needed to hold the power grows without bound as the"
             " outlet temperature approaches the inlet temperature: limit it with"
             " step.mass_flow_rate_above(...)."
         )
-    if isinstance(step, ConstantPower) and step.adjusted == INLET_TEMPERATURE:
+    if isinstance(step, Power) and step.adjusted == INLET_TEMPERATURE:
         return (
             " Consider limiting the inlet temperature with"
             " step.inlet_temperature_below(...) or step.inlet_temperature_above(...)."
@@ -251,6 +252,12 @@ def run_experiment(model, experiment, parameter_values=None, var_pts=None, solve
             inputs.update(step.input_values())
             inputs[STEP_INDEX.name] = branch_index[step.branch_key]
             inputs[START_TIME.name] = start_time
+            # Held by a rest that is given no inlet temperature
+            inputs[PREVIOUS_INLET_TEMPERATURE.name] = (
+                float(parameter_values["Initial temperature [K]"])
+                if solution is None
+                else float(solution[INLET_TEMPERATURE].entries[-1])
+            )
             # Output times, measured from the start of the step. Passing them as
             # t_interp stops IDAKLU from storing every internal step
             npts = max(2, round(step.duration / step.period) + 1)

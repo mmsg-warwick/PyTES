@@ -14,12 +14,17 @@ surface flux law (:mod:`pytes.submodels.flux_laws`), Newton's law of cooling by 
 
 import pybamm
 
+from .. import deprecation
 from .base_submodel import BaseSubModel
 from .fluid import FLUID_ENTHALPY, FLUID_TEMPERATURE, HEAT_GAIN
 from .flux_laws import FluidState, NewtonCooling
 
+# The old names of the couplings (LedgerWallCoupling, FinPCMCoupling) warn and give the
+# new ones
+__getattr__ = deprecation.module_getattr(__name__)
 
-class LedgerWallCoupling(BaseSubModel):
+
+class WallCoupling(BaseSubModel):
     """
     A storage in direct contact with the flow path wall, exchanging heat with the fluid.
 
@@ -105,14 +110,14 @@ class LedgerWallCoupling(BaseSubModel):
         }
 
 
-class FinRootCoupling(LedgerWallCoupling):
+class FinRootCoupling(WallCoupling):
     """
     Fins whose roots are on the flow path wall, exchanging heat with the fluid.
 
     The heat the fluid exchanges over one fin pitch of wall enters through the fin root
     alone, so the heat flux into the fin root is ``d_m / d_c`` times the surface flux law's
     flux. The heat the fluid gains is taken from the fins' discrete energy balance, as in
-    :class:`LedgerWallCoupling`, so energy is conserved exactly.
+    :class:`WallCoupling`, so energy is conserved exactly.
 
     Parameters
     ----------
@@ -142,30 +147,38 @@ class FinRootCoupling(LedgerWallCoupling):
         )
 
 
-class FinPCMCoupling(BaseSubModel):
+class FinStorageCoupling(BaseSubModel):
     """
-    Phase-change material between two fins, at the fin temperature where it touches a fin.
+    A storage material between two fins, at the fin temperature where it touches a fin. The
+    material may change phase or not: the coupling is the same.
 
-    The PCM's boundary temperature is the fin temperature. The heat the fin gains per unit
-    fin volume is minus the heat the PCM on both sides gains through the fin face, computed
-    from the PCM's own discrete energy balance: ``-(2 / d_c)`` times the integral of its
-    conduction heating rate across the half-gap (the flux at the midplane is zero). This telescopes to the discrete flux at the
-    fin face, so energy is conserved exactly.
+    The storage's boundary temperature is the fin temperature. The heat the fin gains per
+    unit fin volume is minus the heat the storage on both sides gains through the fin face,
+    computed from the storage's own discrete energy balance: ``-(2 / d_c)`` times the
+    integral of its conduction heating rate across the half-gap (the flux at the midplane is
+    zero). This telescopes to the discrete flux at the fin face, so energy is conserved
+    exactly.
 
     Parameters
     ----------
     param : object
         The model's parameters. Uses ``d_c``.
     pcm_label : str
-        The PCM's label (see :class:`pytes.submodels.EnthalpyStorage`).
+        The label of the storage between the fins (see
+        :class:`pytes.submodels.EnthalpyStorage`).
     pcm_geometry : :class:`pytes.submodels.StorageGeometry`
-        The PCM's geometry (across the half-gap).
+        Its geometry (across the half-gap).
     fin_label : str, optional
         The fins' label (default "Fin").
     """
 
     def __init__(
-        self, param, pcm_label, pcm_geometry, fin_label="Fin", name="Fin-PCM coupling"
+        self,
+        param,
+        pcm_label,
+        pcm_geometry,
+        fin_label="Fin",
+        name="Fin-storage coupling",
     ):
         self.pcm_label = pcm_label
         self.pcm_geometry = pcm_geometry

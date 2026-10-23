@@ -18,9 +18,9 @@ T_COLD = 273.15 + 10
 def test_matches_reference_experiment():
     model = pytes.SharpFrontModel()
     steps = [
-        s.ConstantInputs(T_COLD, MDOT, duration=60, period=10),
-        s.ConstantPower(900, inlet_temperature=T_COLD, duration=300, period=10),
-        s.ConstantPower(1200, mass_flow_rate=MDOT, duration=300, period=10),
+        s.Inlet(T_COLD, MDOT, duration=60, period=10),
+        s.Power(900, inlet_temperature=T_COLD, duration=300, period=10),
+        s.Power(1200, mass_flow_rate=MDOT, duration=300, period=10),
     ]
     solution = run_experiment(
         model, Experiment(steps), var_pts={model.y: 4, model.z: 5}
@@ -42,7 +42,7 @@ def test_matches_reference_experiment():
 
 
 def test_steps_must_drive_the_model_controls():
-    class OneControlStep(s.ConstantInputs):
+    class OneControlStep(s.Inlet):
         controls = ("Inlet temperature [K]",)
 
     model = pytes.SharpFrontModel()

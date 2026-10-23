@@ -323,15 +323,18 @@ will need different controls.
 
 ### D10. PyTES carries its own experiment runner
 Built on PyBaMM's unified experiment mode (one model, controls as solver unknowns, step
-index selecting the branch), free of battery assumptions so it stays upstreamable. Alpha step
-types: `ConstantInputs` and `ConstantPower`; values may be constants, time series or functions
-of time. Terminations: outlet or inlet temperature, mass flow rate, liquid fraction, custom, plus a maximum duration per step (a time-series step defaults to the length of its
+index selecting the branch), free of battery assumptions so it stays upstreamable. Step
+types, named after what they hold as PyBaMM's are (maintainer, 2026-10-23, issue #18,
+F-054; formerly `ConstantInputs` and `ConstantPower`): `Inlet` (the inlet temperature and
+the mass flow rate), `Power` and `Rest` (no flow; the inlet temperature is held where the
+previous step left it, or at a given value); values may be constants, time series or
+functions of time. Terminations: outlet or inlet temperature, mass flow rate, liquid fraction, custom, plus a maximum duration per step (a time-series step defaults to the length of its
 series). Cycles group steps and can repeat. Returns an ordinary `pybamm.Solution` with
 `.cycles` and `.steps`. Point probes `T(t, z, ...)` are PyBaMM's own
 `solution[name](t=..., z=...)`; no PyTES code.
-- **`ConstantPower` adjusts the control left free** (maintainer, 2026-10-14):
-  `ConstantPower(P, mass_flow_rate=...)` adjusts the inlet temperature,
-  `ConstantPower(P, inlet_temperature=...)` adjusts the mass flow rate; giving both or
+- **`Power` adjusts the control left free** (maintainer, 2026-10-14):
+  `Power(P, mass_flow_rate=...)` adjusts the inlet temperature,
+  `Power(P, inlet_temperature=...)` adjusts the mass flow rate; giving both or
   neither raises. Rationale: the names `ConstantPowerInletTemperature` and
   `ConstantPowerFlowRate` read as what is held, but named what is adjusted. The rule extends
   to refrigerant controls (D9).

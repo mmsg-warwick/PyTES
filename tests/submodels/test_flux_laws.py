@@ -123,9 +123,7 @@ def test_the_coefficient_rises_with_the_flow(cls, option):
 def test_constant_power_adjusts_the_flow_through_the_coefficient():
     # With a correlation, the coefficient follows the flow rate an experiment adjusts
     model = pytes.SharpFrontModel(options={"heat transfer coefficient": "Gnielinski"})
-    experiment = Experiment(
-        [step.ConstantPower(4000, inlet_temperature=283.15, duration=300)]
-    )
+    experiment = Experiment([step.Power(4000, inlet_temperature=283.15, duration=300)])
     solution = run_experiment(model, experiment, var_pts=var_pts(model))
     mdot = solution["Mass flow rate [kg.s-1]"].entries
     h = solution["Heat transfer coefficient [W.m-2.K-1]"].entries

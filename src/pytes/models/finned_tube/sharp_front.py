@@ -8,8 +8,8 @@ import pybamm
 from ...submodels import (
     DeviceEnergy,
     EnthalpyStorage,
-    LedgerWallCoupling,
     StorageGeometry,
+    WallCoupling,
 )
 from .base_finned_tube import BaseFinnedTubeModel
 
@@ -27,7 +27,7 @@ class SharpFrontModel(BaseFinnedTubeModel):
     - "fluid": :class:`pytes.submodels.AdvectedFluid`;
     - "storage": :class:`pytes.submodels.EnthalpyStorage` of the composite, in cylindrical
       coordinates;
-    - "coupling": :class:`pytes.submodels.LedgerWallCoupling`, the composite touching the
+    - "coupling": :class:`pytes.submodels.WallCoupling`, the composite touching the
       tube wall;
     - "device energy": :class:`pytes.submodels.DeviceEnergy`.
 
@@ -66,7 +66,7 @@ class SharpFrontModel(BaseFinnedTubeModel):
         storage = EnthalpyStorage(param, param.composite, geometry)
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage
-        self.submodels["coupling"] = LedgerWallCoupling(
+        self.submodels["coupling"] = WallCoupling(
             param, param.fluid, storage.label, geometry, flux_law=self.flux_law()
         )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])

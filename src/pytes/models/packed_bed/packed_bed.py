@@ -13,11 +13,11 @@ from ...submodels import (
     FlowPath,
     HeatTransferCoefficientOptions,
     Jeffreson,
-    LedgerWallCoupling,
     LumpedGeometry,
     LumpedStorage,
     PerAreaTotals,
     StorageGeometry,
+    WallCoupling,
 )
 from ..base_model import BaseModel
 from .parameter_values import get_parameter_values
@@ -39,7 +39,7 @@ class PackedBedModel(BaseModel):
     - "storage": :class:`pytes.submodels.EnthalpyStorage` of the PCM in a capsule
       (spherical), exchanging heat at its surface; or, for a lumped capsule,
       :class:`pytes.submodels.LumpedStorage`;
-    - "coupling": :class:`pytes.submodels.LedgerWallCoupling`, the fluid and the capsule
+    - "coupling": :class:`pytes.submodels.WallCoupling`, the fluid and the capsule
       surfaces (``3 (1 - eps) / R`` of surface per unit bed volume);
     - "device energy": :class:`pytes.submodels.DeviceEnergy`;
     - "per-area totals": :class:`pytes.submodels.PerAreaTotals`, the device totals per unit
@@ -158,7 +158,7 @@ class PackedBedModel(BaseModel):
             storage = EnthalpyStorage(param, param.pcm, geometry)
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage
-        self.submodels["coupling"] = LedgerWallCoupling(
+        self.submodels["coupling"] = WallCoupling(
             param, param.fluid, storage.label, geometry, flux_law=self.flux_law(storage)
         )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])
