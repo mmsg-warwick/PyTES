@@ -73,5 +73,11 @@ class SharpFrontModel(BaseFinnedTubeModel):
 
     @property
     def default_var_pts(self):
-        """Number of mesh points in each spatial variable"""
-        return {self.y: 40, self.z: 40}
+        """
+        Number of mesh points in each spatial variable, with about the same error from each
+        (F-052). For the default discharge, against 160 points in either and 20 or 40 in
+        the other, ``y`` gives 0.054 K on average in the outlet temperature and 0.11 % in
+        the stored energy, and ``z`` 0.066 K and 0.12 %, in about 1 s; 40 by 40 gives about
+        a quarter of these errors, in about 5 times as long.
+        """
+        return {self.y: 20, self.z: 20}

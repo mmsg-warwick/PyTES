@@ -91,36 +91,65 @@ def schumann_outlet(parameter_values, t):
     return np.array([validation.schumann(xi, rate * (ti - Z / u))[0] for ti in t])
 
 
-@pytest.fixture(scope="module", params=["resolved", "lumped"])
-def schumann_errors(request):
-    """Largest error in the scaled outlet temperature, by number of cells along the bed"""
-    base, model, parameter_values = sensible_bed(request.param)
+def schumann_error(n_z, storage_element="resolved", flow_path_method=None):
+    """
+    Largest error in the scaled outlet temperature with ``n_z`` cells along the bed, with
+    the model's spatial method on the flow path or another
+    """
+    base, model, parameter_values = sensible_bed(storage_element)
     T_0 = parameter_values["Initial temperature [K]"]
     dT = parameter_values["Inlet temperature [K]"] - T_0
     t = np.linspace(0, 3000, 151)
     exact = schumann_outlet(parameter_values, t)
-    errors = {}
-    for n_z in (200, 400):
-        solution = pybamm.Simulation(
-            model,
-            parameter_values=parameter_values,
-            var_pts=var_pts(base, {"r": 5, "z": n_z}),
-            solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10),
-        ).solve([0, t[-1]], t_interp=t)
-        theta = (solution["Outlet temperature [K]"].entries - T_0) / dT
-        errors[n_z] = np.max(np.abs(theta - exact))
-    return errors
+    spatial_methods = dict(model.default_spatial_methods)
+    if flow_path_method is not None:
+        spatial_methods["flow path"] = flow_path_method
+    solution = pybamm.Simulation(
+        model,
+        parameter_values=parameter_values,
+        var_pts=var_pts(base, {"r": 5, "z": n_z}),
+        spatial_methods=spatial_methods,
+        solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10),
+    ).solve([0, t[-1]], t_interp=t)
+    theta = (solution["Outlet temperature [K]"].entries - T_0) / dT
+    return np.max(np.abs(theta - exact))
 
 
-def test_sensible_bed_matches_schumann(schumann_errors):
-    # Within 2 % of the temperature step on 400 cells
-    assert schumann_errors[400] < 0.02
+@pytest.fixture(scope="module", params=["resolved", "lumped"])
+def storage_element(request):
+    """The capsule: resolved, or lumped (Schumann's model itself, issue #5)"""
+    return request.param
 
 
-def test_sensible_bed_converges_to_schumann_at_first_order(schumann_errors):
+@pytest.fixture(scope="module")
+def first_order_errors(storage_element):
+    """Largest error in the scaled outlet temperature with first-order upwinding"""
+    first_order = pytes.compat.fluid_spatial_method("first order")
+    return {
+        n_z: schumann_error(n_z, storage_element, first_order) for n_z in (200, 400)
+    }
+
+
+def test_sensible_bed_matches_schumann(storage_element):
+    # The default, second-order scheme (F-052): within 1 % of the temperature step on 50
+    # cells; on more, a resolved capsule keeps the difference between a capsule that
+    # conducts and Schumann's lumped one (about 0.3 %)
+    assert schumann_error(50, storage_element) < 0.01
+    assert schumann_error(200, storage_element) < 0.004
+
+
+def test_first_order_converges_to_schumann_at_first_order(first_order_errors):
     # First-order upwinding: the error halves with the cell size, so what is left is
     # discretisation error, not a modelling difference
-    assert schumann_errors[200] / schumann_errors[400] == pytest.approx(2, rel=0.2)
+    assert first_order_errors[200] / first_order_errors[400] == pytest.approx(
+        2, rel=0.2
+    )
+
+
+def test_second_order_beats_first_order_on_far_fewer_cells(
+    storage_element, first_order_errors
+):
+    assert schumann_error(50, storage_element) < first_order_errors[400]
 
 
 class SurfaceAt(BaseSubModel):

@@ -132,6 +132,8 @@ class MushModel(BaseFinnedTubeModel):
     def default_var_pts(self):
         """
         Number of mesh points in each spatial variable. 10 points in ``x`` change the
-        outlet temperature by about 0.02 K and are about 4 times faster
+        outlet temperature by about 0.02 K and are about 4 times faster. Along the tube,
+        against 80 points, 20 give 0.061 K on average in the outlet temperature and 0.11 %
+        in the stored energy for the default discharge (F-052)
         """
         return {self.x: 20, self.y: 20, self.z: 20}

@@ -56,7 +56,8 @@ class AdvectedFluid(BaseSubModel):
     other properties come from the fluid-property object at the state: ``T = T(h)``, and the
     outlet temperature is ``T(h_out)``.
 
-    The enthalpy flux ``mdot_path h`` is upwinded (first order). The inflow uses
+    The enthalpy flux ``mdot_path h`` is upwinded, at second order with the default spatial
+    method (:func:`pytes.compat.fluid_spatial_method`, F-052). The inflow uses
     :func:`pytes.compat.upwind_inlet_value`.
 
     Parameters
