@@ -25,6 +25,11 @@ class DeviceEnergy(BaseSubModel):
       and the total thermal energy adds the fluid. Every energy is zero at the uniform state
       at the reference temperature (DESIGN D14).
     - Heat loss power: zero (there is no casing yet), positive for loss.
+    - Storage temperatures (issue #14): the average over all the storage components,
+      weighted by volume, over the whole device ("Storage average temperature [K]") and
+      over each cross-section of the flow path ("Storage cross-section average temperature
+      [K]"). With one storage they equal its own averages; with several (the fins and the
+      PCM of the mush model) they compare with a model that homogenises them.
     - Initial state: uniform at "Initial temperature [K]" (DESIGN D14). Each component
       starts at its equilibrium state at that temperature: for a sharp melting point,
       solid at the melting temperature; with a melting range, partly liquid inside it.
@@ -39,8 +44,9 @@ class DeviceEnergy(BaseSubModel):
     fluid_component : :class:`pytes.submodels.AdvectedFluid`
         The fluid.
     storage_components : list
-        The storage submodels. Each has an ``energy_variable`` and a
-        ``uniform_energy(T)`` method.
+        The storage submodels. Each has a ``label``, a ``storage_geometry``, an
+        ``energy_variable`` and a ``uniform_energy(T)`` method, and provides "<label>
+        average temperature [K]" and "<label> cross-section average temperature [K]".
     """
 
     assumptions = ("There are no heat losses to the surroundings.",)
@@ -89,6 +95,18 @@ class DeviceEnergy(BaseSubModel):
         for component in self.storage_components[1:]:
             E_storage = E_storage + self.coupled(component.energy_variable)
         E_total = E_storage + self.coupled(self.fluid_component.energy_variable)
+
+        def volume_weighted(name, volume):
+            """The average of a temperature of every storage, weighted by volume"""
+            total = weighted = 0
+            for component in self.storage_components:
+                V = volume(component.storage_geometry)
+                # On the volume's domain, so that PyBaMM does not broadcast it
+                T = self.coupled(name.format(component.label), V.domain or None)
+                weighted = weighted + V * T
+                total = total + V
+            return weighted / total
+
         variables = {
             "Power [W]": power,
             "Discharged energy [J]": E_out,
@@ -98,6 +116,13 @@ class DeviceEnergy(BaseSubModel):
             "Storage thermal energy [J]": E_storage,
             "Total thermal energy [J]": E_total,
             "Heat loss power [W]": pybamm.Scalar(0),
+            "Storage average temperature [K]": volume_weighted(
+                "{} average temperature [K]", lambda geometry: geometry.volume
+            ),
+            "Storage cross-section average temperature [K]": volume_weighted(
+                "{} cross-section average temperature [K]",
+                lambda geometry: geometry.cross_section_volume,
+            ),
             INITIAL_TEMPERATURE: param.T_init,
         }
         self.variables = variables

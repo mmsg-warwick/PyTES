@@ -28,6 +28,8 @@ REQUIRED_VARIABLES = (
     "Discharged throughput [J]",
     "Charged throughput [J]",
     "Storage thermal energy [J]",
+    "Storage average temperature [K]",
+    "Storage cross-section average temperature [K]",
     "Heat transfer fluid thermal energy [J]",
     "Total thermal energy [J]",
     "Heat loss power [W]",

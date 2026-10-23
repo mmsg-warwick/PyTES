@@ -105,3 +105,45 @@ def test_volume_flow_rate_follows_the_controls():
         sol["Mass flow rate [kg.s-1]"].entries / rho,
     )
     assert np.ptp(sol["Mass flow rate [kg.s-1]"].entries) > 0
+
+
+def test_storage_temperatures_combine_the_storages(solution):
+    # Volume-weighted over the storage components: with one storage they are its own
+    # averages; in the mush model they lie between the PCM's and the fins'
+    model, sol = solution
+    labels = [
+        sub.label
+        for sub in model.submodels.values()
+        if isinstance(sub, pytes.submodels.EnthalpyStorage)
+    ]
+    for kind in ("average", "cross-section average"):
+        combined = sol[f"Storage {kind} temperature [K]"].entries
+        own = [sol[f"{label} {kind} temperature [K]"].entries for label in labels]
+        if len(own) == 1:
+            np.testing.assert_allclose(combined, own[0], rtol=1e-12)
+        else:
+            assert np.all(combined >= np.minimum(*own) - 1e-9)
+            assert np.all(combined <= np.maximum(*own) + 1e-9)
+
+
+def test_storage_average_is_the_mean_of_the_cross_section_averages(solution):
+    # On a uniform mesh along the flow path, as the default and coarse meshes are
+    model, sol = solution
+    cross_section = sol["Storage cross-section average temperature [K]"].entries
+    np.testing.assert_allclose(
+        sol["Storage average temperature [K]"].entries,
+        cross_section.mean(axis=0),
+        rtol=1e-12,
+    )
+
+
+@pytest.mark.parametrize("element", ["resolved", "lumped"])
+def test_averaged_storage_has_one_cross_section(element):
+    options = {"storage along flow path": "averaged", "storage element": element}
+    model = pytes.PackedBedModel(options=options)
+    sol = pybamm.Simulation(model, var_pts=var_pts(model)).solve([0, 600])
+    np.testing.assert_allclose(
+        sol["Storage cross-section average temperature [K]"].entries,
+        sol["Storage average temperature [K]"].entries,
+        rtol=1e-12,
+    )

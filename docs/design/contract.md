@@ -89,6 +89,8 @@ averaged one (`"storage along flow path": "averaged"`) does not. A lumped storag
 | `Charged energy [J]` | `-Discharged energy`, the net energy put in (F-055) |
 | `Discharged throughput [J]`, `Charged throughput [J]` | time integrals of `max(P, 0)` and `max(-P, 0)` (solver states); they only grow, and their difference is the discharged energy (F-055) |
 | `Storage thermal energy [J]` | storage only (PCM, fins) |
+| `Storage average temperature [K]` | over all the storage, volume-weighted (F-055) |
+| `Storage cross-section average temperature [K]` | along `z`, over all the storage in each cross-section of the flow path, volume-weighted: across the storage depth (and fin gap) of a finned tube, over a capsule in a packed bed; one value if the storage is averaged along the flow path (F-055) |
 | `Heat transfer fluid thermal energy [J]` | fluid inventory |
 | `Total thermal energy [J]` | storage + fluid inventory |
 | `Heat loss power [W]` | positive for loss; zero today |
@@ -113,9 +115,12 @@ transfer coefficient [W.m-2.K-1]` (from the coupling's flux law: the parameter, 
 correlation's value), `Surface Reynolds number` and `Surface Prandtl number` (from the
 family's flow geometry, with any coefficient; F-055), plus `Surface Nusselt number` with a
 correlation (F-049), and `Effective heat transfer coefficient [W.m-2.K-1]` and `Surface
-Biot number` with Jeffreson's correction (F-051). Every storage provides `<label> average
-temperature [K]`, its volume-weighted average temperature (F-055), e.g. `Phase-change
-material average temperature [K]` and, in the mush model, `Fin average temperature [K]`.
+Biot number` with Jeffreson's correction (F-051). Every storage provides its own
+volume-weighted averages (F-055), `<label> average temperature [K]` and `<label>
+cross-section average temperature [K]` (along `z`): `Phase-change material ...` in every
+model and, in the mush model, also `Fin ...`. The `Storage ...` temperatures above combine
+them, so that the mush model (fins and PCM apart) compares with the sharp-front model
+(homogenised).
 
 **Family-specific:** prefixed (`Fin temperature [K]`). The packed bed adds the device totals
 per unit bed cross-section (`Power per unit area [W.m-2]`, `Discharged energy per unit area

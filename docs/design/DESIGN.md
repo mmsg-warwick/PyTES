@@ -362,9 +362,16 @@ from the inputs (inlet state against storage state), and the sign of the power s
     energy, heat loss power, fluid specific enthalpy and fluid temperature along the flow
     path (the enthalpy is the state, D5); and, for comparison with measurements (issue #14,
     F-055), the volume flow rate, the pumped volume, the inlet-outlet temperature
-    difference, the fluid velocity, the charged energy and the two throughputs.
-  - *Every storage:* its volume-weighted average temperature, `<label> average temperature
-    [K]` (F-055, defining what F-043 had dropped as undefined).
+    difference, the fluid velocity, the charged energy, the two throughputs, and the
+    storage temperatures averaged over the whole storage and over each cross-section of the
+    flow path (`Storage average temperature [K]`, `Storage cross-section average
+    temperature [K]`), volume-weighted over all the storage (maintainer, 2026-10-24).
+    Rationale: one name in every family, and a quantity that compares models that split the
+    storage differently (the mush model's fins and PCM against the sharp front's composite).
+    In a packed bed the cross-section average is the capsule's volume average.
+  - *Every storage:* its own volume-weighted averages, `<label> average temperature [K]` and
+    `<label> cross-section average temperature [K]` (F-055, defining what F-043 had dropped
+    as undefined).
   - *Optional, standard name when present:* average liquid fraction, pressure drop, outlet
     fluid state (quality, superheat; later).
   - *Family-specific:* namespaced with a prefix ("Capsule ...", "Fin ...") so they cannot
