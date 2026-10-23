@@ -449,10 +449,21 @@ versus discharged energy is the key comparison plot.
   for cost, not split into unit and integration (the suite runs in about 25 s, and the
   conformance suite is clearest as one folder). The example notebooks run in CI with
   `nbmake`. Coverage (all tests, slow ones included) goes to Codecov.
+- **Fluid advection scheme** (maintainer, 2026-10-23, issue #7, F-052): second order by
+  default, `compat.LimitedFiniteVolume` (MUSCL with the van Albada limiter, applied to
+  gradients so that it works on non-uniform meshes), with the inflow and outflow faces
+  first order so that the outlet value and the exact energy balance are unchanged. It is
+  numerics, chosen through `spatial_methods` (`compat.fluid_spatial_method("first order")`
+  for PyBaMM's own upwinding), not a model option. Rationale: on the models it costs about
+  the same per cell and is far more accurate, so the default meshes along the flow path
+  were reduced to balance their error against the other directions (sharp front 20 by 20,
+  packed bed 40 by 40; mush unchanged). It moves to PyBaMM's finite volumes when they offer
+  it.
 - Known upstream items: `pybamm.upwind` inflow uses a ghost node (`2*T_bc - T_1`) and can draw
   in fluid colder than the inlet (#5860, filed by the maintainer 2026-10-07; workaround in
   `compat`); first-order upwinding is diffusive
-  (matters most for packed-bed thermoclines); face boundary values (#5094, assigned to the
+  (matters most for packed-bed thermoclines; PyTES uses its own second-order scheme until
+  PyBaMM has one, below); face boundary values (#5094, assigned to the
   maintainer); `pybamm.Simulation` does not resolve coupled variables
   by default (`resolve_coupled_variables=True`, or `discretisation_kwargs` in `Simulation`;
   workaround in `compat`, F-028); `pybamm.Solution` takes no new attributes since 26.10
@@ -535,7 +546,7 @@ arise.
 | **A. Skeleton** | Submodel refactor of the finned-tube code prototype; draft contract (a page or two); conformance tests ported from the existing 72 |
 | **B. Bed port** | Bring the encapsulated family in under the contract; merge material classes; Schumann (sensible limit) and spherical Stefan benchmarks; log every mismatch. **Closed 2026-10-16**: all acceptance criteria met (F-039 to F-041), §4 Open emptied (F-042 to F-046) |
 | **C. v0.1 alpha** | Both families, experiment runner, standard plots, cross-family design-study notebook, CI and packaging. (The PyBOP example is dropped: maintainer, 2026-10-16.) **Closed 2026-10-22**: 0.1.0a1 (2026-10-17) and 0.1.0a2 (2026-10-22) released, CI running (F-047) |
-| **D. Gap filling** | Lumped capsule (done: D4, F-051), flow-dependent HTC (done early: D6, F-049), advection scheme improvements tied to upstream |
+| **D. Gap filling** | Lumped capsule (done: D4, F-051), flow-dependent HTC (done early: D6, F-049), advection scheme improvements tied to upstream (a second-order scheme, the default: D16, F-052) |
 | **E. v1.0** | Contract freeze, deprecation policy, one experimental validation per family, docs, admission guide |
 
 Do not call any API stable before the end of Stage B. Time-box stages. If A overruns, cut

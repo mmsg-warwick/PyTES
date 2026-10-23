@@ -15,5 +15,6 @@ parameter_layers
 heat_transfer_coefficient
 composing_models
 validation
+advection_scheme
 design_study
 ```

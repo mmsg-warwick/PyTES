@@ -209,16 +209,17 @@ class PackedBedModel(BaseModel):
     @property
     def default_var_pts(self):
         """
-        Number of mesh points in each spatial variable. The error is largest while the
-        thermal front leaves the bed, and falls slowly with ``r`` because of the melting
-        front inside the capsules. For the default charge, compared with a mesh of 80 by 160
-        (itself not fully converged in ``r``), these give errors of about 1.8 K at most and
-        0.24 K on average in the outlet temperature, and 1 % in the stored energy, in 3.5 s;
-        20 by 40 gives 3.7 K, 0.54 K and 1.9 % in 0.5 s. A lumped capsule has no ``r``.
+        Number of mesh points in each spatial variable (F-052). The error comes mostly from
+        ``r``, and falls slowly with it because of the melting front inside the capsules.
+        For the default charge, against 160 points in ``r`` (40 in ``z``), 40 give 0.27 K
+        on average in the outlet temperature and 1.8 % in the stored energy; against 640
+        points in ``z`` (40 in ``r``), 40 give 0.063 K and 0.33 %, and 5.4 K at most, in a
+        short spike as the front leaves the bed. It solves in about 1.5 s. A lumped capsule
+        has no ``r``.
         """
         if self.lumped:
-            return {self.z: 80}
-        return {self.r: 40, self.z: 80}
+            return {self.z: 40}
+        return {self.r: 40, self.z: 40}
 
     @property
     def default_spatial_methods(self):
