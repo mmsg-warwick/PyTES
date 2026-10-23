@@ -66,6 +66,9 @@ class BaseModel(pybamm.BaseModel):
     #: Allowed values of each option, the first being the default
     allowed_options = {}
 
+    #: Options that were renamed, by old name: the error for an old name gives the new one
+    renamed_options = {"storage": "storage along flow path"}
+
     def __init__(self, name, options=None):
         super().__init__(name=name)
         self.options = self.process_options(options)
@@ -82,11 +85,16 @@ class BaseModel(pybamm.BaseModel):
         Raises
         ------
         pytes.OptionError
-            If an option or a value is not allowed, or the combination is rejected by
-            :meth:`check_options`.
+            If an option or a value is not allowed (an option that was renamed included),
+            or the combination is rejected by :meth:`check_options`.
         """
         options = dict(options or {})
         for key, value in options.items():
+            if key in self.renamed_options:
+                raise OptionError(
+                    f"{self.name}: option '{key}' was renamed to "
+                    f"'{self.renamed_options[key]}'"
+                )
             if key not in self.allowed_options:
                 raise OptionError(
                     f"{self.name}: option '{key}' not recognised; the options are "

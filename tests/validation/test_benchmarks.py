@@ -3,6 +3,7 @@
 import numpy as np
 import pybamm
 import pytest
+from conftest import var_pts
 
 import pytes
 from pytes import validation
@@ -12,6 +13,7 @@ from pytes.submodels import (
     DeviceEnergy,
     EnthalpyStorage,
     LedgerWallCoupling,
+    LumpedStorage,
 )
 from pytes.submodels.storage import INITIAL_TEMPERATURE
 
@@ -32,16 +34,18 @@ def test_schumann_solution_satisfies_its_equations():
     assert validation.schumann(3, 0) == (0, 0)
 
 
-def sensible_bed():
+def sensible_bed(storage_element="resolved"):
     """
     The packed bed with capsules of a sensible material, conductive enough to be lumped
-    (Biot number 0.008), as in Schumann's model
+    (Biot number 0.008), as in Schumann's model. A lumped capsule (issue #5) is Schumann's
+    model itself.
     """
-    base = pytes.PackedBedModel()
+    base = pytes.PackedBedModel(options={"storage element": storage_element})
     param = base.param
     geometry = base.submodels["storage"].storage_geometry
     fluid = base.submodels["fluid"]
-    storage = EnthalpyStorage(
+    storage_class = LumpedStorage if storage_element == "lumped" else EnthalpyStorage
+    storage = storage_class(
         param, SensibleMaterial("Capsule"), geometry, label="Capsule"
     )
     model = pytes.ComposedModel(
@@ -87,10 +91,10 @@ def schumann_outlet(parameter_values, t):
     return np.array([validation.schumann(xi, rate * (ti - Z / u))[0] for ti in t])
 
 
-@pytest.fixture(scope="module")
-def schumann_errors():
+@pytest.fixture(scope="module", params=["resolved", "lumped"])
+def schumann_errors(request):
     """Largest error in the scaled outlet temperature, by number of cells along the bed"""
-    base, model, parameter_values = sensible_bed()
+    base, model, parameter_values = sensible_bed(request.param)
     T_0 = parameter_values["Initial temperature [K]"]
     dT = parameter_values["Inlet temperature [K]"] - T_0
     t = np.linspace(0, 3000, 151)
@@ -100,7 +104,7 @@ def schumann_errors():
         solution = pybamm.Simulation(
             model,
             parameter_values=parameter_values,
-            var_pts={base.r: 5, base.z: n_z},
+            var_pts=var_pts(base, {"r": 5, "z": n_z}),
             solver=pybamm.IDAKLUSolver(rtol=1e-8, atol=1e-10),
         ).solve([0, t[-1]], t_interp=t)
         theta = (solution["Outlet temperature [K]"].entries - T_0) / dT

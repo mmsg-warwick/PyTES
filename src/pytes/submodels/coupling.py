@@ -34,7 +34,9 @@ class LedgerWallCoupling(BaseSubModel):
     surface.)
 
     The coupling also provides the flux law's own variables (e.g. "Heat transfer
-    coefficient [W.m-2.K-1]", see :meth:`pytes.submodels.SurfaceFluxLaw.variables`).
+    coefficient [W.m-2.K-1]", see :meth:`pytes.submodels.SurfaceFluxLaw.variables`), and
+    requires the variables the law reads
+    (:attr:`pytes.submodels.SurfaceFluxLaw.coupled_variables`).
 
     For a storage averaged along the flow path (``geometry.averaged``), the flux law sees
     the fluid state averaged along the flow path, and the heat the fluid gains is spread
@@ -49,7 +51,8 @@ class LedgerWallCoupling(BaseSubModel):
         The fluid-property object.
     label : str
         The storage's label (see :class:`pytes.submodels.EnthalpyStorage`).
-    geometry : :class:`pytes.submodels.StorageGeometry`
+    geometry : :class:`pytes.submodels.StorageGeometry` or \
+:class:`pytes.submodels.LumpedGeometry`
         The storage's geometry.
     flux_law : :class:`pytes.submodels.SurfaceFluxLaw`, optional
         The surface flux law (default :class:`pytes.submodels.NewtonCooling`).
@@ -77,6 +80,8 @@ class LedgerWallCoupling(BaseSubModel):
     def build(self):
         label = self.label
         geometry = self.storage_geometry
+        for name, variable in self.flux_law.coupled_variables.items():
+            self.coupled(name, variable.domain)
         conduction = self.coupled(
             f"{label} conduction heating rate [W.m-3]", geometry.primary_domain
         )

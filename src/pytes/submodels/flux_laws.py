@@ -58,8 +58,20 @@ class SurfaceFluxLaw:
 
     Subclasses implement :meth:`heat_flux`. Geometry a law needs (e.g. a hydraulic
     diameter, for a correlation) is passed to its constructor by the family; the fluid's
-    state, flow included, comes with each call as a :class:`FluidState`.
+    state, flow included, comes with each call as a :class:`FluidState`. A law that needs a
+    variable of another submodel (e.g. the storage conductivity, for :class:`Jeffreson`)
+    reads it as a :class:`pybamm.CoupledVariable` listed in :attr:`coupled_variables`,
+    which the coupling declares as its own requirements, so the model's wiring checks see
+    it.
+
+    Attributes
+    ----------
+    coupled_variables : dict
+        The :class:`pybamm.CoupledVariable` objects the law reads, by name (none by
+        default).
     """
+
+    coupled_variables = {}
 
     def heat_flux(self, fluid, fluid_state, T_s):
         """
@@ -292,6 +304,81 @@ class WakaoKaguei(PackedBedCorrelation):
 
     def nusselt(self, Re, Pr):
         return 2 + 1.1 * Re**0.6 * Pr ** (1 / 3)
+
+
+class Jeffreson(SurfaceFluxLaw):
+    """
+    Newton's law of cooling for a lumped sphere, with Jeffreson's correction for the
+    conduction resistance inside it (issue #5): the heat flux into the sphere is
+    ``h_eff (T_f - T_s)``, with ``T_s`` the sphere's (uniform) temperature and
+
+    ``1 / h_eff = 1 / h + R / (5 k)``, that is ``h_eff = h / (1 + Bi / 5)``, ``Bi = h R / k``,
+
+    where ``h`` is the heat transfer coefficient of the law it corrects, ``R`` the sphere's
+    radius and ``k`` its conductivity (`Jeffreson, "Prediction of breakthrough curves in
+    packed beds: 1. Applicability of single parameter models", AIChE Journal 18, 1972
+    <https://doi.org/10.1002/aic.690180225>`__).
+    The correction is exact for the slow variation of a sensible sphere; while a PCM melts
+    or freezes inside the sphere it is an approximation, with ``k`` the conductivity at the
+    sphere's mean enthalpy.
+
+    Parameters
+    ----------
+    law : :class:`NewtonCooling`
+        The law it corrects, which gives ``h`` (a constant coefficient or a Nusselt
+        correlation).
+    radius : pybamm.Symbol
+        The sphere's radius ``R`` [m].
+    conductivity : str
+        Name of the variable holding the sphere's conductivity [W.m-1.K-1], e.g.
+        "Phase-change material thermal conductivity [W.m-1.K-1]" from a
+        :class:`pytes.submodels.LumpedStorage`.
+    domain : str or list of str, optional
+        Primary domain of that variable (default: none).
+
+    Raises
+    ------
+    TypeError
+        If ``law`` is not a :class:`NewtonCooling`.
+    """
+
+    def __init__(self, law, radius, conductivity, domain=None):
+        if not isinstance(law, NewtonCooling):
+            raise TypeError(
+                f"Jeffreson's correction applies to a heat transfer coefficient (a "
+                f"NewtonCooling law), got {type(law).__name__}"
+            )
+        self.law = law
+        self.radius = radius
+        self.conductivity = pybamm.CoupledVariable(conductivity, domain)
+        self.coupled_variables = {conductivity: self.conductivity}
+
+    def biot(self, fluid, fluid_state):
+        """The Biot number of the sphere, ``h R / k``"""
+        h = self.law.heat_transfer_coefficient(fluid, fluid_state)
+        return h * self.radius / self.conductivity
+
+    def heat_transfer_coefficient(self, fluid, fluid_state):
+        """The corrected coefficient ``h_eff`` [W.m-2.K-1]"""
+        h = self.law.heat_transfer_coefficient(fluid, fluid_state)
+        return h / (1 + self.biot(fluid, fluid_state) / 5)
+
+    def heat_flux(self, fluid, fluid_state, T_s):
+        h_eff = self.heat_transfer_coefficient(fluid, fluid_state)
+        return h_eff * (fluid_state.T - T_s)
+
+    def variables(self, fluid, fluid_state):
+        """
+        Those of the law it corrects, plus "Effective heat transfer coefficient
+        [W.m-2.K-1]" and "Surface Biot number"
+        """
+        return {
+            **self.law.variables(fluid, fluid_state),
+            "Effective heat transfer coefficient [W.m-2.K-1]": (
+                self.heat_transfer_coefficient(fluid, fluid_state)
+            ),
+            "Surface Biot number": self.biot(fluid, fluid_state),
+        }
 
 
 #: The base class of the correlations of each flow geometry

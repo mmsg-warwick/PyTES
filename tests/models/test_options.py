@@ -14,17 +14,28 @@ def cls(request):
 
 
 def test_defaults_are_filled_in(cls):
-    defaults = {"storage": "resolved", "heat transfer coefficient": "constant"}
+    defaults = {key: values[0] for key, values in cls.allowed_options.items()}
+    # Every model has these, with these defaults
+    assert defaults["storage along flow path"] == "resolved"
+    assert defaults["heat transfer coefficient"] == "constant"
     assert cls().options == defaults
-    averaged = cls(options={"storage": "averaged"}).options
-    assert averaged == {**defaults, "storage": "averaged"}
+    averaged = cls(options={"storage along flow path": "averaged"}).options
+    assert averaged == {**defaults, "storage along flow path": "averaged"}
 
 
 @pytest.mark.parametrize(
     "options, match",
     [
         ({"thermal": "lumped"}, "option 'thermal' not recognised"),
-        ({"storage": "lumped"}, "value 'lumped' of option 'storage' not recognised"),
+        (
+            {"storage along flow path": "lumped"},
+            "value 'lumped' of option 'storage along flow path' not recognised",
+        ),
+        # Renamed (F-050): the error gives the new name
+        (
+            {"storage": "averaged"},
+            "option 'storage' was renamed to 'storage along flow path'",
+        ),
     ],
 )
 def test_unknown_options_raise(cls, options, match):
@@ -37,19 +48,21 @@ def test_averaged_storage_has_no_flow_path_domain(cls):
         H = model.submodels["storage"].H
         return [domain for level in H.domains.values() for domain in level]
 
-    assert "flow path" not in domains(cls(options={"storage": "averaged"}))
+    assert "flow path" not in domains(
+        cls(options={"storage along flow path": "averaged"})
+    )
     assert "flow path" in domains(cls())
 
 
 def test_resolved_provides_every_averaged_variable(cls):
     # Within a family, the higher fidelity provides every variable of the lower one
     resolved = set(cls().variables)
-    averaged = set(cls(options={"storage": "averaged"}).variables)
+    averaged = set(cls(options={"storage along flow path": "averaged"}).variables)
     assert averaged <= resolved
 
 
 def stored_energy(cls, storage, flow_factor):
-    model = cls(options={"storage": storage})
+    model = cls(options={"storage along flow path": storage})
     parameter_values = model.default_parameter_values
     parameter_values["Mass flow rate [kg.s-1]"] *= flow_factor
     t = np.linspace(0, 1800, 61)

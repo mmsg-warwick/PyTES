@@ -12,7 +12,10 @@ from ...submodels import (
     EnthalpyStorage,
     FlowPath,
     HeatTransferCoefficientOptions,
+    Jeffreson,
     LedgerWallCoupling,
+    LumpedGeometry,
+    LumpedStorage,
     PerAreaTotals,
     StorageGeometry,
 )
@@ -34,7 +37,8 @@ class PackedBedModel(BaseModel):
     - "fluid": :class:`pytes.submodels.AdvectedFluid`, through the voids (flow area
       ``eps A``, a single flow path);
     - "storage": :class:`pytes.submodels.EnthalpyStorage` of the PCM in a capsule
-      (spherical), exchanging heat at its surface;
+      (spherical), exchanging heat at its surface; or, for a lumped capsule,
+      :class:`pytes.submodels.LumpedStorage`;
     - "coupling": :class:`pytes.submodels.LedgerWallCoupling`, the fluid and the capsule
       surfaces (``3 (1 - eps) / R`` of surface per unit bed volume);
     - "device energy": :class:`pytes.submodels.DeviceEnergy`;
@@ -43,10 +47,16 @@ class PackedBedModel(BaseModel):
 
     Options:
 
-    - "storage": "resolved" (default), a capsule at every point along the bed; or
-      "averaged", one capsule standing for the average along the bed, exchanging heat with
-      the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
+    - "storage along flow path": "resolved" (default), a capsule at every point along the
+      bed; or "averaged", one capsule standing for the average along the bed, exchanging
+      heat with the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
       `encapsulated-LTES <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository).
+    - "storage element": "resolved" (default), the temperature resolved across each
+      capsule; "lumped", a uniform temperature in each capsule (issue #5), much cheaper,
+      and accurate when the capsule's Biot number is small; or "lumped with Jeffreson", a
+      lumped capsule whose heat transfer coefficient is corrected for the conduction
+      inside it (:class:`pytes.submodels.Jeffreson`), whichever coefficient the "heat
+      transfer coefficient" option gives.
     - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
       [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or a Nusselt correlation for
       the flow through the bed, by name: "Wakao-Kaguei"
@@ -65,13 +75,14 @@ class PackedBedModel(BaseModel):
     r : pybamm.SpatialVariable
         Distance from the capsule centre [m], from 0 to the capsule radius, in the
         "capsule" domain (spherical), with the "flow path" as its secondary domain unless
-        the storage is averaged.
+        the storage is averaged. Not set for a lumped capsule.
     z : pybamm.SpatialVariable
         Distance along the bed from the inlet [m], in the "flow path" domain.
     """
 
     allowed_options = {
-        "storage": ("resolved", "averaged"),
+        "storage along flow path": ("resolved", "averaged"),
+        "storage element": ("resolved", "lumped", "lumped with Jeffreson"),
         "heat transfer coefficient": HeatTransferCoefficientOptions("packed bed"),
     }
 
@@ -81,15 +92,21 @@ class PackedBedModel(BaseModel):
     @property
     def averaged(self):
         """Whether the capsules are averaged along the bed"""
-        return self.options["storage"] == "averaged"
+        return self.options["storage along flow path"] == "averaged"
+
+    @property
+    def lumped(self):
+        """Whether each capsule has a uniform temperature"""
+        return self.options["storage element"].startswith("lumped")
 
     def set_spatial_variables(self):
-        domains = {"primary": "capsule"}
-        if not self.averaged:
-            domains["secondary"] = "flow path"
-        self.r = pybamm.SpatialVariable(
-            "r", domains=domains, coord_sys="spherical polar"
-        )
+        if not self.lumped:
+            domains = {"primary": "capsule"}
+            if not self.averaged:
+                domains["secondary"] = "flow path"
+            self.r = pybamm.SpatialVariable(
+                "r", domains=domains, coord_sys="spherical polar"
+            )
         self.z = pybamm.SpatialVariable(
             "z", domains={"primary": "flow path"}, coord_sys="cartesian"
         )
@@ -99,12 +116,18 @@ class PackedBedModel(BaseModel):
 
     def set_submodels(self):
         param = self.param
-        r, z = self.r, self.z
+        z = self.z
 
-        # The integral over r of a spherical symbol is over the capsule volume (it
-        # includes 4 pi r**2); there are capsule_density capsules per unit bed volume
-        def cross_section_integral(symbol):
-            return param.A * param.capsule_density * pybamm.Integral(symbol, r)
+        if self.lumped:
+            # The capsules take (1 - eps) A of bed volume per unit bed length
+            def cross_section_integral(symbol):
+                return param.A * (1 - param.eps) * symbol
+
+        else:
+            # The integral over r of a spherical symbol is over the capsule volume (it
+            # includes 4 pi r**2); there are capsule_density capsules per unit bed volume
+            def cross_section_integral(symbol):
+                return param.A * param.capsule_density * pybamm.Integral(symbol, self.r)
 
         # An averaged capsule is the same at every z
         def integrate(symbol):
@@ -114,39 +137,66 @@ class PackedBedModel(BaseModel):
             return pybamm.Integral(per_length, z)
 
         flow_path = FlowPath(z, param.Z, param.flow_area, 1)
-        geometry = StorageGeometry(
-            r,
-            integrate,
-            cross_section_integral,
-            inner="right",
-            flow_path=flow_path if self.averaged else None,
-        )
         fluid = AdvectedFluid(param, param.fluid, flow_path)
-        storage = EnthalpyStorage(param, param.pcm, geometry)
+        if self.lumped:
+            geometry = LumpedGeometry(
+                integrate,
+                cross_section_integral,
+                3 / param.R,
+                flow_path,
+                averaged=self.averaged,
+            )
+            storage = LumpedStorage(param, param.pcm, geometry)
+        else:
+            geometry = StorageGeometry(
+                self.r,
+                integrate,
+                cross_section_integral,
+                inner="right",
+                flow_path=flow_path if self.averaged else None,
+            )
+            storage = EnthalpyStorage(param, param.pcm, geometry)
         self.submodels["fluid"] = fluid
         self.submodels["storage"] = storage
         self.submodels["coupling"] = LedgerWallCoupling(
-            param, param.fluid, storage.label, geometry, flux_law=self.flux_law()
+            param, param.fluid, storage.label, geometry, flux_law=self.flux_law(storage)
         )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [storage])
         self.submodels["per-area totals"] = PerAreaTotals(param, param.A)
 
-    def flux_law(self):
-        """The surface flux law at the capsules, from the "heat transfer coefficient" option"""
+    def flux_law(self, storage):
+        """
+        The surface flux law at the capsules, from the "heat transfer coefficient" option,
+        corrected for the conduction inside the capsule with "storage element": "lumped
+        with Jeffreson"
+        """
         values = self.allowed_options["heat transfer coefficient"]
-        return values.flux_law(
+        law = values.flux_law(
             self.options["heat transfer coefficient"], self.param.R, self.param.A
         )
+        if self.options["storage element"] == "lumped with Jeffreson":
+            law = Jeffreson(
+                law,
+                self.param.R,
+                f"{storage.label} thermal conductivity [W.m-1.K-1]",
+                storage.storage_geometry.boundary_domain,
+            )
+        return law
 
     @property
     def default_geometry(self):
-        """A capsule (``r`` from 0 to the capsule radius) and the bed (``z``)"""
-        return pybamm.Geometry(
-            {
-                "capsule": {self.r: {"min": pybamm.Scalar(0), "max": self.param.R}},
-                "flow path": {self.z: {"min": pybamm.Scalar(0), "max": self.param.Z}},
+        """
+        A capsule (``r`` from 0 to the capsule radius), unless it is lumped, and the bed
+        (``z``)
+        """
+        geometry = {
+            "flow path": {self.z: {"min": pybamm.Scalar(0), "max": self.param.Z}}
+        }
+        if not self.lumped:
+            geometry["capsule"] = {
+                self.r: {"min": pybamm.Scalar(0), "max": self.param.R}
             }
-        )
+        return pybamm.Geometry(geometry)
 
     @property
     def default_submesh_types(self):
@@ -164,17 +214,19 @@ class PackedBedModel(BaseModel):
         front inside the capsules. For the default charge, compared with a mesh of 80 by 160
         (itself not fully converged in ``r``), these give errors of about 1.8 K at most and
         0.24 K on average in the outlet temperature, and 1 % in the stored energy, in 3.5 s;
-        20 by 40 gives 3.7 K, 0.54 K and 1.9 % in 0.5 s.
+        20 by 40 gives 3.7 K, 0.54 K and 1.9 % in 0.5 s. A lumped capsule has no ``r``.
         """
+        if self.lumped:
+            return {self.z: 80}
         return {self.r: 40, self.z: 80}
 
     @property
     def default_spatial_methods(self):
         """Finite volumes in every domain; the bed uses the fluid's spatial method"""
-        return {
-            "capsule": pybamm.FiniteVolume(),
-            "flow path": compat.fluid_spatial_method(),
-        }
+        methods = {"flow path": compat.fluid_spatial_method()}
+        if not self.lumped:
+            methods["capsule"] = pybamm.FiniteVolume()
+        return methods
 
     @property
     def default_quick_plot_variables(self):

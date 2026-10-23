@@ -76,3 +76,66 @@ def test_raul_parameter_set_runs():
 def test_unknown_parameter_set():
     with pytest.raises(ValueError, match="not recognised"):
         get_parameter_values("Nallusamy2008")
+
+
+LUMPED = {"storage element": "lumped"}
+
+
+def test_lumped_capsule_has_no_capsule_domain():
+    model = pytes.PackedBedModel(options=LUMPED)
+    assert isinstance(model.submodels["storage"], pytes.submodels.LumpedStorage)
+    assert not hasattr(model, "r")
+    assert "capsule" not in model.default_geometry
+    assert model.submodels["storage"].H.domain == ["flow path"]
+
+
+def test_resolved_provides_every_lumped_variable():
+    # Within a family, the higher fidelity provides every variable of the lower one
+    lumped = set(pytes.PackedBedModel(options=LUMPED).variables)
+    assert lumped <= set(pytes.PackedBedModel().variables)
+
+
+def stored_energy(options, conductivity):
+    """Stored energy over a two-hour charge, with capsules of the given conductivity"""
+    model = pytes.PackedBedModel(options=options)
+    parameter_values = model.default_parameter_values
+    for phase in ("solid", "liquid"):
+        parameter_values[f"PCM {phase} phase conductivity [W.m-1.K-1]"] = conductivity
+    t = np.linspace(0, 7200, 61)
+    solution = pybamm.Simulation(
+        model,
+        parameter_values=parameter_values,
+        var_pts=var_pts(model, {"r": 10, "z": 40}),
+    ).solve([0, t[-1]], t_interp=t)
+    return solution["Storage thermal energy [J]"].entries
+
+
+@pytest.fixture(scope="module")
+def lumping_errors():
+    """
+    Largest difference in stored energy from the resolved capsule, over the change in
+    stored energy, by lumped capsule and capsule conductivity
+    """
+    errors = {}
+    for k in (10, 100):
+        resolved = stored_energy({}, k)
+        change = np.max(np.abs(resolved - resolved[0]))
+        for element in ("lumped", "lumped with Jeffreson"):
+            lumped = stored_energy({"storage element": element}, k)
+            errors[element, k] = np.max(np.abs(lumped - resolved)) / change
+    return errors
+
+
+def test_lumped_converges_to_resolved_as_the_biot_number_falls(lumping_errors):
+    # Bi = h R / k is 0.275 and 0.0275 with h = 100 W.m-2.K-1 and R = 27.5 mm: the
+    # error is about proportional to it
+    assert lumping_errors["lumped", 100] < 2e-3
+    assert lumping_errors["lumped", 10] / lumping_errors["lumped", 100] > 5
+
+
+def test_jeffreson_brings_the_lumped_capsule_closer(lumping_errors):
+    for k in (10, 100):
+        assert (
+            lumping_errors["lumped with Jeffreson", k]
+            < 0.6 * lumping_errors["lumped", k]
+        )
