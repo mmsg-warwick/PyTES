@@ -166,7 +166,8 @@ class EnthalpyStorage(BaseSubModel):
     former provide liquid-fraction variables. The state list is ``[H]`` plus the
     material's internal states (none for the current materials, DESIGN D7).
 
-    It also provides its conductivity, "<label> thermal conductivity [W.m-1.K-1]".
+    It also provides its conductivity, "<label> thermal conductivity [W.m-1.K-1]", and its
+    volume-weighted average temperature, "<label> average temperature [K]" (issue #14).
 
     Ledger couplings (DESIGN D6) take the heat that crossed the storage's boundaries from
     ``"<label> conduction heating rate [W.m-3]"``, ``div(k grad T)``: its integral over the
@@ -287,6 +288,9 @@ class EnthalpyStorage(BaseSubModel):
                 }
             )
         variables[f"{label} temperature [K]"] = T
+        variables[f"{label} average temperature [K]"] = (
+            geometry.integrate(T) / geometry.volume
+        )
         variables[f"{label} surface temperature [K]"] = pybamm.boundary_value(
             T, geometry.inner
         )
@@ -394,6 +398,9 @@ class LumpedStorage(EnthalpyStorage):
                 }
             )
         variables[f"{label} temperature [K]"] = T
+        variables[f"{label} average temperature [K]"] = (
+            geometry.integrate(T) / geometry.volume
+        )
         variables[f"{label} surface temperature [K]"] = T
         variables[f"{label} thermal conductivity [W.m-1.K-1]"] = material.k(
             H, self.internal_states

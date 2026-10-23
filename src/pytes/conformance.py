@@ -81,7 +81,10 @@ def check_stateless_materials(model):
 
 
 def check_unit_twins(solution):
-    """Every unit twin equals its SI variable converted (DESIGN D12)"""
+    """
+    Every unit twin equals its SI variable converted (DESIGN D12), to round-off: the
+    solver may evaluate a twin's expression in another order than the conversion here
+    """
     model = solution.all_models[0]
     for name in model.variables:
         for twin, convert in unit_twins(name).items():
@@ -89,8 +92,8 @@ def check_unit_twins(solution):
             np.testing.assert_allclose(
                 solution[twin].entries,
                 expected,
-                rtol=1e-12,
-                atol=1e-12 * np.max(np.abs(expected)),
+                rtol=1e-10,
+                atol=1e-10 * np.max(np.abs(expected)),
                 err_msg=f"{model.name}: {twin}",
             )
 

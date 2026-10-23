@@ -86,12 +86,18 @@ averaged one (`"storage along flow path": "averaged"`) does not. A lumped storag
 | `Inlet specific enthalpy [J.kg-1]`, `Outlet specific enthalpy [J.kg-1]` | zero at the reference temperature |
 | `Power [W]` | `mdot (h_out - h_in)`, positive on discharge |
 | `Discharged energy [J]` | time integral of power (a solver state) |
+| `Charged energy [J]` | `-Discharged energy`, the net energy put in (F-055) |
+| `Discharged throughput [J]`, `Charged throughput [J]` | time integrals of `max(P, 0)` and `max(-P, 0)` (solver states); they only grow, and their difference is the discharged energy (F-055) |
 | `Storage thermal energy [J]` | storage only (PCM, fins) |
 | `Heat transfer fluid thermal energy [J]` | fluid inventory |
 | `Total thermal energy [J]` | storage + fluid inventory |
 | `Heat loss power [W]` | positive for loss; zero today |
 | `Heat transfer fluid specific enthalpy [J.kg-1]` | along `z`; the fluid state |
 | `Heat transfer fluid temperature [K]` | along `z`; `T(h)` |
+| `Heat transfer fluid velocity [m.s-1]` | along `z`; mean velocity in the flow area, `mdot_path / (A_flow rho(h))` (interstitial in a packed bed) (F-055) |
+| `Inlet-outlet temperature difference [K]` | `T_in - T_out`; no twin (F-055) |
+| `Volume flow rate [m3.s-1]` | whole device, at the inlet density, `mdot / rho(h_in)`; twin `[l.min-1]` (F-055) |
+| `Pumped volume [m3]` | time integral of the volume flow rate (a solver state); twin `[l]` (F-055) |
 
 **Optional, standard names:** `Average liquid fraction` (weighted by the PCM volume, fins
 and fluid excluded).
@@ -104,9 +110,12 @@ uniform states is `pytes.energy_between(model, T_a, T_b)` (§5).
 
 **Also provided by every current model:** `Initial uniform temperature [K]`; `Heat
 transfer coefficient [W.m-2.K-1]` (from the coupling's flux law: the parameter, or the
-correlation's value), plus `Surface Reynolds number`, `Surface Prandtl number` and `Surface
-Nusselt number` with a correlation (F-049), and `Effective heat transfer coefficient
-[W.m-2.K-1]` and `Surface Biot number` with Jeffreson's correction (F-051).
+correlation's value), `Surface Reynolds number` and `Surface Prandtl number` (from the
+family's flow geometry, with any coefficient; F-055), plus `Surface Nusselt number` with a
+correlation (F-049), and `Effective heat transfer coefficient [W.m-2.K-1]` and `Surface
+Biot number` with Jeffreson's correction (F-051). Every storage provides `<label> average
+temperature [K]`, its volume-weighted average temperature (F-055), e.g. `Phase-change
+material average temperature [K]` and, in the mush model, `Fin average temperature [K]`.
 
 **Family-specific:** prefixed (`Fin temperature [K]`). The packed bed adds the device totals
 per unit bed cross-section (`Power per unit area [W.m-2]`, `Discharged energy per unit area
@@ -116,10 +125,11 @@ the PCM storage's own (for the sharp-front model, the composite).
 
 **Units** (DESIGN D12): submodels define every variable in SI units. When a model is built,
 `pytes.variables.add_unit_twins` adds twins for every variable in `[K]` (`[degC]`), `[W]`
-(`[kW]`), `[J]` (`[kWh]`) and `[s]` (`[min]`, `[h]`); a twin written by hand is rejected. Temperature differences
+(`[kW]`), `[J]` (`[kWh]`), `[s]` (`[min]`, `[h]`), `[m3.s-1]` (`[l.min-1]`) and `[m3]`
+(`[l]`); a twin written by hand is rejected. Temperature differences
 (names containing "temperature difference") get no twin. `check_required_variables` checks
 that every such variable has its twin and no difference has one; `check_unit_twins`
-checks the values.
+checks the values, to round-off (relative 1e-10).
 
 **Conservation identity** (`check_energy_conservation`, round-off tolerance):
 `Total thermal energy(t) - Total thermal energy(0) = -Discharged energy(t) - int(Heat loss power) dt`.

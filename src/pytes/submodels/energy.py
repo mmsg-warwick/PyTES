@@ -15,7 +15,12 @@ class DeviceEnergy(BaseSubModel):
 
     - Power: ``mdot (h_out - h_in)``, positive on discharge (DESIGN D8, D12).
     - Discharged energy: the time integral of the power, solved for by the solver so that
-      it can be checked against the change in total thermal energy.
+      it can be checked against the change in total thermal energy. Charged energy is its
+      opposite, the net energy put in.
+    - Throughputs (issue #14): the energy delivered while discharging, the time integral of
+      ``max(P, 0)``, and the energy put in while charging, of ``max(-P, 0)``. Both only
+      grow, and their difference is the discharged energy; their ratio over a cycle is
+      its round-trip efficiency.
     - Energies: the storage thermal energy is the sum of the storage components' energies,
       and the total thermal energy adds the fluid. Every energy is zero at the uniform state
       at the reference temperature (DESIGN D14).
@@ -69,8 +74,16 @@ class DeviceEnergy(BaseSubModel):
             - self.coupled("Inlet specific enthalpy [J.kg-1]")
         )
         E_out = pybamm.Variable("Discharged energy [J]", scale=1e6)
-        self.rhs = {E_out: power}
-        self.initial_conditions = {E_out: pybamm.Scalar(0)}
+        E_discharge = pybamm.Variable("Discharged throughput [J]", scale=1e6)
+        E_charge = pybamm.Variable("Charged throughput [J]", scale=1e6)
+        self.rhs = {
+            E_out: power,
+            E_discharge: pybamm.maximum(power, 0),
+            E_charge: pybamm.maximum(-power, 0),
+        }
+        self.initial_conditions = {
+            E: pybamm.Scalar(0) for E in (E_out, E_discharge, E_charge)
+        }
 
         E_storage = self.coupled(self.storage_components[0].energy_variable)
         for component in self.storage_components[1:]:
@@ -79,6 +92,9 @@ class DeviceEnergy(BaseSubModel):
         variables = {
             "Power [W]": power,
             "Discharged energy [J]": E_out,
+            "Charged energy [J]": -E_out,
+            "Discharged throughput [J]": E_discharge,
+            "Charged throughput [J]": E_charge,
             "Storage thermal energy [J]": E_storage,
             "Total thermal energy [J]": E_total,
             "Heat loss power [W]": pybamm.Scalar(0),
