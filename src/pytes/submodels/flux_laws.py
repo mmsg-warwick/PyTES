@@ -315,8 +315,9 @@ class Jeffreson(SurfaceFluxLaw):
     ``1 / h_eff = 1 / h + R / (5 k)``, that is ``h_eff = h / (1 + Bi / 5)``, ``Bi = h R / k``,
 
     where ``h`` is the heat transfer coefficient of the law it corrects, ``R`` the sphere's
-    radius and ``k`` its conductivity (C. P. Jeffreson, "Prediction of breakthrough curves
-    in packed beds: 1. Applicability of single parameter models", AIChE Journal 18, 1972).
+    radius and ``k`` its conductivity (`Jeffreson, "Prediction of breakthrough curves in
+    packed beds: 1. Applicability of single parameter models", AIChE Journal 18, 1972
+    <https://doi.org/10.1002/aic.690180225>`__).
     The correction is exact for the slow variation of a sensible sphere; while a PCM melts
     or freezes inside the sphere it is an approximation, with ``k`` the conductivity at the
     sphere's mean enthalpy.

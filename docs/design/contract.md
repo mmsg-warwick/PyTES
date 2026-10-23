@@ -13,14 +13,12 @@ and the tests disagree, the tests win.**
   `model.print_submodel_info()`. Users call models; advanced users may build their own from
   submodels with `pytes.ComposedModel` (same wiring checks; not admitted, DESIGN D1).
 - It belongs to a family (today: `finned_tube` and `packed_bed`) and passes the conformance
-  suite, with every combination of its options that it admits (`allowed_options`, less
-  those `check_options` rejects; today `"storage along flow path": "resolved" |
-  "averaged"` in every model; `"heat transfer coefficient": "constant" | "Gnielinski"` in
-  the finned tube, `"constant" | "Wakao-Kaguei"` in the packed bed, plus any correlation
-  registered for the model's flow with `register_correlation`; and in the packed bed
-  `"storage element": "resolved" | "lumped"` and `"internal resistance": "none" |
-  "Jeffreson"`, the latter only with a lumped capsule). Unknown options or values, and
-  rejected combinations, raise `pytes.OptionError`.
+  suite, with every combination of its options (`allowed_options`; today `"storage along
+  flow path": "resolved" | "averaged"` in every model; `"heat transfer coefficient":
+  "constant" | "Gnielinski"` in the finned tube, `"constant" | "Wakao-Kaguei"` in the
+  packed bed, plus any correlation registered for the model's flow with
+  `register_correlation`; and in the packed bed `"storage element": "resolved" | "lumped"
+  | "lumped with Jeffreson"`). Unknown options or values raise `pytes.OptionError`.
 
 ## 2. Submodels
 
@@ -64,7 +62,7 @@ with a default `pybamm.Simulation`.
 
 A storage resolved along the flow path has `"flow path"` as its last secondary domain; an
 averaged one (`"storage along flow path": "averaged"`) does not. A lumped storage element
-(`"storage element": "lumped"`, packed bed) has no domain of its own: its variables are on
+(`"storage element": "lumped"` or `"lumped with Jeffreson"`, packed bed) has no domain of its own: its variables are on
 `"flow path"`, or on none when it is also averaged.
 
 ### Slots (DESIGN D5)

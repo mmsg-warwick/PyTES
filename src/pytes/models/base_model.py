@@ -112,18 +112,8 @@ class BaseModel(pybamm.BaseModel):
         self.check_options(options)
         return options
 
-    @classmethod
-    def check_options(cls, options):
-        """
-        Raise :class:`pytes.OptionError` for an incompatible combination of options (none
-        here). A class method, so that the admitted combinations can be listed without
-        building the model.
-
-        Parameters
-        ----------
-        options : dict
-            Every option, defaults included.
-        """
+    def check_options(self, options):
+        """Raise :class:`pytes.OptionError` for an incompatible combination (none yet)"""
 
     def set_spatial_variables(self):
         """Create the spatial variables, which may depend on the options"""

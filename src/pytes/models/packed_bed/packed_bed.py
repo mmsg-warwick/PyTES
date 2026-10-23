@@ -19,7 +19,7 @@ from ...submodels import (
     PerAreaTotals,
     StorageGeometry,
 )
-from ..base_model import BaseModel, OptionError
+from ..base_model import BaseModel
 from .parameter_values import get_parameter_values
 from .parameters import PackedBedParameters
 
@@ -52,17 +52,16 @@ class PackedBedModel(BaseModel):
       heat with the fluid averaged along it (DESIGN D3, D4; the "reduced model" of the
       `encapsulated-LTES <https://github.com/mmsg-warwick/encapsulated-LTES>`_ repository).
     - "storage element": "resolved" (default), the temperature resolved across each
-      capsule; or "lumped", a uniform temperature in each capsule (issue #5), much
-      cheaper, and accurate when the capsule's Biot number is small.
+      capsule; "lumped", a uniform temperature in each capsule (issue #5), much cheaper,
+      and accurate when the capsule's Biot number is small; or "lumped with Jeffreson", a
+      lumped capsule whose heat transfer coefficient is corrected for the conduction
+      inside it (:class:`pytes.submodels.Jeffreson`), whichever coefficient the "heat
+      transfer coefficient" option gives.
     - "heat transfer coefficient": "constant" (default), "Heat transfer coefficient
       [W.m-2.K-1]" (:class:`pytes.submodels.NewtonCooling`); or a Nusselt correlation for
       the flow through the bed, by name: "Wakao-Kaguei"
       (:class:`pytes.submodels.WakaoKaguei`, issue #6), or any correlation registered for
       the flow ``"packed bed"`` with :func:`pytes.submodels.register_correlation`.
-    - "internal resistance": "none" (default); or "Jeffreson", which corrects the heat
-      transfer coefficient of a lumped capsule for the conduction inside it
-      (:class:`pytes.submodels.Jeffreson`). Only with "storage element": "lumped", as a
-      resolved capsule already has that resistance.
 
     Parameters
     ----------
@@ -83,26 +82,12 @@ class PackedBedModel(BaseModel):
 
     allowed_options = {
         "storage along flow path": ("resolved", "averaged"),
-        "storage element": ("resolved", "lumped"),
+        "storage element": ("resolved", "lumped", "lumped with Jeffreson"),
         "heat transfer coefficient": HeatTransferCoefficientOptions("packed bed"),
-        "internal resistance": ("none", "Jeffreson"),
     }
 
     def __init__(self, name="Packed bed model", options=None):
         super().__init__(name=name, options=options)
-
-    @classmethod
-    def check_options(cls, options):
-        """A correction for the internal resistance needs a lumped capsule"""
-        if (
-            options["internal resistance"] != "none"
-            and options["storage element"] != "lumped"
-        ):
-            raise OptionError(
-                f"{cls.__name__}: 'internal resistance': "
-                f"'{options['internal resistance']}' corrects a lumped capsule for the "
-                "conduction inside it, so it needs 'storage element': 'lumped'"
-            )
 
     @property
     def averaged(self):
@@ -112,7 +97,7 @@ class PackedBedModel(BaseModel):
     @property
     def lumped(self):
         """Whether each capsule has a uniform temperature"""
-        return self.options["storage element"] == "lumped"
+        return self.options["storage element"].startswith("lumped")
 
     def set_spatial_variables(self):
         if not self.lumped:
@@ -182,14 +167,14 @@ class PackedBedModel(BaseModel):
     def flux_law(self, storage):
         """
         The surface flux law at the capsules, from the "heat transfer coefficient" option,
-        corrected for the conduction inside a lumped capsule with the "internal
-        resistance" option
+        corrected for the conduction inside the capsule with "storage element": "lumped
+        with Jeffreson"
         """
         values = self.allowed_options["heat transfer coefficient"]
         law = values.flux_law(
             self.options["heat transfer coefficient"], self.param.R, self.param.A
         )
-        if self.options["internal resistance"] == "Jeffreson":
+        if self.options["storage element"] == "lumped with Jeffreson":
             law = Jeffreson(
                 law,
                 self.param.R,

@@ -114,26 +114,28 @@ def stored_energy(options, conductivity):
 def lumping_errors():
     """
     Largest difference in stored energy from the resolved capsule, over the change in
-    stored energy, by internal resistance and capsule conductivity
+    stored energy, by lumped capsule and capsule conductivity
     """
     errors = {}
     for k in (10, 100):
         resolved = stored_energy({}, k)
         change = np.max(np.abs(resolved - resolved[0]))
-        for correction in ("none", "Jeffreson"):
-            options = {**LUMPED, "internal resistance": correction}
-            lumped = stored_energy(options, k)
-            errors[correction, k] = np.max(np.abs(lumped - resolved)) / change
+        for element in ("lumped", "lumped with Jeffreson"):
+            lumped = stored_energy({"storage element": element}, k)
+            errors[element, k] = np.max(np.abs(lumped - resolved)) / change
     return errors
 
 
 def test_lumped_converges_to_resolved_as_the_biot_number_falls(lumping_errors):
     # Bi = h R / k is 0.275 and 0.0275 with h = 100 W.m-2.K-1 and R = 27.5 mm: the
     # error is about proportional to it
-    assert lumping_errors["none", 100] < 2e-3
-    assert lumping_errors["none", 10] / lumping_errors["none", 100] > 5
+    assert lumping_errors["lumped", 100] < 2e-3
+    assert lumping_errors["lumped", 10] / lumping_errors["lumped", 100] > 5
 
 
 def test_jeffreson_brings_the_lumped_capsule_closer(lumping_errors):
     for k in (10, 100):
-        assert lumping_errors["Jeffreson", k] < 0.6 * lumping_errors["none", k]
+        assert (
+            lumping_errors["lumped with Jeffreson", k]
+            < 0.6 * lumping_errors["lumped", k]
+        )

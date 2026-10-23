@@ -19,25 +19,12 @@ def _variant(model_class, options):
     return make
 
 
-def _admitted(model_class, options):
-    """Whether the model admits a combination of options"""
-    try:
-        model_class.check_options(options)
-    except pytes.OptionError:
-        return False
-    return True
-
-
 def _variants(model_class):
-    """Every combination of the model's allowed options that it admits"""
+    """Every combination of the model's allowed options"""
     combinations = [{}]
     for key, values in model_class.allowed_options.items():
         combinations = [{**c, key: v} for c in combinations for v in values]
-    return [
-        _variant(model_class, options)
-        for options in combinations
-        if _admitted(model_class, options)
-    ]
+    return [_variant(model_class, options) for options in combinations]
 
 
 #: Every admitted model, with every combination of its options (DESIGN D3). The

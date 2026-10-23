@@ -23,11 +23,6 @@ def test_defaults_are_filled_in(cls):
     assert averaged == {**defaults, "storage along flow path": "averaged"}
 
 
-def test_internal_resistance_needs_a_lumped_capsule():
-    with pytest.raises(pytes.OptionError, match="needs 'storage element': 'lumped'"):
-        pytes.PackedBedModel(options={"internal resistance": "Jeffreson"})
-
-
 @pytest.mark.parametrize(
     "options, match",
     [

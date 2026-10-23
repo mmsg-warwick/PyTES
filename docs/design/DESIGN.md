@@ -147,8 +147,10 @@ testable in isolation.
     `LumpedGeometry`) has a uniform temperature in each element and provides the same
     variables as `EnthalpyStorage`, so the couplings, the device energy and the ledger
     work unchanged. The internal resistance it neglects can be put back in the flux law
-    (D6): `"internal resistance": "Jeffreson"`, only with a lumped element (with a
-    resolved one it would count that resistance twice, so the combination raises).
+    (D6): `"lumped with Jeffreson"` wraps whichever coefficient `"heat transfer
+    coefficient"` gives. It is a value of `"storage element"`, not a separate option
+    (maintainer, 2026-10-23): it only applies to a lumped element (with a resolved one it
+    would count that resistance twice), so as a value it admits no invalid combination.
   - *Averaged coupling* (maintainer, 2026-10-15): one flux from the fluid averaged along
     the flow path, taken uniformly from the fluid, as in the maintainer's published reduced
     model. Rationale: reproduces the published model. Known artefact: early in a charge the
@@ -519,6 +521,12 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
 
 Nothing open at the end of Stage B (2026-10-16). New questions are added here as they
 arise.
+
+- **Options or composition** (maintainer, 2026-10-23): how many variants a model should
+  offer as options, rather than leave to composition from submodels (`ComposedModel`, D3).
+  Options are enumerated and checked by the conformance suite, but each one multiplies the
+  combinations; the lumped capsule's correction was folded into one option value for that
+  reason. To decide before more options are added.
 
 ## 5. Stage plan
 
