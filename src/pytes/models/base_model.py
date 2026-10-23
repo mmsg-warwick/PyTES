@@ -5,7 +5,7 @@
 
 import pybamm
 
-from .. import compat
+from .. import compat, deprecation
 from ..submodels.base_submodel import parameter_names
 from ..variables import add_unit_twins
 
@@ -66,9 +66,6 @@ class BaseModel(pybamm.BaseModel):
     #: Allowed values of each option, the first being the default
     allowed_options = {}
 
-    #: Options that were renamed, by old name: the error for an old name gives the new one
-    renamed_options = {"storage": "storage along flow path"}
-
     def __init__(self, name, options=None):
         super().__init__(name=name)
         self.options = self.process_options(options)
@@ -82,19 +79,29 @@ class BaseModel(pybamm.BaseModel):
         """
         The options with their defaults filled in.
 
+        An option given under an old name (:mod:`pytes.deprecation`) is renamed, with a
+        warning while its alias is active.
+
         Raises
         ------
         pytes.OptionError
-            If an option or a value is not allowed (an option that was renamed included),
-            or the combination is rejected by :meth:`check_options`.
+            If an option or a value is not allowed (an old name whose alias is retired
+            included), an option is given under both its old and new names, or the
+            combination is rejected by :meth:`check_options`.
         """
         options = dict(options or {})
-        for key, value in options.items():
-            if key in self.renamed_options:
+        for key in list(options):
+            rename = deprecation.find("option", key)
+            if rename is None:
+                continue
+            deprecation.check(rename, OptionError)
+            if rename.new in options:
                 raise OptionError(
-                    f"{self.name}: option '{key}' was renamed to "
-                    f"'{self.renamed_options[key]}'"
+                    f"{self.name}: option '{rename.new}' given under both its old and "
+                    "new names"
                 )
+            options[rename.new] = options.pop(key)
+        for key, value in options.items():
             if key not in self.allowed_options:
                 raise OptionError(
                     f"{self.name}: option '{key}' not recognised; the options are "

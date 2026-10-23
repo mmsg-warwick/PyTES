@@ -84,6 +84,9 @@ default-groups = ["dev", "notebooks"]
 testpaths = ["tests"]
 addopts = "-m 'not slow'"
 markers = ["slow: long-running tests (run with -m slow)"]
+# PyTES code and tests never use a deprecated PyTES name (DESIGN D17). Matched by message:
+# naming pytes.deprecation.PyTESDeprecationWarning would import PyTES before coverage starts
+filterwarnings = ["error:.* was renamed to .* in PyTES :DeprecationWarning"]
 
 [tool.coverage.run]
 source = ["pytes"]

@@ -9,12 +9,14 @@ PyTES: models and tools for heat batteries (thermal energy storage), built on Py
   standard plots (:mod:`pytes.plotting`, with the ``plot`` extra),
   the conformance checks (:mod:`pytes.conformance`) and analytical solutions for validation
   (:mod:`pytes.validation`).
+- Renamed names and their deprecation: :mod:`pytes.deprecation`.
 """
 
 from importlib.metadata import version as _version
 
 from . import (
     compat,
+    deprecation,
     experiments,
     fluids,
     materials,
@@ -45,6 +47,7 @@ __all__ = [
     "WiringError",
     "energy_between",
     "compat",
+    "deprecation",
     "experiments",
     "fluids",
     "materials",

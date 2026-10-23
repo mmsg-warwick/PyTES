@@ -150,6 +150,28 @@ names overly long. Class names are CamelCase (`PackedBedModel`); functions, meth
 variables are lower case with underscores (`energy_between`). Short mathematical names are
 fine inside equations when they follow the docstring's notation (`T_f`, `h`).
 
+### Renaming and deprecating
+
+A public name is renamed through the registry in
+[`src/pytes/deprecation.py`](src/pytes/deprecation.py), never by hand, so that every old name
+warns and fails in the same way:
+
+1. Rename the class, function or option everywhere: code, tests, notebooks and
+   documentation. The tests fail if an example notebook or the user documentation still
+   uses the old name, and PyTES's own tests turn the deprecation warning into an error.
+2. Add a `Rename` to `RENAMES`, with the finding that logs it, the release that renames it
+   (the next one) and the release that removes the alias (before 1.0, the next minor
+   release).
+3. For a class or function, add `__getattr__ = deprecation.module_getattr(__name__)` to the
+   module that held the old name (once per module), and drop the old name from its
+   `__all__`.
+4. Log the rename in [`docs/design/findings.md`](docs/design/findings.md) and add
+   `deprecated` and `contract` changelog fragments.
+
+When a release reaches an alias's removal release, a test fails: set `alias=False` in its
+entry, and add a `breaking` fragment. Keep the entry, so that the old name raises an error
+that gives the new one. Variable and parameter names cannot be deprecated yet.
+
 ### PyTES and PyBaMM conventions
 
 - **Parameter names** carry their units, as in PyBaMM: `"PCM latent heat [J.kg-1]"`.
@@ -275,7 +297,8 @@ such as `0.1.0a1` before 1.0.
 
 1. Make sure CI is green on `main`.
 2. Set the new version in `pyproject.toml` (`version`) and in `CITATION.cff` (`version`
-   and `date-released`).
+   and `date-released`). If the tests then fail because an alias reached its removal
+   release, retire it (see [Renaming and deprecating](#renaming-and-deprecating)).
 3. Build the changelog: `uv run towncrier build --version <version>`. It writes the new
    section into `CHANGELOG.md` and deletes the fragments; check it and edit if needed.
 4. The README is also the PyPI project page: keep its links absolute (relative links break

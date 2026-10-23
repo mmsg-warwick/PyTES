@@ -15,4 +15,5 @@ The public API of PyTES. The models are PyBaMM models, so the methods they inher
    postprocessing
    conformance_and_validation
    variables
+   deprecation
    compat
