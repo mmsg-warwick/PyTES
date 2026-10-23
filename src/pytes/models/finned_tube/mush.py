@@ -8,8 +8,8 @@ import pybamm
 from ...submodels import (
     DeviceEnergy,
     EnthalpyStorage,
-    FinPCMCoupling,
     FinRootCoupling,
+    FinStorageCoupling,
     StorageGeometry,
 )
 from .base_finned_tube import BaseFinnedTubeModel
@@ -35,7 +35,7 @@ class MushModel(BaseFinnedTubeModel):
     - "fins": :class:`pytes.submodels.EnthalpyStorage` of the fin metal, radially along
       the fins (cylindrical);
     - "coupling": :class:`pytes.submodels.FinRootCoupling`, the fluid and the fin roots;
-    - "fin-PCM coupling": :class:`pytes.submodels.FinPCMCoupling`;
+    - "fin-PCM coupling": :class:`pytes.submodels.FinStorageCoupling`;
     - "device energy": :class:`pytes.submodels.DeviceEnergy`.
 
     Parameters
@@ -111,7 +111,7 @@ class MushModel(BaseFinnedTubeModel):
         self.submodels["coupling"] = FinRootCoupling(
             param, param.fluid, fins.label, fin_geometry, flux_law=self.flux_law()
         )
-        self.submodels["fin-PCM coupling"] = FinPCMCoupling(
+        self.submodels["fin-PCM coupling"] = FinStorageCoupling(
             param, pcm.label, pcm_geometry, fins.label
         )
         self.submodels["device energy"] = DeviceEnergy(param, fluid, [pcm, fins])

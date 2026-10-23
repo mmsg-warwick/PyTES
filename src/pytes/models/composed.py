@@ -32,7 +32,7 @@ class ComposedModel(BaseModel):
 
         base = pytes.SharpFrontModel()
         storage = base.submodels["storage"]
-        coupling = pytes.submodels.LedgerWallCoupling(
+        coupling = pytes.submodels.WallCoupling(
             base.param, base.param.fluid, storage.label, storage.storage_geometry,
             flux_law=MyLaw(),
         )

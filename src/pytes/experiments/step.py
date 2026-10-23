@@ -16,14 +16,21 @@ since the start of the step [s] and value) or functions of the time since the st
 step [s]. Constant values are passed to the solver as inputs, so steps that only differ in
 their constant values share the same compiled model branch.
 
-The power is positive when the battery delivers heat (discharge), so a charge at constant
-power uses a negative power.
+The steps are named after what they hold, as PyBaMM's (``pybamm.step.Current``,
+``Power``, ``Rest``): :class:`Inlet` holds the inlet conditions, :class:`Power` the power
+and :class:`Rest` no flow. The power is positive when the battery delivers heat
+(discharge), so a charge uses a negative power.
 """
 
 import numbers
 
 import numpy as np
 import pybamm
+
+from .. import deprecation
+
+# The old names of the steps (ConstantInputs, ConstantPower) warn and give the new ones
+__getattr__ = deprecation.module_getattr(__name__)
 
 #: Input parameter holding the time [s] at which the current step started
 START_TIME = pybamm.InputParameter("Step start time [s]")
@@ -33,6 +40,12 @@ DEFAULT_DURATION = 24 * 3600
 
 #: Default time between output points [s]
 DEFAULT_PERIOD = 60
+
+#: Input parameter holding the inlet temperature [K] at the end of the previous step, which
+#: a :class:`Rest` holds by default
+PREVIOUS_INLET_TEMPERATURE = pybamm.InputParameter(
+    "Inlet temperature at the end of the previous step [K]"
+)
 
 INLET_TEMPERATURE = "Inlet temperature [K]"
 MASS_FLOW_RATE = "Mass flow rate [kg.s-1]"
@@ -336,17 +349,17 @@ class BaseStep:
         return f"{type(self).__name__}({values}, duration={self.duration:g} s)"
 
 
-class ConstantInputs(BaseStep):
+class Inlet(BaseStep):
     """
-    Hold the inlet temperature [K] and the mass flow rate [kg.s-1]. Each can be a constant,
-    a time series or a function of time (see :class:`Target`).
+    Hold the inlet conditions: the inlet temperature [K] and the mass flow rate [kg.s-1].
+    Each can be a constant, a time series or a function of time (see :class:`Target`).
 
     Parameters
     ----------
     inlet_temperature : float, numpy.ndarray or callable
         Inlet temperature [K].
     mass_flow_rate : float, numpy.ndarray or callable
-        Mass flow rate through the whole device [kg.s-1]. 0 stops the flow (a rest).
+        Mass flow rate through the whole device [kg.s-1]. For no flow, use :class:`Rest`.
     **kwargs
         ``duration``, ``termination``, ``period`` and ``description``, see
         :class:`BaseStep`.
@@ -369,7 +382,43 @@ class ConstantInputs(BaseStep):
         }
 
 
-class ConstantPower(BaseStep):
+class Rest(BaseStep):
+    """
+    Stop the flow: hold the mass flow rate at 0. The inlet temperature has no effect
+    without flow, but the model still needs a value: by default the step holds it where
+    the previous step left it (the initial temperature for a first step), so that the
+    inlet temperature does not jump.
+
+    Parameters
+    ----------
+    inlet_temperature : float, numpy.ndarray or callable, optional
+        Inlet temperature [K] to hold instead (see :class:`Target`).
+    **kwargs
+        ``duration``, ``termination``, ``period`` and ``description``, see
+        :class:`BaseStep`.
+    """
+
+    def __init__(self, inlet_temperature=None, **kwargs):
+        targets = [Target(MASS_FLOW_RATE, 0)]
+        if inlet_temperature is not None:
+            targets.append(Target(INLET_TEMPERATURE, inlet_temperature))
+        super().__init__(targets, **kwargs)
+
+    @property
+    def holds_previous_inlet_temperature(self):
+        """Whether the step holds the inlet temperature of the previous step"""
+        return INLET_TEMPERATURE not in self.targets
+
+    def control_residuals(self, variables, targets, power):
+        """No flow, and the inlet temperature at its target or its previous value"""
+        T_in = targets.get(INLET_TEMPERATURE, PREVIOUS_INLET_TEMPERATURE)
+        return {
+            INLET_TEMPERATURE: variables[INLET_TEMPERATURE] - T_in,
+            MASS_FLOW_RATE: variables[MASS_FLOW_RATE] - targets[MASS_FLOW_RATE],
+        }
+
+
+class Power(BaseStep):
     """
     Hold the power [W] (positive for discharge) by adjusting the one control that is not
     given (DESIGN D10). Give exactly one of:
@@ -417,7 +466,7 @@ class ConstantPower(BaseStep):
         free = [name for name in self.controls if name not in held]
         if len(free) != 1:
             raise ValueError(
-                "ConstantPower adjusts one control to hold the power: give exactly one "
+                "Power adjusts one control to hold the power: give exactly one "
                 "of inlet_temperature and mass_flow_rate"
             )
         self.adjusted = free[0]

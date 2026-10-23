@@ -46,9 +46,9 @@ VARIABLES = [
 MDOT = 0.02  # [kg.s-1], the default
 T_COLD = 273.15 + 10
 EXPERIMENT_STEPS = [
-    s.ConstantInputs(T_COLD, MDOT, duration=60, period=10),
-    s.ConstantPower(900, inlet_temperature=T_COLD, duration=300, period=10),
-    s.ConstantPower(1200, mass_flow_rate=MDOT, duration=300, period=10),
+    s.Inlet(T_COLD, MDOT, duration=60, period=10),
+    s.Power(900, inlet_temperature=T_COLD, duration=300, period=10),
+    s.Power(1200, mass_flow_rate=MDOT, duration=300, period=10),
 ]
 EXPERIMENT_VARIABLES = [
     "Outlet temperature [K]",

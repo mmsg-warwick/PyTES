@@ -16,11 +16,13 @@ from pytes.deprecation import PyTESDeprecationWarning, Rename
 
 ROOT = Path(__file__).parents[2]
 
-#: Where users read PyTES code: the example notebooks and the user documentation
+#: Where users read PyTES code: the example notebooks and the user documentation. Not
+#: the changelog (nor its copy in docs/, made when the site is built): it records the
+#: names of its time
 USER_FACING = [
     *sorted((ROOT / "examples").glob("*.ipynb")),
     ROOT / "README.md",
-    *sorted((ROOT / "docs").glob("*.md")),
+    *sorted(p for p in (ROOT / "docs").glob("*.md") if p.name != "changelog.md"),
 ]
 
 #: A deprecated function, for the tests of the mechanism

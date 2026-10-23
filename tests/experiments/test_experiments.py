@@ -34,7 +34,7 @@ def test_constant_inputs_match_plain_solve():
     plain = pybamm.Simulation(model, var_pts=mesh(model)).solve(
         [0, 600], t_interp=np.linspace(0, 600, 61)
     )
-    solution = run([s.ConstantInputs(T_COLD, Q0, duration=600, period=10)], model)
+    solution = run([s.Inlet(T_COLD, Q0, duration=600, period=10)], model)
     np.testing.assert_allclose(
         solution["Outlet temperature [K]"](t=plain.t),
         plain["Outlet temperature [K]"].entries,
@@ -48,21 +48,19 @@ def test_constant_inputs_match_plain_solve():
 def test_constant_power_adjusting_flow_rate_as_first_step(inlet_temperature):
     # The first step starts from guesses for the controls, which must not make the
     # power independent of the flow rate
-    solution = run(
-        [s.ConstantPower(900, inlet_temperature=inlet_temperature, duration=300)]
-    )
+    solution = run([s.Power(900, inlet_temperature=inlet_temperature, duration=300)])
     np.testing.assert_allclose(solution["Power [W]"].entries, 900, rtol=1e-4)
 
 
 @pytest.mark.parametrize(
     "step",
     [
-        s.ConstantPower(1200, mass_flow_rate=Q0, duration=300),
-        s.ConstantPower(900, inlet_temperature=T_COLD, duration=300),
+        s.Power(1200, mass_flow_rate=Q0, duration=300),
+        s.Power(900, inlet_temperature=T_COLD, duration=300),
     ],
 )
 def test_constant_power(step):
-    solution = run([s.ConstantInputs(T_COLD, Q0, duration=60), step])
+    solution = run([s.Inlet(T_COLD, Q0, duration=60), step])
     power = all_steps(solution)[1]["Power [W]"].entries
     target = step.targets["Power [W]"].value
     np.testing.assert_allclose(power, target, rtol=1e-4)
@@ -74,7 +72,7 @@ def test_charging_has_negative_power():
     pv["Initial temperature [K]"] = T_COLD
     solution = run_experiment(
         model,
-        Experiment([s.ConstantInputs(T_HOT, Q0, duration=300)]),
+        Experiment([s.Inlet(T_HOT, Q0, duration=300)]),
         parameter_values=pv,
         var_pts=mesh(model),
     )
@@ -85,12 +83,12 @@ def test_termination_ends_step_and_next_step_continues():
     threshold = 273.15 + 45
     solution = run(
         [
-            s.ConstantPower(
+            s.Power(
                 1200,
                 mass_flow_rate=Q0,
                 termination=s.outlet_temperature_below(threshold),
             ),
-            s.ConstantInputs(T_COLD, Q0 / 2, duration=120),
+            s.Inlet(T_COLD, Q0 / 2, duration=120),
         ]
     )
     first, second = all_steps(solution)
@@ -111,7 +109,7 @@ def test_mass_flow_rate_limit():
     # Holding the power by the flow rate needs more and more flow as the outlet cools
     solution = run(
         [
-            s.ConstantPower(
+            s.Power(
                 1800,
                 inlet_temperature=T_COLD,
                 termination=s.mass_flow_rate_above(2 * Q0),
@@ -127,10 +125,10 @@ def test_mass_flow_rate_limit():
 def test_energy_conservation_over_experiment(model_class):
     solution = run(
         [
-            s.ConstantPower(1200, mass_flow_rate=Q0, duration=300),
-            s.ConstantPower(900, inlet_temperature=T_COLD, duration=300),
-            s.ConstantInputs(T_HOT, Q0, duration=300),
-            s.ConstantInputs(T_COLD, 0.0, duration=120),
+            s.Power(1200, mass_flow_rate=Q0, duration=300),
+            s.Power(900, inlet_temperature=T_COLD, duration=300),
+            s.Inlet(T_HOT, Q0, duration=300),
+            s.Rest(duration=120),
         ],
         model_class(),
     )
@@ -144,8 +142,8 @@ def test_time_series_input_is_followed_and_held():
     series = np.array([[0, Q0], [60, Q0 / 2], [120, 0]])
     solution = run(
         [
-            s.ConstantInputs(T_COLD, Q0, duration=60),
-            s.ConstantInputs(T_COLD, series, duration=180, period=10),
+            s.Inlet(T_COLD, Q0, duration=60),
+            s.Inlet(T_COLD, series, duration=180, period=10),
         ]
     )
     step = all_steps(solution)[1]
@@ -159,9 +157,7 @@ def test_time_series_input_is_followed_and_held():
 
 
 def test_function_of_time_input():
-    solution = run(
-        [s.ConstantInputs(lambda t: T_COLD + t / 60, Q0, duration=120, period=10)]
-    )
+    solution = run([s.Inlet(lambda t: T_COLD + t / 60, Q0, duration=120, period=10)])
     np.testing.assert_allclose(
         solution["Inlet temperature [K]"].entries, T_COLD + solution.t / 60, atol=1e-6
     )
@@ -170,14 +166,14 @@ def test_function_of_time_input():
 def test_steps_with_constant_values_share_a_branch():
     experiment = Experiment(
         [
-            s.ConstantInputs(T_COLD, Q0),
-            s.ConstantInputs(T_HOT, Q0 / 2),
-            s.ConstantPower(1200, mass_flow_rate=Q0),
-            s.ConstantPower(600, mass_flow_rate=Q0 / 2),
-            s.ConstantPower(600, inlet_temperature=T_COLD),
+            s.Inlet(T_COLD, Q0),
+            s.Inlet(T_HOT, Q0 / 2),
+            s.Power(1200, mass_flow_rate=Q0),
+            s.Power(600, mass_flow_rate=Q0 / 2),
+            s.Power(600, inlet_temperature=T_COLD),
             # Different structure: a time series, or a different termination
-            s.ConstantInputs(T_COLD, np.array([[0, Q0], [60, 0]])),
-            s.ConstantInputs(T_COLD, Q0, termination=s.outlet_temperature_below(300)),
+            s.Inlet(T_COLD, np.array([[0, Q0], [60, 0]])),
+            s.Inlet(T_COLD, Q0, termination=s.outlet_temperature_below(300)),
         ]
     )
     assert len(experiment.steps) == 7
@@ -186,8 +182,8 @@ def test_steps_with_constant_values_share_a_branch():
 
 def test_cycles():
     cycle = (
-        s.ConstantInputs(T_HOT, Q0, duration=120),
-        s.ConstantInputs(T_COLD, Q0, duration=120),
+        s.Inlet(T_HOT, Q0, duration=120),
+        s.Inlet(T_COLD, Q0, duration=120),
     )
     solution = run([cycle] * 3)
     assert len(solution.cycles) == 3
@@ -200,11 +196,9 @@ def test_step_already_terminated_is_skipped():
     with pytest.warns(UserWarning, match="Skipping step"):
         solution = run(
             [
-                s.ConstantInputs(T_COLD, Q0, duration=60),
-                s.ConstantInputs(
-                    T_COLD, Q0, termination=s.outlet_temperature_above(303.15)
-                ),
-                s.ConstantInputs(T_COLD, Q0, duration=60),
+                s.Inlet(T_COLD, Q0, duration=60),
+                s.Inlet(T_COLD, Q0, termination=s.outlet_temperature_above(303.15)),
+                s.Inlet(T_COLD, Q0, duration=60),
             ]
         )
     assert len(all_steps(solution)) == 2
@@ -214,7 +208,7 @@ def test_step_already_terminated_is_skipped():
 def test_input_model_is_not_modified():
     model = pytes.SharpFrontModel()
     events = [e.name for e in model.events]
-    run([s.ConstantInputs(T_COLD, Q0, duration=60)], model)
+    run([s.Inlet(T_COLD, Q0, duration=60)], model)
     assert [e.name for e in model.events] == events
     assert len(model.algebraic) == 0
 
@@ -229,7 +223,7 @@ def test_input_model_is_not_modified():
 )
 def test_invalid_targets(value, error):
     with pytest.raises(error):
-        s.ConstantInputs(T_COLD, value)
+        s.Inlet(T_COLD, value)
 
 
 @pytest.mark.parametrize(
@@ -239,12 +233,12 @@ def test_invalid_targets(value, error):
 )
 def test_constant_power_adjusts_exactly_one_control(controls):
     with pytest.raises(ValueError, match="exactly one"):
-        s.ConstantPower(600, **controls)
+        s.Power(600, **controls)
 
 
 def test_constant_power_adjusts_the_control_left_free():
-    assert s.ConstantPower(600, inlet_temperature=T_COLD).adjusted == s.MASS_FLOW_RATE
-    assert s.ConstantPower(600, mass_flow_rate=Q0).adjusted == s.INLET_TEMPERATURE
+    assert s.Power(600, inlet_temperature=T_COLD).adjusted == s.MASS_FLOW_RATE
+    assert s.Power(600, mass_flow_rate=Q0).adjusted == s.INLET_TEMPERATURE
 
 
 def test_invalid_experiment():
@@ -258,8 +252,8 @@ def test_no_warnings_from_time_series_branches():
         warnings.simplefilter("error", pybamm.SolverWarning)
         run(
             [
-                s.ConstantInputs(T_COLD, np.array([[0, Q0], [60, Q0 / 2]])),
-                s.ConstantInputs(T_COLD, Q0, duration=300),
+                s.Inlet(T_COLD, np.array([[0, Q0], [60, Q0 / 2]])),
+                s.Inlet(T_COLD, Q0, duration=300),
             ]
         )
 
@@ -270,9 +264,9 @@ def test_solver_failure_stops_experiment_with_partial_solution():
     with pytest.warns(UserWarning, match="mass_flow_rate_above"):
         solution = run(
             [
-                s.ConstantInputs(T_COLD, Q0, duration=600),
-                s.ConstantPower(1800, inlet_temperature=T_COLD, duration=3600),
-                s.ConstantInputs(T_COLD, Q0, duration=60),
+                s.Inlet(T_COLD, Q0, duration=600),
+                s.Power(1800, inlet_temperature=T_COLD, duration=3600),
+                s.Inlet(T_COLD, Q0, duration=60),
             ]
         )
     assert solution.t[-1] == pytest.approx(600)
@@ -282,17 +276,40 @@ def test_solver_failure_stops_experiment_with_partial_solution():
 @pytest.mark.parametrize(
     "power_step",
     [
-        s.ConstantPower(600, mass_flow_rate=Q0, duration=120),
-        s.ConstantPower(600, inlet_temperature=T_COLD, duration=120),
+        s.Power(600, mass_flow_rate=Q0, duration=120),
+        s.Power(600, inlet_temperature=T_COLD, duration=120),
     ],
 )
 def test_power_step_after_rest_with_no_flow(power_step):
     # The controls start from the rest step's values (no flow), which must not make the
     # power equation independent of the control it adjusts
-    solution = run([s.ConstantInputs(T_COLD, 0.0, duration=60), power_step])
+    solution = run([s.Rest(inlet_temperature=T_COLD, duration=60), power_step])
     np.testing.assert_allclose(
         all_steps(solution)[1]["Power [W]"].entries, 600, rtol=1e-4
     )
+
+
+def test_rest_holds_the_previous_inlet_temperature():
+    solution = run([s.Inlet(T_HOT - 5, Q0, duration=60), s.Rest(duration=60)])
+    rest = all_steps(solution)[1]
+    np.testing.assert_allclose(rest["Mass flow rate [kg.s-1]"].entries, 0, atol=1e-12)
+    np.testing.assert_allclose(rest["Inlet temperature [K]"].entries, T_HOT - 5)
+    np.testing.assert_allclose(rest["Power [W]"].entries, 0, atol=1e-9)
+
+
+def test_rest_first_holds_the_initial_temperature():
+    model = pytes.SharpFrontModel()
+    solution = run([s.Rest(duration=60)], model)
+    T_init = model.default_parameter_values["Initial temperature [K]"]
+    np.testing.assert_allclose(solution["Inlet temperature [K]"].entries, T_init)
+
+
+def test_rest_with_an_inlet_temperature():
+    rest = s.Rest(inlet_temperature=np.array([[0, T_COLD], [60, T_HOT]]), duration=60)
+    assert not rest.holds_previous_inlet_temperature
+    solution = run([s.Inlet(T_HOT, Q0, duration=60), rest])
+    T_in = all_steps(solution)[1]["Inlet temperature [K]"].entries
+    assert T_in[0] == pytest.approx(T_COLD) and T_in[-1] == pytest.approx(T_HOT)
 
 
 def test_custom_termination():
@@ -303,9 +320,7 @@ def test_custom_termination():
     termination = s.Termination("Outlet cooled by 5 K", cooled)
     assert repr(termination) == "Termination('Outlet cooled by 5 K')"
     assert termination.key.startswith("Outlet cooled by 5 K@")
-    solution = run(
-        [s.ConstantInputs(T_COLD, Q0, duration=3600, termination=[termination])]
-    )
+    solution = run([s.Inlet(T_COLD, Q0, duration=3600, termination=[termination])])
     assert solution["Outlet temperature [degC]"].entries[-1] == pytest.approx(
         65, abs=0.1
     )
@@ -360,7 +375,7 @@ def test_threshold_terminations(termination, variable, threshold, inlet, initial
     model = pytes.SharpFrontModel()
     parameter_values = model.default_parameter_values
     parameter_values["Initial temperature [K]"] = initial
-    step = s.ConstantInputs(inlet, Q0, duration=6 * 3600, termination=termination)
+    step = s.Inlet(inlet, Q0, duration=6 * 3600, termination=termination)
     solution = run_experiment(
         model,
         Experiment([step]),
@@ -375,12 +390,10 @@ def test_failure_hints():
     from pytes.experiments.experiment import _failure_hint
 
     assert "mass_flow_rate_above" in _failure_hint(
-        s.ConstantPower(1e3, inlet_temperature=T_COLD)
+        s.Power(1e3, inlet_temperature=T_COLD)
     )
-    assert "inlet_temperature_below" in _failure_hint(
-        s.ConstantPower(1e3, mass_flow_rate=Q0)
-    )
-    assert _failure_hint(s.ConstantInputs(T_COLD, Q0)) == ""
+    assert "inlet_temperature_below" in _failure_hint(s.Power(1e3, mass_flow_rate=Q0))
+    assert _failure_hint(s.Inlet(T_COLD, Q0)) == ""
 
 
 def test_experiment_where_no_step_can_run():
@@ -388,7 +401,7 @@ def test_experiment_where_no_step_can_run():
     with pytest.warns(UserWarning), pytest.raises(pybamm.SolverError, match="No step"):
         run(
             [
-                s.ConstantInputs(
+                s.Inlet(
                     T_COLD,
                     Q0,
                     termination=s.outlet_temperature_above(273.15 + 40),
