@@ -8,6 +8,33 @@ until 1.0 the model contract may change, and every change to it is also logged i
 
 <!-- towncrier release notes start -->
 
+## [0.1.0a3] - 2026-10-24
+
+### Breaking changes
+
+- The option `"storage"` is renamed `"storage along flow path"`, with the same values: write `options={"storage along flow path": "averaged"}` for the averaged storage. The old name raises an error that gives the new one. ([#15](https://github.com/mmsg-warwick/PyTES/pull/15))
+- Every model's results change: the fluid is advected at second order by default, and the default meshes are coarser (sharp front 20 by 20 instead of 40 by 40, packed bed 40 by 40 instead of 40 by 80, or 40 instead of 80 for a lumped capsule), for smaller errors in less time. To keep earlier results, pass `spatial_methods={**model.default_spatial_methods, "flow path": pytes.compat.fluid_spatial_method("first order")}` and the earlier `var_pts`. ([#16](https://github.com/mmsg-warwick/PyTES/pull/16))
+
+### Model contract changes
+
+- Every storage provides `"<label> thermal conductivity [W.m-1.K-1]"`, a model with Jeffreson's correction also provides `"Effective heat transfer coefficient [W.m-2.K-1]"` and `"Surface Biot number"`, and a surface flux law may list the variables it reads in `coupled_variables`, which its coupling requires. ([#15](https://github.com/mmsg-warwick/PyTES/pull/15))
+- The step types are `Inlet`, `Power` and `Rest`, and the couplings `WallCoupling`, `FinRootCoupling` and `FinStorageCoupling` (default submodel name "Fin-storage coupling"). ([#20](https://github.com/mmsg-warwick/PyTES/pull/20))
+- Nine variables join the required set: `Volume flow rate [m3.s-1]`, `Pumped volume [m3]`, `Inlet-outlet temperature difference [K]`, `Heat transfer fluid velocity [m.s-1]`, `Charged energy [J]`, `Discharged throughput [J]`, `Charged throughput [J]`, `Storage average temperature [K]` and `Storage cross-section average temperature [K]`; every storage provides `<label> average temperature [K]` and `<label> cross-section average temperature [K]`; and `[m3.s-1]` and `[m3]` get `[l.min-1]` and `[l]` unit twins. ([#36](https://github.com/mmsg-warwick/PyTES/pull/36))
+
+### Deprecations
+
+- `step.ConstantInputs` and `step.ConstantPower` are renamed `step.Inlet` and `step.Power`, and the couplings `LedgerWallCoupling` and `FinPCMCoupling` are renamed `WallCoupling` and `FinStorageCoupling`. The old names still work, with a `PyTESDeprecationWarning`, until PyTES 0.2.0. ([#20](https://github.com/mmsg-warwick/PyTES/pull/20))
+
+### New features
+
+- A documentation site at https://pytes.readthedocs.io, built with Sphinx: an API reference generated from the docstrings, the example notebooks, a getting-started page, the design documents, the changelog and the contribution guide. Build it locally with `uv run --group docs sphinx-build docs docs/_build/html`. ([#13](https://github.com/mmsg-warwick/PyTES/pull/13))
+- A lumped capsule for the packed bed (issue #5): `options={"storage element": "lumped"}` gives each capsule a uniform temperature, much faster and accurate when the capsule's Biot number is small, and `"lumped with Jeffreson"` also corrects the heat transfer coefficient for the conduction inside the capsule (new submodels `LumpedStorage` and `LumpedGeometry`, and the flux law `Jeffreson`). ([#15](https://github.com/mmsg-warwick/PyTES/pull/15))
+- A second-order, limited upwind scheme for the heat transfer fluid (issue #7), on uniform or non-uniform meshes: a temperature front stays much sharper on the same mesh, and energy is still conserved exactly. It is the default; `pytes.compat.fluid_spatial_method("first order")` selects PyBaMM's first-order upwinding. ([#16](https://github.com/mmsg-warwick/PyTES/pull/16))
+- Renamed names now go through one registry, `pytes.deprecation`: an old class, function or option name keeps working for at least one release with a `PyTESDeprecationWarning` that gives the new name, then raises an error that gives it. ([#19](https://github.com/mmsg-warwick/PyTES/pull/19))
+- A `step.Rest` experiment step: no flow, with the inlet temperature held where the previous step left it, or at a value you give. ([#20](https://github.com/mmsg-warwick/PyTES/pull/20))
+- New outputs for comparison with measurements (issue #14): `Volume flow rate [m3.s-1]` (also in l/min), `Pumped volume [m3]` (also in litres), `Inlet-outlet temperature difference [K]`, `Heat transfer fluid velocity [m.s-1]`, `Charged energy [J]`, the throughputs `Discharged throughput [J]` and `Charged throughput [J]` (for round-trip efficiencies), the storage temperatures averaged over the whole storage and over each cross-section along the flow path (`Storage average temperature [K]`, `Storage cross-section average temperature [K]`, and each storage's own), and the surface Reynolds and Prandtl numbers with any heat transfer coefficient. ([#36](https://github.com/mmsg-warwick/PyTES/pull/36))
+
+
 ## [0.1.0a2] - 2026-10-22
 
 ### Breaking changes

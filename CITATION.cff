@@ -18,8 +18,8 @@ repository-code: "https://github.com/mmsg-warwick/PyTES"
 url: "https://pytes.readthedocs.io"
 doi: 10.5281/zenodo.23438443
 license: BSD-3-Clause
-version: 0.1.0a2
-date-released: 2026-10-22
+version: 0.1.0a3
+date-released: 2026-10-24
 keywords:
   - thermal energy storage
   - heat battery
