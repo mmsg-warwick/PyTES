@@ -23,6 +23,8 @@ def test_is_temperature_difference():
         ("Power [W]", ["Power [kW]"]),
         ("Discharged energy [J]", ["Discharged energy [kWh]"]),
         ("Time [s]", ["Time [min]", "Time [h]"]),
+        ("Volume flow rate [m3.s-1]", ["Volume flow rate [l.min-1]"]),
+        ("Pumped volume [m3]", ["Pumped volume [l]"]),
         (DIFFERENCE, []),
         ("Power per unit area [W.m-2]", []),
     ],
@@ -39,6 +41,8 @@ def test_twins_are_converted():
             "Discharged energy [J]": pybamm.Scalar(7.2e6),
             DIFFERENCE: pybamm.Scalar(5),
             "Time [s]": pybamm.Scalar(5400),
+            "Volume flow rate [m3.s-1]": pybamm.Scalar(5e-5),
+            "Pumped volume [m3]": pybamm.Scalar(0.25),
         }
     )
     assert variables["Outlet temperature [degC]"].evaluate() == pytest.approx(26.85)
@@ -47,6 +51,8 @@ def test_twins_are_converted():
     assert "Inlet-outlet temperature difference [degC]" not in variables
     assert variables["Time [min]"].evaluate() == pytest.approx(90)
     assert variables["Time [h]"].evaluate() == pytest.approx(1.5)
+    assert variables["Volume flow rate [l.min-1]"].evaluate() == pytest.approx(3)
+    assert variables["Pumped volume [l]"].evaluate() == pytest.approx(250)
 
 
 def test_twins_are_never_written_by_hand():

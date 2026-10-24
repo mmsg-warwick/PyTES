@@ -111,6 +111,9 @@ class NewtonCooling(SurfaceFluxLaw):
     name : str, optional
         Name of the coefficient parameter (default "Heat transfer coefficient
         [W.m-2.K-1]").
+    flow : :class:`NusseltCorrelation`, optional
+        The flow geometry (e.g. a :class:`TubeCorrelation`), for reporting the surface
+        Reynolds and Prandtl numbers only (issue #14); it does not change the coefficient.
 
     Attributes
     ----------
@@ -118,8 +121,12 @@ class NewtonCooling(SurfaceFluxLaw):
         The heat transfer coefficient [W.m-2.K-1].
     """
 
-    def __init__(self, name="Heat transfer coefficient [W.m-2.K-1]"):
+    #: The flow geometry for reporting, or None
+    flow = None
+
+    def __init__(self, name="Heat transfer coefficient [W.m-2.K-1]", flow=None):
         self.coefficient = pybamm.Parameter(name)
+        self.flow = flow
 
     def heat_transfer_coefficient(self, fluid, fluid_state):
         """
@@ -139,12 +146,21 @@ class NewtonCooling(SurfaceFluxLaw):
         return h * (fluid_state.T - T_s)
 
     def variables(self, fluid, fluid_state):
-        """The heat transfer coefficient, as "Heat transfer coefficient [W.m-2.K-1]\""""
-        return {
+        """
+        The heat transfer coefficient, as "Heat transfer coefficient [W.m-2.K-1]", and,
+        given a flow geometry, the "Surface Reynolds number" and "Surface Prandtl number"
+        """
+        variables = {
             HEAT_TRANSFER_COEFFICIENT: self.heat_transfer_coefficient(
                 fluid, fluid_state
             )
         }
+        if self.flow is not None:
+            variables["Surface Reynolds number"] = self.flow.reynolds(
+                fluid, fluid_state
+            )
+            variables["Surface Prandtl number"] = self.flow.prandtl(fluid, fluid_state)
+        return variables
 
 
 class NusseltCorrelation(NewtonCooling):
@@ -543,5 +559,6 @@ class HeatTransferCoefficientOptions(Sequence):
         :class:`SurfaceFluxLaw`
         """
         if value == CONSTANT:
-            return NewtonCooling()
+            # The flow geometry reports the surface Reynolds and Prandtl numbers
+            return NewtonCooling(flow=FLOWS[self.flow](*geometry))
         return CORRELATIONS[self.flow][value](*geometry)

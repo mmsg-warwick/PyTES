@@ -45,6 +45,10 @@ class PackedBedModel(BaseModel):
     - "per-area totals": :class:`pytes.submodels.PerAreaTotals`, the device totals per unit
       bed cross-sectional area (e.g. "Power per unit area [W.m-2]").
 
+    In this family the cross-section averages along the bed (e.g. "Storage cross-section
+    average temperature [K]") are the capsules' volume averages: every capsule at a given
+    height is the same.
+
     Options:
 
     - "storage along flow path": "resolved" (default), a capsule at every point along the

@@ -359,9 +359,21 @@ from the inputs (inlet state against storage state), and the sign of the power s
 - **Tiers.**
   - *Required for every model:* time, mass flow rate, inlet and outlet temperature, inlet and
     outlet specific enthalpy, power, discharged energy, storage thermal energy, total thermal
-    energy, heat loss power, fluid specific enthalpy and fluid temperature along the flow path (the enthalpy is the state, D5).
-  - *Optional, standard name when present:* average liquid fraction, mean storage
-    temperature, pressure drop, outlet fluid state (quality, superheat; later).
+    energy, heat loss power, fluid specific enthalpy and fluid temperature along the flow
+    path (the enthalpy is the state, D5); and, for comparison with measurements (issue #14,
+    F-055), the volume flow rate, the pumped volume, the inlet-outlet temperature
+    difference, the fluid velocity, the charged energy, the two throughputs, and the
+    storage temperatures averaged over the whole storage and over each cross-section of the
+    flow path (`Storage average temperature [K]`, `Storage cross-section average
+    temperature [K]`), volume-weighted over all the storage (maintainer, 2026-10-24).
+    Rationale: one name in every family, and a quantity that compares models that split the
+    storage differently (the mush model's fins and PCM against the sharp front's composite).
+    In a packed bed the cross-section average is the capsule's volume average.
+  - *Every storage:* its own volume-weighted averages, `<label> average temperature [K]` and
+    `<label> cross-section average temperature [K]` (F-055, defining what F-043 had dropped
+    as undefined).
+  - *Optional, standard name when present:* average liquid fraction, pressure drop, outlet
+    fluid state (quality, superheat; later).
   - *Family-specific:* namespaced with a prefix ("Capsule ...", "Fin ...") so they cannot
     collide with the shared set.
 - **One standard name for the flow path** across families: domain `"flow path"`,
@@ -374,7 +386,8 @@ from the inputs (inlet state against storage state), and the sign of the power s
 - **SI canonical** (maintainer, 2026-10-16, extending "K canonical"). Models define every
   quantity in SI units: K, W, J, kg.s-1, and so on. For reading, one shared helper
   (`pytes.variables.add_unit_twins`, run when a model is built) generates unit twins as model
-  variables: `[K]` → `[degC]`, `[W]` → `[kW]`, `[J]` → `[kWh]`, `[s]` → `[min]` and `[h]`. Twins are never written by
+  variables: `[K]` → `[degC]`, `[W]` → `[kW]`, `[J]` → `[kWh]`, `[s]` → `[min]` and `[h]`,
+  `[m3.s-1]` → `[l.min-1]` and `[m3]` → `[l]` (F-055). Twins are never written by
   hand; a model that does is rejected. Rationale: one place for every conversion, no
   computational cost (PyBaMM evaluates a variable only when it is requested; measured), and
   the twins work everywhere, `QuickPlot` included. `[degC]` departs from PyBaMM's `[C]`
@@ -386,8 +399,10 @@ from the inputs (inlet state against storage state), and the sign of the power s
 - **Heat loss power** is a required variable, positive for loss, identically zero for now
   (no casing yet). Conservation identity, which is the conformance check:
   `change in total energy = -int(power) dt - int(heat loss) dt`.
-- **Discharged energy** is the net time integral of power. Throughput, if wanted, is a
-  separate variable.
+- **Discharged energy** is the net time integral of power, and charged energy its opposite.
+  The throughputs are separate variables (maintainer, 2026-10-24, F-055): the energy out
+  while discharging and the energy in while charging, whose ratio over a cycle is its
+  round-trip efficiency.
 - **Two energies.** *Storage thermal energy* (PCM or capsule material, plus fins where
   present). *Total thermal energy* (storage plus fluid inventory), which is the one in the
   conservation identity.

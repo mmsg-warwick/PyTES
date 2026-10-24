@@ -60,6 +60,12 @@ class AdvectedFluid(BaseSubModel):
     method (:func:`pytes.compat.fluid_spatial_method`, F-052). The inflow uses
     :func:`pytes.compat.upwind_inlet_value`.
 
+    It also provides the flow as it is usually measured (issue #14): the volume flow rate
+    of the whole device at the inlet density, ``mdot / rho(h_in)``, and its time integral,
+    the pumped volume (a solver state, zero at the start); the mean velocity along the
+    flow path, ``mdot_path / (A_flow rho(h))`` (in a packed bed, the interstitial
+    velocity); and the inlet-outlet temperature difference, ``T_in - T_out``.
+
     Parameters
     ----------
     param : object
@@ -118,6 +124,19 @@ class AdvectedFluid(BaseSubModel):
         self.initial_conditions = {h_f: fluid.h(self.coupled(INITIAL_TEMPERATURE))}
 
         E_f = path.n_paths * path.area * pybamm.Integral(fluid.rho(h_f) * h_f, path.z)
+
+        volume_flow_rate = param.mdot / fluid.rho(h_in)
+        # Scaled by the fluid volume of the device: the number of times it was replaced
+        pumped = pybamm.Variable(
+            "Pumped volume [m3]", scale=path.n_paths * path.area * path.length
+        )
+        self.rhs = {**self.rhs, pumped: volume_flow_rate}
+        self.initial_conditions = {**self.initial_conditions, pumped: pybamm.Scalar(0)}
+        # The mass flux along the flow path over the local density
+        velocity = pybamm.PrimaryBroadcast(mdot_path / path.area, "flow path") / (
+            fluid.rho(h_f)
+        )
+
         variables = {
             FLUID_ENTHALPY: h_f,
             "Inlet specific enthalpy [J.kg-1]": h_in,
@@ -132,6 +151,10 @@ class AdvectedFluid(BaseSubModel):
                 FLUID_TEMPERATURE: fluid.T(h_f),
                 "Inlet temperature [K]": T_in,
                 "Outlet temperature [K]": fluid.T(h_out),
+                "Inlet-outlet temperature difference [K]": T_in - fluid.T(h_out),
+                "Heat transfer fluid velocity [m.s-1]": velocity,
+                "Volume flow rate [m3.s-1]": volume_flow_rate,
+                "Pumped volume [m3]": pumped,
             }
         )
         self.variables = variables

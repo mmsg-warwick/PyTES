@@ -73,8 +73,14 @@ class StorageGeometry:
     @property
     def volume(self):
         """Volume of the storage in the whole device [m3]"""
-        ones = pybamm.FullBroadcast(1, broadcast_domains=self.domains)
-        return self.integrate(ones)
+        return self.integrate(pybamm.FullBroadcast(1, broadcast_domains=self.domains))
+
+    @property
+    def cross_section_volume(self):
+        """Volume of the storage per unit length of flow path, for one flow path [m2]"""
+        return self.cross_section_integral(
+            pybamm.FullBroadcast(1, broadcast_domains=self.domains)
+        )
 
     def gradient_from_heat_flux(self, heat_flux, k):
         """
@@ -144,9 +150,19 @@ class LumpedGeometry:
     @property
     def volume(self):
         """Volume of the storage in the whole device [m3]"""
+        return self.integrate(self._ones)
+
+    @property
+    def cross_section_volume(self):
+        """Volume of the storage per unit length of flow path, for one flow path [m2]"""
+        return self.cross_section_integral(self._ones)
+
+    @property
+    def _ones(self):
+        """1 on the storage domains"""
         if self.averaged:
-            return self.integrate(pybamm.Scalar(1))
-        return self.integrate(pybamm.PrimaryBroadcast(1, self.primary_domain))
+            return pybamm.Scalar(1)
+        return pybamm.PrimaryBroadcast(1, self.primary_domain)
 
 
 class EnthalpyStorage(BaseSubModel):
@@ -166,7 +182,11 @@ class EnthalpyStorage(BaseSubModel):
     former provide liquid-fraction variables. The state list is ``[H]`` plus the
     material's internal states (none for the current materials, DESIGN D7).
 
-    It also provides its conductivity, "<label> thermal conductivity [W.m-1.K-1]".
+    It also provides its conductivity, "<label> thermal conductivity [W.m-1.K-1]", and its
+    volume-weighted average temperatures (issue #14): over the whole storage, "<label>
+    average temperature [K]", and over each cross-section of the flow path, "<label>
+    cross-section average temperature [K]", along the flow path (e.g. across the storage
+    depth of a finned tube, or over a capsule in a packed bed).
 
     Ledger couplings (DESIGN D6) take the heat that crossed the storage's boundaries from
     ``"<label> conduction heating rate [W.m-3]"``, ``div(k grad T)``: its integral over the
@@ -287,6 +307,12 @@ class EnthalpyStorage(BaseSubModel):
                 }
             )
         variables[f"{label} temperature [K]"] = T
+        variables[f"{label} average temperature [K]"] = (
+            geometry.integrate(T) / geometry.volume
+        )
+        variables[f"{label} cross-section average temperature [K]"] = (
+            geometry.cross_section_integral(T) / geometry.cross_section_volume
+        )
         variables[f"{label} surface temperature [K]"] = pybamm.boundary_value(
             T, geometry.inner
         )
@@ -394,6 +420,12 @@ class LumpedStorage(EnthalpyStorage):
                 }
             )
         variables[f"{label} temperature [K]"] = T
+        variables[f"{label} average temperature [K]"] = (
+            geometry.integrate(T) / geometry.volume
+        )
+        variables[f"{label} cross-section average temperature [K]"] = (
+            geometry.cross_section_integral(T) / geometry.cross_section_volume
+        )
         variables[f"{label} surface temperature [K]"] = T
         variables[f"{label} thermal conductivity [W.m-1.K-1]"] = material.k(
             H, self.internal_states
