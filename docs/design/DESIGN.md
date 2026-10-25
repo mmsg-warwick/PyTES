@@ -554,6 +554,7 @@ Settled at the end of Stage B (maintainer, 2026-10-15):
 | Measured DSC enthalpy curves | Material classes expose `H2T`, `T2H`, `k(H)`, liquid fraction |
 | Temperature-dependent properties (maintainer, 2026-10-18) | Models read properties only through the fluid-property object (functions of `(h, p)`) and the material classes (`k(H)`, `H2T`), never as bare parameters. Until then, each parameter layer's docstring records the temperature at which its constant values were taken from the source |
 | Pipe networks, channelling | Single flow path is assumed in D5; revisit if needed |
+| Serpentine tube layouts, long term (issue #40; maintainer, 2026-10-25) | Nothing in the contract assumes that a storage has a single active boundary: storage between two passes is heated from both sides, as is the capsule shell. Exact conservation then needs each face's discrete flux (PyBaMM #5094, tracked in #39). The passes are in series, so D5's single flow path holds. The number of passes and the layout fix the model's structure, so they are set when the model is built, not as parameter values (see §4, options or composition) |
 | Model card rendering | Keep the submodel metadata complete now; render later |
 | Packaged sensitivity and fitting tools | Keep as notebooks until a second use proves them |
 | Upstream experiment generalisation, #5094 follow-up | `compat` isolation; runner free of battery assumptions |
