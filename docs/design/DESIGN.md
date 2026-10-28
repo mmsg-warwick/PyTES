@@ -453,6 +453,46 @@ and outlet temperature, power, discharged energy, fluid temperature profile snap
 `plot_fluid_profiles`). Power
 versus discharged energy is the key comparison plot.
 
+**Plot colours** (maintainer, 2026-10-28). Both lead with the brand orange `#E8590C` and are
+chosen to stay readable with colour-vision deficiency:
+- **Colour cycle "PyTES Thermal"**: `#E8590C` ember, `#1F4E9C` deep blue, `#14A08A` teal,
+  `#F0A930` amber, `#A23B72` berry, `#88C7F0` powder, `#36312E` charcoal. Hot leads and cold
+  follows, so a two-line plot reads as hot against cold. Checked by simulating protan,
+  deutan and tritan vision (Machado et al., 2009, full severity): the closest pair of the
+  seven, in any of the four visions, is 10.1 apart in CIEDE2000 (berry and deep blue,
+  protan), and 12.4 within the first four. Okabe–Ito with the brand orange first scores
+  9.9, Paul Tol's vibrant 8.6, a palette of Open Color shades 7.7, and matplotlib's
+  `tab10` 1.3 (orange and green, protan). Powder blue has 1.8:1 contrast on white, so it
+  suits fills and reference lines better than thin data lines.
+- **Sequential colourmap "ember"**, for fields such as temperature: dark brown, through the
+  brand orange, to cream, perceptually uniform in CAM02-UCS. Lightness rises
+  monotonically and keeps within 5 J' of a straight line, and neighbouring colours are
+  equally far apart (step size varies by 0.013 %). No published map is both uniform and
+  orange throughout: inferno is as uniform but black and purple in its dark half, and
+  cmocean's `solar` and `thermal` pass far from the brand orange (about 11 to 14 CAM02-UCS
+  units). The values, and the script that generates them, are in `docs/design/colours/`.
+- **Diverging colourmap "thaw"** (proposed, for the maintainer's review), for values about
+  a reference such as the phase-change temperature: dark navy, through the cycle's deep
+  blue, to a near-white centre, then through the brand orange to dark red-brown. Built like
+  ember, one half at a time: lightness falls monotonically from the centre (J' 95) to both
+  ends (J' 20), and colours equally far from the centre differ in lightness by at most
+  2.4 J'. Step size varies by 2.8 %, as the blue half is 5 % shorter (blue reaches the edge
+  of the sRGB gamut). Mirrored colours stay at least 19.6 CAM02-UCS units apart in every
+  simulated vision. cmocean's `balance` is as uniform but blue to red; Crameri's `vik` has
+  the hues but halves that are not monotone in lightness; matplotlib's `coolwarm`, `RdBu`
+  and `PuOr` vary in step size by 19 % to 23 %. Values and script beside ember's.
+- **Colour cycle "PyTES Thermal (dark)"** (proposed, for the maintainer's review), the
+  twin for dark backgrounds: `#F76707` (the dark logo's orange), `#6785F9`, `#04B68B`,
+  `#FFC66C`, `#B06C99`, `#B2D5F8`, `#D9D0C7` (a light warm grey in place of charcoal). Same
+  hues and order, each lifted by searching lightness and chroma for the largest
+  separation, keeping at least 70 % of the light colour's chroma. Closest pair 13.3 in
+  CIEDE2000 (teal and grey, protan); contrast at least 4.6:1 on the documentation's dark
+  background `#14181E` and 5.5:1 on black. The colourmaps need no dark twin: a map fills
+  its axes.
+- `pytes.plotting` adopts the cycles and registers the maps once PyBaMM's change of the
+  matplotlib default (in progress) settles how a downstream package sets its style
+  (issue #43).
+
 ### D16. Relationship with PyBaMM
 - Workarounds only in `compat`, each tagged with the upstream issue and removal condition.
 - Support PyBaMM releases from the last 3 months (CalVer). CI against the latest release is

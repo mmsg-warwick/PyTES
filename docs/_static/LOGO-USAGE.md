@@ -30,6 +30,18 @@ All backgrounds are **transparent**. "light" and "dark" refer to the page theme 
 | "Py" | `#E8590C` | `#FF922B` |
 | "TES" | `#3A1A0A` | `#FFF1E0` |
 
+## Plot colours
+
+Figures use their own palette, chosen for readability with colour-vision deficiency (DESIGN
+D15). It shares the brand orange.
+
+| Role | Colours |
+|---|---|
+| Line colour cycle "PyTES Thermal", in order, for light backgrounds | `#E8590C` `#1F4E9C` `#14A08A` `#F0A930` `#A23B72` `#88C7F0` `#36312E` |
+| Line colour cycle "PyTES Thermal (dark)", in order, for dark backgrounds | `#F76707` `#6785F9` `#04B68B` `#FFC66C` `#B06C99` `#B2D5F8` `#D9D0C7` |
+| Sequential colourmap "ember" | dark brown `#35130E`, through `#E8590C`, to cream `#FFEFD6` (256 values in `docs/design/colours/ember.csv`) |
+| Diverging colourmap "thaw" | dark navy `#11198C`, through `#1F4E9C`, to near-white `#F1EDED`, through `#E8590C`, to dark red-brown `#4C160E` (256 values in `docs/design/colours/thaw.csv`) |
+
 ## Notes
 
 - The flame outline comes from the SVG Repo "flame-danger" icon (CC0, per the maintainer). The bars, colours and wordmark are new.
