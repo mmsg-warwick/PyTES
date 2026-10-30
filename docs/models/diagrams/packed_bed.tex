@@ -1,0 +1,41 @@
+% The packed bed: capsules in a column, the fluid flowing through the voids
+\documentclass[tikz, border=4pt]{standalone}
+\input{pytes-diagrams}
+\begin{document}
+\begin{tikzpicture}
+  \def\W{3.2}
+  \def\Z{5.6}
+  \def\rc{0.26}
+  % Fluid in the voids, then the capsules in staggered rows
+  \fill[fluidfill] (0, 0) rectangle (\W, \Z);
+  \foreach \row in {0, ..., 10} {
+    \pgfmathsetmacro{\yc}{0.3 + 0.5*\row}
+    \pgfmathsetmacro{\shift}{mod(\row, 2) == 0 ? 0.3 : 0.56}
+    \foreach \col in {0, ..., 5} {
+      \pgfmathsetmacro{\xc}{\shift + 0.52*\col}
+      \ifdim \xc pt < 3.0pt
+        \draw[pcm] (\xc, \yc) circle (\rc);
+      \fi
+    }
+  }
+  \draw[outline, line width=1pt] (0, 0) rectangle (\W, \Z);
+  % One height: every capsule there is the same
+  \draw[pytesorange, line width=0.9pt, dashed] (-0.15, 2.52) rectangle (\W + 0.15, 3.08);
+  \draw[pytesorange, line width=0.5pt] (\W + 0.15, 2.8) -- (\W + 0.6, 2.8)
+    node[note, anchor=west, text=pytesorange, align=left]
+    {at each height, one capsule\\stands for all those there};
+  % Flow
+  \draw[flow] (\W/2, -1.1) -- (\W/2, -0.1);
+  \node[label, anchor=north] at (\W/2, -1.1) {inlet: $\dot m$, $T_\mathrm{in}$};
+  \draw[flow] (\W/2, \Z + 0.1) -- (\W/2, \Z + 1.1);
+  \node[label, anchor=south] at (\W/2, \Z + 1.1) {outlet: $T_\mathrm{out}$};
+  % Coordinate and dimensions
+  \draw[axis] (-0.9, 0) -- (-0.9, 1.4) node[label, left] {$z$};
+  \draw[dimension] (-0.45, 0) -- (-0.45, \Z) node[label, midway, left] {$Z$};
+  \node[note, anchor=west, align=left] at (\W + 0.6, 4.6)
+    {cross-sectional area $A$\\porosity $\varepsilon$: volume\\fraction of the fluid};
+  \node[note, anchor=west, align=left] at (\W + 0.6, 1.1)
+    {capsules of\\radius $R$};
+  \draw[pytesink, line width=0.4pt] (\W + 0.6, 1.1) -- (2.86, 0.8);
+\end{tikzpicture}
+\end{document}

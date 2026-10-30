@@ -1,0 +1,32 @@
+% One capsule of the packed bed, melting from its surface inwards
+\documentclass[tikz, border=4pt]{standalone}
+\input{pytes-diagrams}
+\begin{document}
+\begin{tikzpicture}
+  \def\R{2.2}
+  \def\front{1.35}
+  % The fluid around the capsule
+  \fill[fluidfill, rounded corners=6pt] (-3.6, -3.1) rectangle (3.6, 3.1);
+  \node[label, anchor=north west] at (-3.5, 3.0) {fluid at $T_f$};
+  % Liquid shell and solid core
+  \draw[liquid] (0, 0) circle (\R);
+  \draw[pcm] (0, 0) circle (\front);
+  \draw[guide] (0, 0) circle (\front);
+  \node[note] at (0, 0.55) {solid};
+  \node[note] at (0, 1.75) {liquid};
+  \draw[pytesink, line width=0.4pt] ({\front*cos(250)}, {\front*sin(250)}) -- (-1.2, -2.6)
+    node[note, below] {melting front};
+  % Coordinate and radius
+  \fill[pytesink] (0, 0) circle (1.5pt);
+  \draw[axis] (0, 0) -- (2.9, 0) node[label, above] {$r$};
+  \draw[dimension] (0, 0) -- (-\R, 0) node[label, pos=0.75, above] {$R$};
+  \node[note] at (0, -0.55) {$\partial T/\partial r = 0$};
+  % Heat flux from the fluid through the surface
+  \foreach \a in {30, 90, 150, 210, 330} {
+    \draw[heat] ({(\R + 0.75)*cos(\a)}, {(\R + 0.75)*sin(\a)})
+      -- ({(\R + 0.08)*cos(\a)}, {(\R + 0.08)*sin(\a)});
+  }
+  \node[label, text=pytesorange, anchor=south east] at (3.55, -3.05)
+    {$q = h_c (T_f - T_s)$};
+\end{tikzpicture}
+\end{document}

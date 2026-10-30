@@ -290,6 +290,15 @@ and open `docs/_build/html/index.html`. Any warning fails the build, here and in
 broken cross-reference, a malformed docstring, or a page missing from every table of
 contents. A new public module needs an entry in one of the pages of `docs/api/`.
 
+The diagrams on the model pages are drawn in TikZ, in
+[`docs/models/diagrams/`](docs/models/diagrams), with their colours and styles in a shared
+preamble. The SVGs built from them are committed, so the site builds without TeX. After
+changing a diagram, rebuild its SVG (this needs TeX with TikZ, and `dvisvgm`):
+
+```bash
+python docs/models/diagrams/build.py capsule    # or no name, for every diagram
+```
+
 ## Releasing
 
 For maintainers. PyTES uses [semantic versioning](https://semver.org), with pre-releases
