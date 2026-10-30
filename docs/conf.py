@@ -52,8 +52,9 @@ language = "en_GB"
 # each build (the copies are gitignored). They are rendered from their committed outputs,
 # never executed here: CI already runs them (nbmake)
 _NOTEBOOKS = DOCS / "examples"
-for _notebook in sorted((ROOT / "examples").glob("*.ipynb")):
-    shutil.copy2(_notebook, _NOTEBOOKS / _notebook.name)
+for _folder in ["", "getting_started"]:
+    for _notebook in sorted((ROOT / "examples" / _folder).glob("*.ipynb")):
+        shutil.copy2(_notebook, _NOTEBOOKS / _folder / _notebook.name)
 
 nb_execution_mode = "off"
 myst_enable_extensions = ["dollarmath", "amsmath"]
