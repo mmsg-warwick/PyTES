@@ -1,4 +1,7 @@
-"""Standard plots (DESIGN D15): they work for every model and for comparisons."""
+"""Standard plots and plot colours (DESIGN D15)."""
+
+import subprocess
+import sys
 
 import matplotlib
 import numpy as np
@@ -69,3 +72,62 @@ def test_power_and_energy_axes_include_zero_with_room_above(solutions):
         assert low <= 0 < max(line.get_ydata().max() for line in ax.lines) < high
         assert not ax.yaxis.get_major_formatter().get_useOffset()
     matplotlib.pyplot.close(fig)
+
+
+def _lightness(rgb):
+    """CIELAB lightness L* of sRGB colours in [0, 1]"""
+    linear = np.where(rgb <= 0.04045, rgb / 12.92, ((rgb + 0.055) / 1.055) ** 2.4)
+    Y = linear @ np.array([0.2126, 0.7152, 0.0722])
+    return np.where(Y > 216 / 24389, 116 * np.cbrt(Y) - 16, 24389 / 27 * Y)
+
+
+@pytest.mark.parametrize(
+    ("style", "colours"),
+    [
+        ("pytes.thermal", plotting.THERMAL),
+        ("pytes.thermal_dark", plotting.THERMAL_DARK),
+    ],
+)
+def test_colour_cycle_styles(style, colours):
+    # The style sheets shipped in the package hold the same colours as the constants
+    with matplotlib.pyplot.style.context(style):
+        cycle = matplotlib.rcParams["axes.prop_cycle"].by_key()["color"]
+    assert [matplotlib.colors.to_hex(c).upper() for c in cycle] == list(colours)
+
+
+def test_colours_are_not_the_default():
+    # Importing pytes.plotting registers names only: matplotlib's defaults are unchanged
+    default = matplotlib.rcParamsDefault["axes.prop_cycle"]
+    assert matplotlib.rcParams["axes.prop_cycle"] == default
+
+
+@pytest.mark.parametrize("name", plotting.COLOURMAPS)
+def test_colourmaps_are_registered(name):
+    colourmap = matplotlib.colormaps[name]
+    assert colourmap.N == 256
+    reversed_colourmap = matplotlib.colormaps[f"{name}_r"]
+    np.testing.assert_array_equal(reversed_colourmap(0.0), colourmap(1.0))
+    plotting.register_colourmaps()  # again: no error, same map
+    assert matplotlib.colormaps[name] == colourmap
+
+
+def test_ember_lightness_rises_through_the_brand_orange():
+    rgb = matplotlib.colormaps["pytes.ember"](np.linspace(0, 1, 256))[:, :3]
+    assert np.all(np.diff(_lightness(rgb)) > 0)
+    brand = matplotlib.colors.to_rgb(plotting.THERMAL[0])
+    assert np.min(np.linalg.norm(rgb - brand, axis=1)) < 0.01
+
+
+def test_thaw_lightness_peaks_at_the_centre():
+    # Lightest in the middle and falling steadily to both ends, about symmetrically. The map
+    # is symmetric to 2.4 in CAM02-UCS lightness J' (make_colourmaps.py); CIELAB L*, used
+    # here to avoid a colorspacious dependency, rates the saturated orange half lighter
+    L = _lightness(matplotlib.colormaps["pytes.thaw"](np.linspace(0, 1, 256))[:, :3])
+    assert np.all(np.diff(L[:128]) > 0)
+    assert np.all(np.diff(L[128:]) < 0)
+    assert np.max(np.abs(L - L[::-1])) < 6.5
+
+
+def test_import_pytes_does_not_import_matplotlib():
+    code = "import sys, pytes; assert 'matplotlib' not in sys.modules"
+    subprocess.run([sys.executable, "-c", code], check=True)

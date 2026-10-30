@@ -16,5 +16,6 @@ heat_transfer_coefficient
 composing_models
 validation
 advection_scheme
+plot_colours
 design_study
 ```

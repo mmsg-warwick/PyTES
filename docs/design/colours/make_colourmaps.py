@@ -2,7 +2,8 @@
 # Generate the PyTES colourmaps
 #
 """
-Generate the PyTES colourmaps (DESIGN D15) as 256 sRGB triplets in [0, 1] each:
+Generate the PyTES colourmaps (DESIGN D15) as 256 sRGB triplets in [0, 1] each, into
+``src/pytes/colourmaps/``, from where :mod:`pytes.plotting` registers them with matplotlib:
 
 - ``ember.csv``, sequential: from a dark brown near the "TES" ink of the wordmark
   (#3A1A0A), through the brand orange (#E8590C), to cream.
@@ -138,9 +139,11 @@ def thaw(n=N_COLOURS):
     return to_rgb(np.vstack([blue[::-1], orange]))
 
 
+OUTPUT = Path(__file__).parents[3] / "src" / "pytes" / "colourmaps"
+
 if __name__ == "__main__":
     for name, rgb in {"ember": ember(), "thaw": thaw()}.items():
-        file = Path(__file__).with_name(f"{name}.csv")
+        file = OUTPUT / f"{name}.csv"
         lines = [", ".join(f"{c:.6f}" for c in colour) for colour in rgb]
         file.write_text("red, green, blue\n" + "\n".join(lines) + "\n")
         print(f"wrote {len(lines)} colours to {file}")

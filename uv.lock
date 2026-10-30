@@ -3192,7 +3192,7 @@ notebooks = [
 [package.metadata]
 requires-dist = [
     { name = "ipywidgets", marker = "extra == 'plot'" },
-    { name = "matplotlib", marker = "extra == 'plot'" },
+    { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.7" },
     { name = "numpy" },
     { name = "pybamm", specifier = ">=26.9" },
     { name = "scipy" },

@@ -13,9 +13,59 @@ the outputs every model provides, so they work for any model and family, and nee
 - :func:`plot_fluid_profiles`: the fluid temperature along the flow path at given times.
 
 Each returns the figure and its axes, for further styling.
+
+The PyTES plot colours (DESIGN D15) are available, not yet the default:
+
+- the colour cycles :data:`THERMAL` and :data:`THERMAL_DARK`, also as the matplotlib
+  styles ``"pytes.thermal"`` and ``"pytes.thermal_dark"``
+  (``plt.style.use("pytes.thermal")``);
+- the colourmaps ``"pytes.ember"`` (sequential) and ``"pytes.thaw"`` (diverging), and their
+  reversals ``"pytes.ember_r"`` and ``"pytes.thaw_r"``, registered with matplotlib when this
+  module is imported (``cmap="pytes.ember"``).
 """
 
+import importlib.resources
+
 import numpy as np
+
+#: The colour cycle "PyTES Thermal", for light backgrounds (style ``"pytes.thermal"``)
+THERMAL = ("#E8590C", "#1F4E9C", "#14A08A", "#F0A930", "#A23B72", "#88C7F0", "#36312E")
+
+#: The colour cycle "PyTES Thermal (dark)", for dark backgrounds (style
+#: ``"pytes.thermal_dark"``)
+THERMAL_DARK = (
+    "#F76707",
+    "#6785F9",
+    "#04B68B",
+    "#FFC66C",
+    "#B06C99",
+    "#B2D5F8",
+    "#D9D0C7",
+)
+
+#: The colourmaps registered with matplotlib, each also reversed (name ending in ``_r``)
+COLOURMAPS = ("pytes.ember", "pytes.thaw")
+
+
+def register_colourmaps():
+    """
+    Register the PyTES colourmaps (:data:`COLOURMAPS`) and their reversals with matplotlib.
+
+    Done when :mod:`pytes.plotting` is imported, if matplotlib is installed; registering
+    again does nothing.
+    """
+    import matplotlib
+    from matplotlib.colors import ListedColormap
+
+    data = importlib.resources.files("pytes") / "colourmaps"
+    for name in COLOURMAPS:
+        if name in matplotlib.colormaps:
+            continue
+        with (data / f"{name.removeprefix('pytes.')}.csv").open() as file:
+            colours = np.loadtxt(file, delimiter=",", skiprows=1)
+        colourmap = ListedColormap(colours, name=name)
+        matplotlib.colormaps.register(colourmap)
+        matplotlib.colormaps.register(colourmap.reversed())
 
 
 def _pyplot():
@@ -161,3 +211,11 @@ def plot_fluid_profiles(solution, times, label=None):
     ax.set_title(label or solution.all_models[0].name)
     ax.legend(fontsize="small")
     return fig, ax
+
+
+try:
+    import matplotlib  # noqa: F401
+except ImportError:  # pragma: no cover - depends on the environment
+    pass
+else:
+    register_colourmaps()
