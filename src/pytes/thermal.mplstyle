@@ -1,0 +1,3 @@
+# PyTES Thermal (DESIGN D15): the PyTES colour cycle, for light backgrounds.
+# Use with plt.style.use("pytes.thermal"); the colours are pytes.plotting.THERMAL.
+axes.prop_cycle: cycler("color", ["E8590C", "1F4E9C", "14A08A", "F0A930", "A23B72", "88C7F0", "36312E"])

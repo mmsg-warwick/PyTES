@@ -1,0 +1,4 @@
+# PyTES Thermal (dark) (DESIGN D15): the PyTES colour cycle, for dark backgrounds.
+# Use with plt.style.use("pytes.thermal_dark"), after a dark style such as
+# "dark_background"; the colours are pytes.plotting.THERMAL_DARK.
+axes.prop_cycle: cycler("color", ["F76707", "6785F9", "04B68B", "FFC66C", "B06C99", "B2D5F8", "D9D0C7"])

@@ -32,8 +32,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# pybamm.dynamic_plot and QuickPlot sliders in notebooks need ipywidgets
-plot = ["matplotlib", "ipywidgets"]
+# pybamm.dynamic_plot and QuickPlot sliders in notebooks need ipywidgets; matplotlib 3.7
+# finds the styles "pytes.thermal" and "pytes.thermal_dark" inside the package
+plot = ["matplotlib>=3.7", "ipywidgets"]
 
 [dependency-groups]
 dev = [

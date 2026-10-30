@@ -10,3 +10,55 @@ html[data-theme="dark"] {
   --pst-color-secondary: #FFA94D;
   --pst-color-link-hover: #FFA94D;
 }
+
+/* Colour swatches and colourmap bars on the plot colours page (docs/plot_colours.md) */
+.pytes-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1.25rem;
+}
+.pytes-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 6.5rem;
+  font-size: 0.8rem;
+}
+.pytes-swatch span:first-child {
+  height: 2.25rem;
+  border-radius: 0.3rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.pytes-swatch code {
+  font-size: 0.8rem;
+}
+.pytes-swatches.on-dark {
+  padding: 0.75rem;
+  border-radius: 0.4rem;
+  background: #14181e;
+  color: #e6e6e6;
+}
+.pytes-colourmap {
+  height: 2rem;
+  margin: 0.5rem 0 0.25rem;
+  border-radius: 0.3rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.pytes-colourmap-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  font-size: 0.8rem;
+}
+
+/* A square of the colour before inline hex colours (docs/_static/colour-chips.js) */
+.pytes-colour-chip {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 0.3em;
+  vertical-align: -0.05em;
+  border-radius: 0.15em;
+  box-shadow: 0 0 0 1px var(--pst-color-border, rgba(0, 0, 0, 0.25));
+}
