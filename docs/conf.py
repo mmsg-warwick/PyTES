@@ -113,6 +113,8 @@ html_title = f"PyTES {release}"
 html_static_path = ["_static"]
 # The logo's colours
 html_css_files = ["pytes.css"]
+# A square of the colour before inline hex colours, such as `#E8590C`
+html_js_files = ["colour-chips.js"]
 html_favicon = "_static/favicon.svg"
 html_theme_options = {
     "logo": {
