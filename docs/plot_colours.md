@@ -13,7 +13,7 @@ They are available now but are **not yet the default**: a plot uses matplotlib's
 
 ```python
 import matplotlib.pyplot as plt
-from matplotlib.colors import TwoSlopeNorm
+from matplotlib.colors import CenteredNorm
 
 import pytes.plotting  # registers the colourmaps with matplotlib
 
@@ -23,7 +23,7 @@ with plt.style.context(["dark_background", "pytes.thermal_dark"]):
     ...  # a figure for a dark background
 
 ax.pcolormesh(t, z, T, cmap="pytes.ember")
-ax.pcolormesh(t, z, T, cmap="pytes.thaw", norm=TwoSlopeNorm(vcenter=T_melt))
+ax.pcolormesh(t, z, T, cmap="pytes.thaw", norm=CenteredNorm(vcenter=T_melt))
 ```
 
 The colours are also {data}`pytes.plotting.THERMAL` and
@@ -150,7 +150,12 @@ Thaw is diverging: dark navy, through the deep blue of the colour cycle, to a ne
 centre, then through the PyTES orange to a dark red-brown. It is meant for a field
 centred on a reference value, such as the phase-change temperature, so that the pale band
 marks the melting front, with colder fluid in blue and hotter in orange. Centre it with
-matplotlib's {class}`~matplotlib.colors.TwoSlopeNorm`, as above.
+matplotlib's {class}`~matplotlib.colors.CenteredNorm`, as above, which makes the range
+symmetric about the reference, so that a kelvin is the same step in colour on both sides.
+{class}`~matplotlib.colors.TwoSlopeNorm` instead stretches each half over its own range:
+with fluid from 28 K below the reference to 10 K above it, a kelvin would look 2.8 times
+bigger above the reference than below, undoing the map's equal steps. Use it only when
+the two sides are not comparable, for example when they are in different units.
 
 Its lightness falls steadily from the centre to both ends, and colours equally far from
 the centre match in lightness to within 2.4 CAM02-UCS units, so neither side looks
