@@ -26,3 +26,4 @@ docs/_build/
 docs/examples/*.ipynb
 docs/changelog.md
 docs/contributing.md
+docs/parameter_values.rst

@@ -16,6 +16,8 @@ ordinary PyBaMM model, so PyBaMM's simulations, solvers and plots work on it dir
 
 - [**Getting started**](getting_started.md): install PyTES and run a first model.
 - [**Examples**](examples/index.md): notebooks for each capability.
+- [**Parameter values**](parameter_values.rst): the parameter sets and layers PyTES
+  provides, with their sources.
 - [**Plot colours**](plot_colours.md): the PyTES colour cycles and colourmaps, and why.
 - [**API reference**](api/index.rst): models, submodels, experiments and the toolkit.
 - [**Design**](design/index.md): the decisions behind PyTES and the model contract.
@@ -26,6 +28,7 @@ ordinary PyBaMM model, so PyBaMM's simulations, solvers and plots work on it dir
 
 getting_started
 examples/index
+parameter_values
 plot_colours
 api/index
 design/index

@@ -1,0 +1,1 @@
+A new documentation page, Parameter values, lists every parameter set and layer PyTES provides, with its values, its source and, for the materials and fluids, the temperature at which the values were taken. It is generated from the code at each build, so it always matches the values the models use.

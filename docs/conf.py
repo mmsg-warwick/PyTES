@@ -8,11 +8,16 @@ Build locally with::
 
 import re
 import shutil
+import sys
 from pathlib import Path
 
 import pytes
 
 DOCS = Path(__file__).parent
+sys.path.insert(0, str(DOCS))
+
+import parameter_values  # noqa: E402
+
 ROOT = DOCS.parent
 
 # -- Project ------------------------------------------------------------------------------
@@ -83,6 +88,12 @@ def _site_link(match):
 for _source, _page in _PAGES.items():
     _text = (ROOT / _source).read_text(encoding="utf-8")
     (DOCS / _page).write_text(_LINK.sub(_site_link, _text), encoding="utf-8")
+
+# -- Parameter values ---------------------------------------------------------------------
+
+# Generated at each build (and gitignored) from the registered parameter layers and sets, so
+# that the page shows the values the code holds
+parameter_values.write(DOCS / "parameter_values.rst")
 
 # -- API reference ------------------------------------------------------------------------
 
