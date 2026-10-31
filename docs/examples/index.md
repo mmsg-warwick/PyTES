@@ -1,11 +1,21 @@
 # Examples
 
-Each capability of PyTES has a short notebook. The notebooks are in the
-[`examples/`](https://github.com/mmsg-warwick/PyTES/tree/main/examples) folder of the
-repository; download them to run them yourself.
+New to PyTES? Start with the [getting started tutorials](getting_started/index.md), a
+series of short notebooks that each show one thing.
+
+The other notebooks each show one capability of PyTES in more depth. All the notebooks are
+in the [`examples/`](https://github.com/mmsg-warwick/PyTES/tree/main/examples) folder of
+the repository; download them to run them yourself.
 
 ```{toctree}
 :maxdepth: 1
+
+getting_started/index
+```
+
+```{toctree}
+:maxdepth: 1
+:caption: Capabilities
 
 finned_tube_models
 packed_bed_models

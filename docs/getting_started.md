@@ -57,6 +57,9 @@ The full list of outputs and their definitions is in the [model contract](design
 
 ## Next steps
 
+- Work through the [getting started tutorials](examples/getting_started/index.md): six
+  short notebooks on running models, the two families, parameter values, plotting and
+  experiments.
 - Operate a battery through charge, rest and discharge steps with
   {func}`pytes.experiments.run_experiment` ([Running experiments](examples/experiments.ipynb)).
 - Build parameter sets from layers and swap a PCM
