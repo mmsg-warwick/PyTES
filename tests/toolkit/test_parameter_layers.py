@@ -103,6 +103,23 @@ def test_registered_layers_state_their_sources(kind, name):
         )
 
 
+@pytest.mark.parametrize(
+    "kind, name",
+    [
+        param
+        for param in registered_layers()
+        if param.values[0] in ("heat_transfer_fluid", "pcm", "metal")
+    ],
+)
+def test_material_layers_state_their_temperature(kind, name):
+    """
+    A material or fluid layer records the temperature at which its constant values were
+    taken, on a line of its own (shown on the Parameter values page of the documentation).
+    """
+    doc = inspect.getdoc(layers.LAYERS[kind][name])
+    assert any(line.startswith("Taken at: ") for line in doc.splitlines())
+
+
 @pytest.mark.parametrize("set_name", layers.SETS)
 def test_named_sets_are_the_family_defaults(set_name):
     family, parameter_set = FAMILY_SETS[set_name]
