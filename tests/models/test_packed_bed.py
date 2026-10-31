@@ -57,6 +57,43 @@ def test_per_area_totals(charge):
         )
 
 
+def _capsule_surface_per_length():
+    p = get_parameter_values()
+    eps, R = p["Bed porosity"], p["Capsule radius [m]"]
+    return 3 * (1 - eps) / R * p["Bed cross-sectional area [m2]"]
+
+
+def test_fluid_takes_the_flux_law_heat():
+    # The heat the fluid gives up (the ledger, DESIGN D6) is the surface flux law's flux
+    # over the capsule surface, also while the capsule surface melts: the default PCM melts
+    # at a sharp point and its conductivity drops from 0.4 to 0.15 W.m-1.K-1 (F-056)
+    model = pytes.PackedBedModel()
+    t = np.linspace(0, 1800, 61)
+    solution = pybamm.Simulation(
+        model, var_pts=var_pts(model, {"r": 20, "z": 10})
+    ).solve([0, t[-1]], t_interp=t)
+    flux = solution["Phase-change material boundary heat flux [W.m-2]"].entries
+    gain = solution["Heat transfer fluid heat gain per unit length [W.m-1]"].entries
+    expected = -flux * _capsule_surface_per_length()
+    np.testing.assert_allclose(
+        gain, expected, rtol=1e-6, atol=1e-6 * np.abs(gain).max()
+    )
+
+
+def test_charge_heats_the_fluid_monotonically():
+    # With a constant inlet temperature, the fluid at every height only warms. A storage
+    # that took less than the flux law's heat while its surface melted made the fluid
+    # overshoot, then cool by 1 K to 2 K (F-056)
+    model = pytes.PackedBedModel()
+    t = np.linspace(0, 160 * 60, 321)
+    solution = pybamm.Simulation(model).solve([0, t[-1]], t_interp=t)
+    fluid = solution["Heat transfer fluid temperature [K]"]
+    length = get_parameter_values()["Bed length [m]"]
+    for fraction in [0.25, 0.5, 0.75, 1]:
+        T = fluid(t=t, z=fraction * length)
+        assert np.max(np.maximum.accumulate(T) - T) < 0.1, fraction
+
+
 def test_nallusamy_flow_is_about_2_litres_per_minute():
     values = get_parameter_values("Nallusamy2007")
     litres_per_minute = values["Mass flow rate [kg.s-1]"] / 1000 * 6e4
