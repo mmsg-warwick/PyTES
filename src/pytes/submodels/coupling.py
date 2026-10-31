@@ -34,9 +34,9 @@ class WallCoupling(BaseSubModel):
     boundaries, computed from the storage's own discrete energy balance: minus the integral
     of its conduction heating rate over the storage cross-section (the ledger, DESIGN D6).
     This telescopes to the discrete flux at the wall, so energy is conserved exactly,
-    whatever the flux law or the conductivity. (The flux times the perimeter differs
-    slightly, as the storage flux uses the conductivity at the cell face rather than at the
-    surface.)
+    whatever the flux law or the conductivity. It is also the flux times the wall area: the
+    storage's wall condition uses the conductivity on the wall face, as its conduction does
+    (F-056).
 
     The coupling also provides the flux law's own variables (e.g. "Heat transfer
     coefficient [W.m-2.K-1]", see :meth:`pytes.submodels.SurfaceFluxLaw.variables`), and

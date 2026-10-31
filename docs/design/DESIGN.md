@@ -208,7 +208,12 @@ never from a separately discretised flux. This applies to **every** coupling, fl
 and storage-storage (maintainer, 2026-10-14). Rationale: PyBaMM imposes a Neumann condition on
 the gradient, so the flux the finite volumes use is `k_face / k_surface` times the one
 requested, and with a temperature (Dirichlet) condition it is whatever the scheme computes;
-the ledger is exact in both cases, for any conductivity. In a bed, the film resistance works
+the ledger is exact in both cases, for any conductivity. Exact conservation does not make the
+flux right, though: with `k_surface` the conductivity at the extrapolated wall enthalpy, the
+factor reached 5 while a PCM by the wall melted, and the packed bed took a fifth of the flux
+law's heat (F-056). So a storage's heat-flux condition divides by `k_face` itself (the node
+values of `k` extrapolated to the wall, as `k grad(T)` uses), making the factor 1: the flux
+law's flux enters, and the ledger still counts it exactly. In a bed, the film resistance works
 as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no extra unknown
 (F-014).
 - **General surface flux law.** Because the ledger makes conservation independent of how the
@@ -509,6 +514,28 @@ chosen to stay readable with colour-vision deficiency:
 - Workarounds only in `compat`, each tagged with the upstream issue and removal condition.
 - Support PyBaMM releases from the last 3 months (CalVer). CI against the latest release is
   blocking, against `main` non-blocking.
+- **Shims across the supported range** (proposed, for the maintainer's review; issue #45).
+  A fix PyTES makes upstream reaches the oldest supported release only about 3 months
+  after it is released, so a shim stays until then. To keep that cheap and its removal
+  certain:
+  - **Each shim defers to PyBaMM's fix where it exists.** It detects the fix (the new
+    attribute or argument, or a tiny probe of the behaviour), not the version number,
+    which misleads on PyBaMM `main` (development versions) and with backports. On a
+    PyBaMM with the fix, PyTES runs PyBaMM's code; on an older one, the shim. The two
+    must give the same results, so that results do not depend on the installed PyBaMM:
+    the regression and energy conservation tests run on both.
+  - **Each shim declares its upstream issue and, once known, the release with the fix**
+    (`fixed_in`), in a registry in `compat/__init__.py`, beside the prose removal
+    condition. A test reads the floor from `pyproject.toml` and fails when it has reached a
+    shim's `fixed_in`, naming the shim to remove.
+  - **CI runs the oldest supported PyBaMM release as well as the latest**, both blocking,
+    so both paths of every shim run on every pull request (issue #8, which this extends).
+  - **At each PyTES release** the floor rises to the oldest PyBaMM release of the last 3
+    months; the shims the test then names are removed in the same pull request.
+  - **New upstream features** that PyTES uses (not fixes) follow the same pattern: PyTES
+    uses them where available, without raising the floor, and falls back on older PyBaMM.
+    For example, the plot-style hook (#43): an entry point that an older PyBaMM does not
+    read does nothing, so older releases keep the opt-in styles.
 - Support every Python version PyBaMM supports (maintainer, 2026-10-16; today 3.10 to
   3.15), tested in CI, all blocking. Platforms (maintainer, 2026-10-17): Linux is the
   reference, with every Python version, coverage, notebooks and PyBaMM `main`; macOS and

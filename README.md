@@ -77,6 +77,10 @@ common conformance suite.
 
 ## 📓 Examples
 
+New to PyTES? Start with the
+[getting started tutorials](https://github.com/mmsg-warwick/PyTES/tree/main/examples/getting_started),
+six short notebooks that each show one thing.
+
 Notebooks in [`examples/`](https://github.com/mmsg-warwick/PyTES/tree/main/examples): the finned-tube and
 packed-bed models, the lumped capsule, experiments, composing models, analytical validation, and a design study
 comparing the two families. They are also
