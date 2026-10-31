@@ -268,14 +268,17 @@ class EnthalpyStorage(BaseSubModel):
             dHdt = dHdt + self.coupled(
                 f"{label} heat source [W.m-3]", geometry.primary_domain
             )
-        H_surf = pybamm.boundary_value(H, geometry.inner)
 
         self.rhs = {H: dHdt}
         if self.inner_condition == "heat flux":
             heat_flux = self.coupled(
                 f"{label} boundary heat flux [W.m-2]", geometry.boundary_domain
             )
-            k_surf = material.k(H_surf, self.internal_states)
+            # The conductivity that ``k * grad(T)`` uses on the wall face, the node values
+            # extrapolated to the boundary, so that exactly ``heat_flux`` enters. The
+            # conductivity at the extrapolated enthalpy differs from it while the cells
+            # by the wall change phase, by a factor of 5 in the default packed bed (F-056)
+            k_surf = pybamm.boundary_value(k, geometry.inner)
             inner = (geometry.gradient_from_heat_flux(heat_flux, k_surf), "Neumann")
         else:
             T_b = self.coupled(

@@ -27,3 +27,4 @@ docs/examples/*.ipynb
 docs/examples/getting_started/*.ipynb
 docs/changelog.md
 docs/contributing.md
+docs/parameter_values.rst
