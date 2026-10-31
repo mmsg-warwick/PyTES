@@ -112,6 +112,9 @@ jobs:
           ref: main
           path: pybamm-main
           submodules: recursive
+          # pybamm's version comes from its git tags: the history without file contents
+          fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.3.2
       # Building SUNDIALS and SuiteSparse takes most of the time. They are built into
@@ -132,8 +135,10 @@ jobs:
       # The compilers and BLAS that PyBaMM's tests install
       - run: sudo apt-get update && sudo apt-get install -y gfortran libopenblas-dev
       - run: uv sync
+      # Without the workspace sources: through them pybamm pulls in pybammsolvers as an
+      # editable install, which rebuilds itself on import, without its build tools
       - run: >-
-          uv pip install ./pybamm-main/packages/pybammsolvers
+          uv pip install --no-sources ./pybamm-main/packages/pybammsolvers
           ./pybamm-main/packages/pybamm
       - run: uv run --no-sync pytest
 
