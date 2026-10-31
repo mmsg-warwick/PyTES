@@ -1,0 +1,32 @@
+% The sharp-front model: the homogenised storage in (z, y) above the fluid in the tube
+\documentclass[tikz, border=4pt]{standalone}
+\input{pytes-diagrams}
+\begin{document}
+\begin{tikzpicture}
+  \def\L{7.0}
+  \def\Rf{0.7}
+  \def\D{2.8}
+  \draw[fluid] (0, 0) rectangle (\L, \Rf);
+  \draw[composite] (0, \Rf) rectangle (\L, \Rf + \D);
+  \draw[outline, line width=1.1pt] (0, \Rf) -- (\L, \Rf);
+  \draw[symmetry] (-0.3, 0) -- (\L + 0.3, 0);
+  \node[note, align=center] at (\L/2, \Rf + 0.62*\D)
+    {PCM and fins homogenised into one material,\\conduction in $y$ at each $z$};
+  % Conduction in y at a few positions along the tube
+  \foreach \zc in {1.0, 2.6, 4.4, 6.0} {
+    \draw[heat, <->] (\zc, \Rf + 0.15) -- (\zc, \Rf + 0.95);
+  }
+  \draw[flow] (0.9, \Rf/2) -- (2.9, \Rf/2) node[label, right, text=pytesblue] {$h_f(z, t)$};
+  % Boundary conditions
+  \node[note, anchor=south] at (\L/2, \Rf + \D + 0.05) {no flux, $\partial T/\partial y = 0$};
+  \node[note, anchor=west, align=left, text=pytesorange] at (\L + 0.3, \Rf)
+    {wall, $y = R_f$:\\$-k\,\partial T/\partial y = h_c (T_f - T_s)$};
+  \node[note, anchor=east, align=right] at (-0.4, \Rf/2)
+    {inlet:\\$h_f = h(T_\mathrm{in})$};
+  \node[note, anchor=west] at (\L + 0.3, 0) {tube axis};
+  % Coordinates
+  \draw[axis] (0, -0.45) -- (1.2, -0.45) node[label, right] {$z$};
+  \draw[axis] (\L + 0.4, \Rf + 1.2) -- (\L + 0.4, \Rf + 2.4) node[label, right] {$y$};
+  \draw[dimension] (0, -0.95) -- (\L, -0.95) node[label, midway, fill=white, inner sep=1.5pt] {$Z$};
+\end{tikzpicture}
+\end{document}

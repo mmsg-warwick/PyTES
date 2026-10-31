@@ -1,0 +1,40 @@
+% Shared preamble of the PyTES model diagrams: packages, colours and styles.
+% Each diagram is a standalone document that inputs this file; build them with build.py.
+\usepackage{amsmath}
+\usepackage{bm}
+\usetikzlibrary{arrows.meta, calc, decorations.pathreplacing, patterns, positioning}
+
+% The PyTES Thermal colour cycle (pytes.plotting.THERMAL) and tints of it
+\definecolor{pytesorange}{HTML}{E8590C}
+\definecolor{pytesblue}{HTML}{1F4E9C}
+\definecolor{pytesteal}{HTML}{14A08A}
+\definecolor{pytesamber}{HTML}{F0A930}
+\definecolor{pytesplum}{HTML}{A23B72}
+\definecolor{pytessky}{HTML}{88C7F0}
+\definecolor{pytesink}{HTML}{36312E}
+
+% Materials: the heat transfer fluid, the PCM, the metal (fins and tubes)
+\colorlet{fluidfill}{pytessky!75}
+\colorlet{pcmfill}{pytesamber!55}
+\colorlet{liquidfill}{pytesorange!60}
+\colorlet{metalfill}{pytesink!45}
+\colorlet{compositefill}{pcmfill!85!metalfill}
+
+\tikzset{
+  >={Stealth[length=2.2mm]},
+  every picture/.style={line join=round, line cap=round, font=\small},
+  outline/.style={draw=pytesink, line width=0.6pt},
+  fluid/.style={outline, fill=fluidfill},
+  pcm/.style={outline, fill=pcmfill},
+  liquid/.style={outline, fill=liquidfill},
+  metal/.style={outline, fill=metalfill},
+  composite/.style={outline, fill=compositefill},
+  flow/.style={->, draw=pytesblue, line width=1.2pt},
+  heat/.style={->, draw=pytesorange, line width=1.1pt},
+  axis/.style={->, draw=pytesink, line width=0.7pt},
+  dimension/.style={<->, >={Stealth[length=1.6mm]}, draw=pytesink, line width=0.5pt},
+  guide/.style={draw=pytesink!60, line width=0.4pt, dashed},
+  symmetry/.style={draw=pytesink, line width=0.5pt, dash dot},
+  label/.style={text=pytesink, font=\small},
+  note/.style={text=pytesink, font=\footnotesize, align=center},
+}

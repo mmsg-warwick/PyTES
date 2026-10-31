@@ -62,3 +62,12 @@ html[data-theme="dark"] {
   border-radius: 0.15em;
   box-shadow: 0 0 0 1px var(--pst-color-border, rgba(0, 0, 0, 0.25));
 }
+
+/* Model diagrams (docs/models/diagrams) on a light card in both themes, undimmed in dark
+   mode (the dark-light class opts them out of the theme's filter) */
+.bd-content img.pytes-diagram {
+  background-color: #ffffff;
+  padding: 0.75rem;
+  border-radius: 0.4rem;
+  box-shadow: 0 0 0 1px var(--pst-color-border, rgba(0, 0, 0, 0.12));
+}

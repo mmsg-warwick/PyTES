@@ -31,15 +31,16 @@ your own to `pybamm.Simulation` to change them.
 
 | Family | Models | Storage |
 |---|---|---|
-| Finned tube | {class}`~pytes.SharpFrontModel`, {class}`~pytes.MushModel` | PCM around tubes with metal fins (homogenised or resolved) |
-| Packed bed | {class}`~pytes.PackedBedModel` | a bed of spherical PCM capsules |
+| [Finned tube](models/finned_tube.md) | {class}`~pytes.SharpFrontModel`, {class}`~pytes.MushModel` | PCM around tubes with metal fins (homogenised or resolved) |
+| [Packed bed](models/packed_bed.md) | {class}`~pytes.PackedBedModel` | a bed of spherical PCM capsules |
 
 Every model takes `options={"storage along flow path": "averaged"}` for a faster variant
 with one storage cross-section standing for the average along the flow, and the packed bed
 takes `options={"storage element": "lumped"}` for capsules at a uniform temperature
 ([Lumped capsule](examples/lumped_capsule.ipynb)). Each model is a fixed composition of
 submodels (a fluid, a storage and a coupling, plus the device-level energy), listed in
-`model.submodels`; `model.print_submodel_info()` describes them.
+`model.submodels`; `model.print_submodel_info()` describes them. The
+[model pages](models/index.md) give the geometry and the equations of each family.
 
 ## Conventions
 
