@@ -4,7 +4,8 @@ A finned-tube heat battery is a block of phase-change material (PCM) crossed by 
 parallel tubes that carry the heat transfer fluid. Thin metal fins, annular discs around
 each tube, carry the heat into the PCM, which conducts poorly on its own. The family has
 two models: the {class}`~pytes.SharpFrontModel`, which homogenises the fins and the PCM,
-and the {class}`~pytes.MushModel`, which resolves them separately.
+and the {class}`~pytes.MushModel`, which resolves them separately. Both are derived, by
+homogenisation, in [Luckins and Brosa Planella (2025)](https://doi.org/10.1098/rspa.2025.0660).
 
 ## Geometry
 
@@ -94,9 +95,10 @@ a fin, along the fin ($y$), and from the fin into the PCM on either side ($x$). 
 half a fin and half a gap are modelled.
 ```
 
-The mush model resolves the fins and the PCM separately, at each position $z$ along the
-tube. Heat flows from the fluid into the root of each fin, radially along the fin, and from
-the fin into the PCM between it and the next fin. The PCM uses the properties of the PCM on
+The mush model ([Luckins and Brosa Planella, 2025](https://doi.org/10.1098/rspa.2025.0660))
+resolves the fins and the PCM separately, at each position $z$ along the tube. Heat flows
+from the fluid into the root of each fin, radially along the fin, and from the fin into the
+PCM between it and the next fin. The PCM uses the properties of the PCM on
 its own. By symmetry, half the gap is modelled, from the face of the fin
 ($x = d_c / 2$) to the midplane ($x = d_m / 2$).
 
@@ -155,4 +157,8 @@ two-dimensional ($x$, $y$).
 - [Finned-tube models and their submodels](../examples/finned_tube_models.ipynb)
 - [Heat transfer coefficient](../examples/heat_transfer_coefficient.ipynb)
 
-% TODO(maintainer): add the references for the origin of the sharp-front and mush models.
+## References
+
+- E. K. Luckins and F. Brosa Planella, Homogenized models for composite phase-change
+  materials, *Proceedings of the Royal Society A* **481**, 20250660 (2025),
+  [doi:10.1098/rspa.2025.0660](https://doi.org/10.1098/rspa.2025.0660).

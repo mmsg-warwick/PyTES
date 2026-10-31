@@ -45,7 +45,11 @@ One capsule, melting from its surface inwards. Heat enters through the surface a
 conducted radially.
 ```
 
-At each height $z$, heat is conducted radially in a capsule:
+The formulation follows
+[Brosa Planella (2025)](https://doi.org/10.1016/j.ijheatmasstransfer.2024.126533), which
+gives the details. Resolved along the bed, it is also known as the concentric dispersion
+model ([Ismail and Henríquez, 2002](https://doi.org/10.1016/S1359-4311(02)00080-7)). At each
+height $z$, heat is conducted radially in a capsule:
 
 $$
 \frac{\partial H}{\partial t} = \frac{1}{r^2} \frac{\partial}{\partial r}
@@ -108,3 +112,14 @@ with a heat transfer oil at 180 °C. See {mod}`pytes.parameter_layers`.
   Nallusamy et al. (2007)
 - [Lumped capsule](../examples/lumped_capsule.ipynb)
 - [Validation](../examples/validation.ipynb), against Schumann's analytical solution
+
+## References
+
+- F. Brosa Planella, A simple model for latent thermal energy storage systems with
+  encapsulated phase-change material, *International Journal of Heat and Mass Transfer*
+  **239**, 126533 (2025),
+  [doi:10.1016/j.ijheatmasstransfer.2024.126533](https://doi.org/10.1016/j.ijheatmasstransfer.2024.126533).
+- K. A. R. Ismail and J. R. Henríquez, Numerical and experimental study of spherical
+  capsules packed bed latent heat storage system, *Applied Thermal Engineering* **22**,
+  1705–1716 (2002),
+  [doi:10.1016/S1359-4311(02)00080-7](https://doi.org/10.1016/S1359-4311(02)00080-7).
