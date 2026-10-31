@@ -208,7 +208,12 @@ never from a separately discretised flux. This applies to **every** coupling, fl
 and storage-storage (maintainer, 2026-10-14). Rationale: PyBaMM imposes a Neumann condition on
 the gradient, so the flux the finite volumes use is `k_face / k_surface` times the one
 requested, and with a temperature (Dirichlet) condition it is whatever the scheme computes;
-the ledger is exact in both cases, for any conductivity. In a bed, the film resistance works
+the ledger is exact in both cases, for any conductivity. Exact conservation does not make the
+flux right, though: with `k_surface` the conductivity at the extrapolated wall enthalpy, the
+factor reached 5 while a PCM by the wall melted, and the packed bed took a fifth of the flux
+law's heat (F-056). So a storage's heat-flux condition divides by `k_face` itself (the node
+values of `k` extrapolated to the wall, as `k grad(T)` uses), making the factor 1: the flux
+law's flux enters, and the ledger still counts it exactly. In a bed, the film resistance works
 as at the finned-tube wall: the flux uses the boundary value of `T(H)`, with no extra unknown
 (F-014).
 - **General surface flux law.** Because the ledger makes conservation independent of how the
