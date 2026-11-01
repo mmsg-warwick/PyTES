@@ -1,11 +1,14 @@
 """
 Resolving :class:`pybamm.CoupledVariable` when a model is built.
 
-Upstream: no issue filed yet (draft in docs/upstream). PyBaMM resolves coupled variables in
-the model's equations only when the discretisation is created with
+Upstream: no issue filed yet for the default (draft in docs/upstream); it needs
+pybamm-team/PyBaMM#6001 fixed first (PR #6002). PyBaMM resolves coupled variables in the
+model's equations only when the discretisation is created with
 ``resolve_coupled_variables=True`` (in :class:`pybamm.Simulation`, through
 ``discretisation_kwargs``); the default (``False``) fails with "CoupledVariable ... was not
-resolved before discretisation".
+resolved before discretisation". With the option on, #6001 is that a coupled variable in a
+boundary condition is not resolved, and that ``inplace=False`` still modifies the input
+model.
 
 Workaround: PyTES models resolve every coupled variable when they are built, so the finished
 model contains none and works with a default :class:`pybamm.Simulation`, solvers and PyBOP.
