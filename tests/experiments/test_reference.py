@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 import pytes
-from pytes.experiments import Experiment, run_experiment, step_description
+from pytes.experiments import Experiment, run_experiment
 from pytes.experiments import step as s
 
 #: Outputs of PyTES on the default set, from tests/data/make_reference.py. Before F-048
@@ -22,9 +22,8 @@ def test_matches_reference_experiment():
         s.Power(900, inlet_temperature=T_COLD, duration=300, period=10),
         s.Power(1200, mass_flow_rate=MDOT, duration=300, period=10),
     ]
-    solution = run_experiment(
-        model, Experiment(steps), var_pts={model.y: 4, model.z: 5}
-    )
+    experiment = Experiment(steps)
+    solution = run_experiment(model, experiment, var_pts={model.y: 4, model.z: 5})
     np.testing.assert_allclose(solution.t, REFERENCE["experiment/t"])
     names = [
         "Outlet temperature [K]",
@@ -37,8 +36,13 @@ def test_matches_reference_experiment():
         np.testing.assert_allclose(
             solution[name].entries, expected, rtol=0, atol=1e-6 * np.max(abs(expected))
         )
-    descriptions = [step_description(st) for c in solution.cycles for st in c.steps]
-    assert descriptions == [st.description for st in steps]
+    # Each step solution sits at its step's position, as in PyBaMM
+    assert [len(c.steps) for c in solution.cycles] == [
+        len(c) for c in experiment.cycles
+    ]
+    for cycle, cycle_solution in zip(experiment.cycles, solution.cycles, strict=True):
+        for step, step_solution in zip(cycle, cycle_solution.steps, strict=True):
+            assert np.isclose(step_solution.t[-1] - step_solution.t[0], step.duration)
 
 
 def test_steps_must_drive_the_model_controls():

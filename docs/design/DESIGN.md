@@ -335,7 +335,11 @@ the mass flow rate), `Power` and `Rest` (no flow; the inlet temperature is held 
 previous step left it, or at a given value); values may be constants, time series or
 functions of time. Terminations: outlet or inlet temperature, mass flow rate, liquid fraction, custom, plus a maximum duration per step (a time-series step defaults to the length of its
 series). Cycles group steps and can repeat. Returns an ordinary `pybamm.Solution` with
-`.cycles` and `.steps`. Point probes `T(t, z, ...)` are PyBaMM's own
+`.cycles` and `.steps`, matched to the experiment's cycles and steps by position, as in
+PyBaMM (maintainer, 2026-11-01, F-057): a skipped step, and a cycle whose steps are all
+skipped, keep their place as a `pybamm.EmptySolution`, so `solution.cycles[i].steps[j]`
+belongs to `experiment.cycles[i][j]`. Rationale: the step solutions need no labels, so
+nothing is stored on `pybamm.Solution` (which has `__slots__` since PyBaMM 26.10). Point probes `T(t, z, ...)` are PyBaMM's own
 `solution[name](t=..., z=...)`; no PyTES code.
 - **`Power` adjusts the control left free** (maintainer, 2026-10-14):
   `Power(P, mass_flow_rate=...)` adjusts the inlet temperature,
