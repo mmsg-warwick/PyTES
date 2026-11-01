@@ -97,6 +97,31 @@ The model also gives the device totals per unit cross-sectional area of the bed,
 `"Power per unit area [W.m-2]"`. The averaged bed is the reduced model of the
 [encapsulated-LTES](https://github.com/mmsg-warwick/encapsulated-LTES) repository.
 
+## Mesh and solver tolerance
+
+By default, the mesh has 40 points along the capsule radius and 40 along the bed, and the
+solver is IDAKLU with `rtol=1e-5` and `atol=1e-8`: a charge of the default bed solves in
+about 2 s. While the capsules melt, the fluid temperature can wiggle by a few hundredths of
+a kelvin (0.04 K at a quarter of the height in the default charge), as the cells next to the
+capsule surface melt one after another. The wiggles shrink as the mesh along the radius is
+refined, and are gone with 80 points, which solve about 5 times slower:
+
+```python
+model = pytes.PackedBedModel()
+sim = pybamm.Simulation(
+    model,
+    var_pts={model.r: 80, model.z: 40},
+    solver=pybamm.IDAKLUSolver(rtol=1e-6, atol=1e-8),
+)
+```
+
+Energy is conserved exactly by the discretised equations, so the error in the energy balance
+is that of the solver. With the default mesh it is about $10^{-8}$ J; with a finer mesh in the
+averaged bed it reaches a few joules (about one part in a million of the energy stored), and
+a tighter `rtol` reduces it. The dips of the averaged bed (see the
+[packed-bed example](../examples/packed_bed_models.ipynb)) do not change with the mesh: they
+come from the averaged formulation.
+
 ## Parameter sets
 
 The default parameter values are the experiments of
