@@ -17,7 +17,6 @@ import warnings
 import numpy as np
 import pybamm
 
-from .. import compat
 from .step import (
     INLET_TEMPERATURE,
     MASS_FLOW_RATE,
@@ -29,6 +28,9 @@ from .step import (
 
 #: Input parameter selecting the active branch of the experiment model (1-based)
 STEP_INDEX = pybamm.InputParameter("Step index")
+
+#: Termination of the placeholder of a skipped step or cycle (PyBaMM's wording)
+_SKIPPED = "Event exceeded in initial conditions"
 
 
 class Experiment:
@@ -221,14 +223,15 @@ def run_experiment(model, experiment, parameter_values=None, var_pts=None, solve
     Returns
     -------
     :class:`pybamm.Solution`
-        The solution of the whole experiment. ``solution.cycles`` holds one solution per
-        cycle, and ``solution.cycles[i].steps`` one per step, each with its
-        ``termination`` (the duration, or the termination condition that ended it) and its
-        description (:func:`step_description`).
+        The solution of the whole experiment. As for PyBaMM experiments,
+        ``solution.cycles[i]`` holds the solution of ``experiment.cycles[i]``, and
+        ``solution.cycles[i].steps[j]`` that of its step ``experiment.cycles[i][j]``, with
+        its ``termination`` (the duration, or the termination condition that ended it).
         Steps whose termination condition already holds when they start are skipped,
-        with a warning. If the solver fails during a step, the experiment stops there
-        with a warning, and the solution up to the end of the previous step is
-        returned (as for PyBaMM experiments).
+        with a warning, and their place is held by a :class:`pybamm.EmptySolution`, as is
+        that of a cycle whose steps are all skipped. If the solver fails during a step,
+        the experiment stops there with a warning, and the solution up to the end of the
+        previous step is returned (as for PyBaMM experiments).
     """
     if parameter_values is None:
         parameter_values = model.default_parameter_values
@@ -278,6 +281,9 @@ def run_experiment(model, experiment, parameter_values=None, var_pts=None, solve
                         f"already holds at the start ({error})",
                         stacklevel=2,
                     )
+                    # A placeholder, as in PyBaMM, keeps the step solutions in step with
+                    # the experiment's steps
+                    step_solutions.append(pybamm.EmptySolution(_SKIPPED, t=start_time))
                     continue
                 warnings.warn(
                     f"Stopping the experiment: the solver failed during step "
@@ -288,33 +294,19 @@ def run_experiment(model, experiment, parameter_values=None, var_pts=None, solve
                 break
             new = solution.sub_solutions[n_before:]
             step_solution = new[0] if len(new) == 1 else sum(new[1:], new[0])
-            compat.set_step_description(step_solution, step.description)
             step_solutions.append(step_solution)
         if step_solutions:
-            cycle_solution = (
-                step_solutions[0]
-                if len(step_solutions) == 1
-                else sum(step_solutions[1:], step_solutions[0])
-            )
+            run = [
+                st for st in step_solutions if not isinstance(st, pybamm.EmptySolution)
+            ]
+            if run:
+                cycle_solution = run[0] if len(run) == 1 else sum(run[1:], run[0])
+            else:
+                # Every step was skipped: a placeholder keeps the cycles in step too
+                cycle_solution = pybamm.EmptySolution(_SKIPPED, t=start_time)
             cycle_solution.steps = step_solutions
             cycle_solutions.append(cycle_solution)
     if solution is None:
         raise pybamm.SolverError("No step of the experiment could be run")
     solution.cycles = cycle_solutions
     return solution
-
-
-def step_description(step_solution):
-    """
-    The description of the step a step solution belongs to.
-
-    Parameters
-    ----------
-    step_solution : pybamm.Solution
-        One of ``solution.cycles[i].steps``.
-
-    Returns
-    -------
-    str or None
-    """
-    return compat.solution.get_step_description(step_solution)

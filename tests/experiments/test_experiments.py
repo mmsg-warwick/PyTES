@@ -196,13 +196,34 @@ def test_step_already_terminated_is_skipped():
     with pytest.warns(UserWarning, match="Skipping step"):
         solution = run(
             [
-                s.Inlet(T_COLD, Q0, duration=60),
-                s.Inlet(T_COLD, Q0, termination=s.outlet_temperature_above(303.15)),
-                s.Inlet(T_COLD, Q0, duration=60),
+                (
+                    s.Inlet(T_COLD, Q0, duration=60),
+                    s.Inlet(T_COLD, Q0, termination=s.outlet_temperature_above(303.15)),
+                    s.Inlet(T_COLD, Q0, duration=60),
+                )
             ]
         )
-    assert len(all_steps(solution)) == 2
     assert solution.t[-1] == pytest.approx(120)
+    # As in PyBaMM, a placeholder keeps the skipped step's place
+    first, skipped, last = solution.cycles[0].steps
+    assert isinstance(skipped, pybamm.EmptySolution)
+    assert skipped.t == pytest.approx([60])
+    assert not isinstance(last, pybamm.EmptySolution)
+    assert last.t[0] == pytest.approx(60)
+
+
+def test_cycle_with_every_step_skipped_keeps_its_place():
+    hot = s.Inlet(T_COLD, Q0, termination=s.outlet_temperature_above(303.15))
+    with pytest.warns(UserWarning, match="Skipping step"):
+        solution = run(
+            [s.Inlet(T_COLD, Q0, duration=60), (hot, hot), s.Rest(duration=60)]
+        )
+    assert len(solution.cycles) == 3
+    skipped = solution.cycles[1]
+    assert isinstance(skipped, pybamm.EmptySolution)
+    assert len(skipped.steps) == 2
+    assert all(isinstance(st, pybamm.EmptySolution) for st in skipped.steps)
+    assert solution.cycles[2].t[-1] == pytest.approx(120)
 
 
 def test_input_model_is_not_modified():
