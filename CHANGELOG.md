@@ -8,6 +8,28 @@ until 1.0 the model contract may change, and every change to it is also logged i
 
 <!-- towncrier release notes start -->
 
+## [0.1.0a4] - 2026-11-02
+
+### Breaking changes
+
+- Packed-bed results change: during a charge, the fluid temperature at each height no longer overshoots and then falls by 1 K to 2 K. While the PCM at a capsule's surface melted, the capsule took up to five times less heat than the heat transfer coefficient gives; it now takes exactly that heat. The default packed bed now fits the measurements of Nallusamy et al. (2007) better at every height, and the finned-tube models move by at most 0.006 K. There is nothing to change in your code. ([#51](https://github.com/mmsg-warwick/PyTES/pull/51))
+- `pytes.experiments.step_description` is removed. As in PyBaMM, `solution.cycles[i].steps[j]` is now always the solution of `experiment.cycles[i][j]`, so read the description as `experiment.cycles[i][j].description`. A skipped step, and a cycle whose steps are all skipped, keep their place as a `pybamm.EmptySolution`. ([#54](https://github.com/mmsg-warwick/PyTES/pull/54))
+
+### New features
+
+- PyTES plot colours, chosen to stay readable with colour blindness and led by the brand orange: the colour cycles PyTES Thermal and PyTES Thermal (dark) as matplotlib styles (`plt.style.use("pytes.thermal")`, `"pytes.thermal_dark"`) and as `pytes.plotting.THERMAL` and `THERMAL_DARK`, and the perceptually uniform colourmaps `"pytes.ember"` (sequential) and `"pytes.thaw"` (diverging), registered with matplotlib when `pytes.plotting` is imported. They are not the default yet; a new documentation page, Plot colours, explains them and the reasons behind them. The `plot` extra now needs matplotlib 3.7 or later. ([#44](https://github.com/mmsg-warwick/PyTES/pull/44))
+- New documentation pages on the models: what every model shares, and a page for each family, the finned tube and the packed bed, with the geometry, the equations and the options, illustrated with diagrams drawn in TikZ (`docs/models/diagrams/`). ([#48](https://github.com/mmsg-warwick/PyTES/pull/48))
+- A new documentation page, Parameter values, lists every parameter set and layer PyTES provides, with its values, its source and, for the materials and fluids, the temperature at which the values were taken. It is generated from the code at each build, so it always matches the values the models use. ([#50](https://github.com/mmsg-warwick/PyTES/pull/50))
+
+### Improvements
+
+- A series of getting started tutorials, six short notebooks in `examples/getting_started/` that each show one thing: running a model, the finned-tube models, the packed-bed models, changing parameter values, plotting, and experiments. ([#47](https://github.com/mmsg-warwick/PyTES/pull/47))
+
+### Bug fixes
+
+- The heat entering a storage through its wall is now exactly the surface flux law's heat flux, also while the material by the wall changes phase (F-056). ([#51](https://github.com/mmsg-warwick/PyTES/pull/51))
+
+
 ## [0.1.0a3] - 2026-10-24
 
 ### Breaking changes
