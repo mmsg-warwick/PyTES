@@ -540,8 +540,9 @@ chosen to stay readable with colour-vision deficiency:
     uses them where available, without raising the floor, and falls back on older PyBaMM.
     For example, the plot-style hook (#43): an entry point that an older PyBaMM does not
     read does nothing, so older releases keep the opt-in styles.
-- Support every Python version PyBaMM supports (maintainer, 2026-10-16; today 3.10 to
-  3.15), tested in CI, all blocking. Platforms (maintainer, 2026-10-17): Linux is the
+- Support every Python version PyBaMM supports (maintainer, 2026-10-16; today 3.11 to
+  3.15), tested in CI, all blocking. A version PyBaMM is about to drop may be dropped
+  first, in the next PyTES release (maintainer, 2026-11-03: Python 3.10, issue #58). Platforms (maintainer, 2026-10-17): Linux is the
   reference, with every Python version, coverage, notebooks and PyBaMM `main`; macOS and
   Windows run the tests on the oldest and newest Python version. A version whose dependencies do not install yet runs
   non-blocking until they do (3.15 did, until `pybammsolvers` 0.11.1 shipped its wheels).

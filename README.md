@@ -35,7 +35,7 @@ pip install --pre "pytes-thermal[plot]"    # plus the standard plots (matplotlib
 The package is `pytes-thermal` on PyPI and is imported as `pytes`. `--pre` is needed while
 PyTES only has alpha releases.
 
-PyTES supports every Python version PyBaMM supports (3.10 to 3.15).
+PyTES supports every Python version PyBaMM supports (3.11 to 3.15).
 
 ## 🚀 Quick start
 
