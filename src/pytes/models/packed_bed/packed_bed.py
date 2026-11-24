@@ -82,6 +82,14 @@ class PackedBedModel(BaseModel):
         the storage is averaged. Not set for a lumped capsule.
     z : pybamm.SpatialVariable
         Distance along the bed from the inlet [m], in the "flow path" domain.
+
+    References
+    ----------
+    The formulation follows `Brosa Planella (2025)
+    <https://doi.org/10.1016/j.ijheatmasstransfer.2024.126533>`__. Resolved along the bed
+    and across the capsules, it is also known as the concentric dispersion model (`Ismail
+    and Henríquez, 2002 <https://doi.org/10.1016/S1359-4311(02)00080-7>`__). The model
+    registers them with :data:`pybamm.citations`, for :func:`pybamm.print_citations`.
     """
 
     allowed_options = {
@@ -92,6 +100,11 @@ class PackedBedModel(BaseModel):
 
     def __init__(self, name="Packed bed model", options=None):
         super().__init__(name=name, options=options)
+        pybamm.citations.register("BrosaPlanella2025")
+        if not self.averaged and not self.lumped:
+            # Resolved along the bed and across the capsules: the concentric dispersion
+            # model
+            pybamm.citations.register("Ismail2002")
 
     @property
     def averaged(self):

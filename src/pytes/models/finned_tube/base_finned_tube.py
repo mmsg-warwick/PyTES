@@ -45,6 +45,12 @@ class BaseFinnedTubeModel(BaseModel):
         secondary domain unless the storage is averaged.
     z : pybamm.SpatialVariable
         Distance along the tube from the inlet [m], in the "flow path" domain.
+
+    References
+    ----------
+    Both models of the family are derived, by homogenisation, in `Luckins and Brosa
+    Planella (2025) <https://doi.org/10.1098/rspa.2025.0660>`__. The model registers it
+    with :data:`pybamm.citations`, for :func:`pybamm.print_citations`.
     """
 
     allowed_options = {
@@ -54,6 +60,7 @@ class BaseFinnedTubeModel(BaseModel):
 
     def __init__(self, name, options=None):
         super().__init__(name=name, options=options)
+        pybamm.citations.register("Luckins2025")
 
     @property
     def averaged(self):
