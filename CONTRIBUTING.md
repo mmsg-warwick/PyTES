@@ -344,7 +344,9 @@ Every push and pull request runs, with [GitHub Actions](https://docs.github.com/
 - on pull requests, the check for a changelog fragment.
 
 Dependabot (`.github/dependabot.yml`) opens a pull request each month that bumps the
-GitHub Actions the workflows use, labelled `no changelog`.
+GitHub Actions the workflows use, labelled `no changelog`. pre-commit.ci opens a pull
+request bumping the hooks in `.pre-commit-config.yaml`; it cannot add labels, so the
+changelog check skips pull requests opened by `pre-commit-ci[bot]`.
 
 Publishing a GitHub release runs `.github/workflows/release.yml` (see
 [Releasing](#releasing)).

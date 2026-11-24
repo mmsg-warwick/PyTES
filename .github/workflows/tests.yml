@@ -145,10 +145,12 @@ jobs:
   changelog:
     name: Changelog fragment
     # A pull request with a user-visible change adds a fragment in changelog.d/
-    # (CONTRIBUTING.md); internal changes are labelled "no changelog"
+    # (CONTRIBUTING.md); internal changes are labelled "no changelog". pre-commit.ci
+    # cannot label its autoupdate pull requests, so they are skipped by author instead.
     if: >-
       github.event_name == 'pull_request' &&
-      !contains(github.event.pull_request.labels.*.name, 'no changelog')
+      !contains(github.event.pull_request.labels.*.name, 'no changelog') &&
+      github.event.pull_request.user.login != 'pre-commit-ci[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
