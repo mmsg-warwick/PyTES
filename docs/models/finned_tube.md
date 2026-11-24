@@ -159,6 +159,10 @@ two-dimensional ($x$, $y$).
 
 ## References
 
+Creating either model registers this reference with PyBaMM's citations, so
+`pybamm.print_citations()` lists it alongside PyBaMM's own (with `pybamm[cite]`
+installed).
+
 - E. K. Luckins and F. Brosa Planella, Homogenized models for composite phase-change
   materials, *Proceedings of the Royal Society A* **481**, 20250660 (2025),
   [doi:10.1098/rspa.2025.0660](https://doi.org/10.1098/rspa.2025.0660).

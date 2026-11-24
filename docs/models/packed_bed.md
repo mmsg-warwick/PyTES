@@ -140,6 +140,11 @@ with a heat transfer oil at 180 °C. See {mod}`pytes.parameter_layers`.
 
 ## References
 
+Creating a packed-bed model registers these references with PyBaMM's citations: the first
+always, and the second when the capsules are resolved both along the bed and across each
+capsule (the default). `pybamm.print_citations()` then lists them alongside PyBaMM's own
+(with `pybamm[cite]` installed).
+
 - F. Brosa Planella, A simple model for latent thermal energy storage systems with
   encapsulated phase-change material, *International Journal of Heat and Mass Transfer*
   **239**, 126533 (2025),

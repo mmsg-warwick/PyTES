@@ -191,7 +191,9 @@ that gives the new one. Variable and parameter names cannot be deprecated yet.
   detects it (by a new argument or a small probe of the behaviour, never by the version
   number) and uses PyBaMM's code, with the same results. Record the release with the fix
   as `fixed_in`; a test then fails once the PyBaMM floor reaches it, naming the shim to
-  remove.
+  remove. A given PyBaMM takes only one of a shim's two paths, so add a test that forces
+  each path (e.g. by monkeypatching its detection, as in `tests/toolkit/test_compat.py`):
+  otherwise the other path is untested, and coverage falls below 100% in CI.
 - Docstrings follow the [NumPy style](https://numpydoc.readthedocs.io/en/latest/format.html),
   and models provide PyBaMM's `default_*` properties.
 
