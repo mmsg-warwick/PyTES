@@ -186,7 +186,12 @@ that gives the new one. Variable and parameter names cannot be deprecated yet.
 - **Fluid properties** come only from the fluid-property object; the heat transfer
   coefficient belongs to the coupling's surface flux law.
 - **Workarounds for PyBaMM** live only in `src/pytes/compat/`, each with the upstream issue
-  and the condition for removing it.
+  and the condition for removing it, and registered in `pytes.compat.SHIMS`. A shim must
+  keep working on every supported PyBaMM release: where a release has the fix, the shim
+  detects it (by a new argument or a small probe of the behaviour, never by the version
+  number) and uses PyBaMM's code, with the same results. Record the release with the fix
+  as `fixed_in`; a test then fails once the PyBaMM floor reaches it, naming the shim to
+  remove.
 - Docstrings follow the [NumPy style](https://numpydoc.readthedocs.io/en/latest/format.html),
   and models provide PyBaMM's `default_*` properties.
 
