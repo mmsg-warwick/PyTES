@@ -12,6 +12,7 @@ conformance checks, so that anyone can compare a model with them.
 """
 
 import numpy as np
+import pybamm
 from scipy.integrate import quad
 from scipy.special import i0e
 
@@ -47,6 +48,7 @@ def schumann(xi, eta):
     theta_f, theta_s : float
         The fluid and solid temperatures, scaled.
     """
+    pybamm.citations.register("Schumann1929")
     if eta <= 0:
         return 0.0, 0.0
     theta_f = 1 - quad(lambda s: _kernel(s, eta), 0, xi, epsabs=1e-13, epsrel=1e-12)[0]

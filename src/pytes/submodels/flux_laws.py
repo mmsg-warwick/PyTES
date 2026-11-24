@@ -176,9 +176,11 @@ class NusseltCorrelation(NewtonCooling):
     ``mu``, ``c_p`` and ``k`` come from the fluid-property object at the fluid state. The
     flow may run either way: the Reynolds number uses the flow's magnitude.
 
-    Subclasses implement :meth:`nusselt`. The correlation's constants are part of it, so a
-    correlation has no parameters of its own: the geometry comes from the family, through
-    the constructor.
+    Subclasses implement :meth:`nusselt`, and list the keys of their references in
+    :attr:`citations` (keys of :data:`pybamm.citations`, or BibTeX entries), which are
+    registered when the correlation is created. The correlation's constants are part of
+    it, so a correlation has no parameters of its own: the geometry comes from the family,
+    through the constructor.
 
     Parameters
     ----------
@@ -190,10 +192,16 @@ class NusseltCorrelation(NewtonCooling):
         Number of flow paths sharing the device's mass flow rate (default 1).
     """
 
+    #: Keys (in ``pybamm.citations``) of the references of the correlation, registered
+    #: when it is created; a subclass sets its own
+    citations = ()
+
     def __init__(self, length, area, n_paths=1):
         self.length = length
         self.area = area
         self.n_paths = n_paths
+        for key in self.citations:
+            pybamm.citations.register(key)
 
     def reynolds(self, fluid, fluid_state):
         """The Reynolds number at the fluid state"""
@@ -286,6 +294,8 @@ class Gnielinski(TubeCorrelation):
     ``Re = 2300`` and ``10^4``. Registered as "Gnielinski" for the flow ``"tube"``.
     """
 
+    citations = ("Gnielinski2013",)
+
     #: Laminar Nusselt number, fully developed flow at a uniform wall temperature
     nusselt_laminar = 3.66
     #: Reynolds numbers at which the transition starts and ends
@@ -317,6 +327,8 @@ class WakaoKaguei(PackedBedCorrelation):
     the Reynolds number. Fitted for ``15 < Re < 8500``. Registered as "Wakao-Kaguei" for the
     flow ``"packed bed"``.
     """
+
+    citations = ("Wakao1979",)
 
     def nusselt(self, Re, Pr):
         return 2 + 1.1 * Re**0.6 * Pr ** (1 / 3)
@@ -368,6 +380,7 @@ class Jeffreson(SurfaceFluxLaw):
         self.radius = radius
         self.conductivity = pybamm.CoupledVariable(conductivity, domain)
         self.coupled_variables = {conductivity: self.conductivity}
+        pybamm.citations.register("Jeffreson1972")
 
     def biot(self, fluid, fluid_state):
         """The Biot number of the sphere, ``h R / k``"""
