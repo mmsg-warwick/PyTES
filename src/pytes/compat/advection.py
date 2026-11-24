@@ -11,6 +11,9 @@ scheme for the fluid (:func:`fluid_spatial_method`, F-052). The fluid's equation
 unchanged, as the scheme only changes the value of the fluid on each cell face, so energy is
 still conserved exactly.
 
+The inflow face comes from :func:`pybamm.upwind` itself, so it is ``T_in`` with or without
+the inflow fix of pybamm-team/PyBaMM#5860 (see :func:`pytes.compat.upwind_inlet_value`).
+
 Remove when: PyBaMM's finite volumes offer a limited upwind scheme. Then select it in
 :func:`fluid_spatial_method`, checking that the inflow and outflow values are unchanged.
 """

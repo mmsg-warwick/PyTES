@@ -26,9 +26,10 @@ ax.pcolormesh(t, z, T, cmap="pytes.ember")
 ax.pcolormesh(t, z, T, cmap="pytes.thaw", norm=CenteredNorm(vcenter=T_melt))
 ```
 
-The colours are also {data}`pytes.plotting.THERMAL` and
+From PyBaMM 26.11, {class}`pybamm.QuickPlot` (and so `Simulation.plot`) follows the style
+too. The colours are also {data}`pytes.plotting.THERMAL` and
 {data}`pytes.plotting.THERMAL_DARK`, for example to pass to
-`pybamm.QuickPlot(solution, colors=list(pytes.plotting.THERMAL))`. Each colourmap has a
+`pybamm.QuickPlot(solution, colors=list(pytes.plotting.THERMAL))` on an older PyBaMM. Each colourmap has a
 reversed version, `"pytes.ember_r"` and `"pytes.thaw_r"`. The
 [Plot colours](examples/plot_colours.ipynb) notebook shows all four on a packed bed
 charge. The styles need matplotlib 3.7 or later, which the `plot` extra installs.
@@ -171,9 +172,10 @@ The colourmaps need no dark twin: a colourmap fills its axes, whatever the backg
 ## Why they are not the default yet
 
 PyTES models are PyBaMM models, and most of their plots come from PyBaMM's
-{class}`pybamm.QuickPlot` (and so `Simulation.plot`), which today uses its own colours
-whatever matplotlib's colour cycle is. Making the PyTES colours the default would mean
-changing matplotlib's global settings when PyTES is imported, which would also restyle
+{class}`pybamm.QuickPlot` (and so `Simulation.plot`), which follows matplotlib's colour
+cycle from PyBaMM 26.11 (before, it used its own colours whatever the cycle was). Making
+the PyTES colours the default would still mean changing matplotlib's global settings when
+PyTES is imported, which would also restyle
 every other figure in the session. Instead, PyTES will make them the default for its own
 models once PyBaMM lets a package set the default style of its models' plots. Your own
 matplotlib settings will still take precedence. Progress is tracked in

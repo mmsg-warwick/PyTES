@@ -1,20 +1,24 @@
 """
 Resolving :class:`pybamm.CoupledVariable` when a model is built.
 
-Upstream: no issue filed yet for the default (draft in docs/upstream); it needs
-pybamm-team/PyBaMM#6001 fixed first (PR #6002). PyBaMM resolves coupled variables in the
-model's equations only when the discretisation is created with
-``resolve_coupled_variables=True`` (in :class:`pybamm.Simulation`, through
-``discretisation_kwargs``); the default (``False``) fails with "CoupledVariable ... was not
-resolved before discretisation". With the option on, #6001 is that a coupled variable in a
-boundary condition is not resolved, and that ``inplace=False`` still modifies the input
-model.
+Upstream: pybamm-team/PyBaMM#6001, fixed by PR #6002 (PyBaMM 26.11), plus a bug not filed
+yet (draft in the gitignored docs/upstream). Before 26.11, PyBaMM resolves coupled variables
+only when the discretisation is created with ``resolve_coupled_variables=True`` (in
+:class:`pybamm.Simulation`, through ``discretisation_kwargs``), and then not in boundary
+conditions (#6001). From 26.11 it resolves them by default, also in boundary conditions.
+But on every release it resolves them from the unprocessed ``model.variables`` after
+parameter processing, so a variable whose scale or reference holds a parameter (as every
+PyTES state does) no longer matches its processed key in ``model.rhs``, and discretisation
+fails with "No key set for variable".
 
-Workaround: PyTES models resolve every coupled variable when they are built, so the finished
-model contains none and works with a default :class:`pybamm.Simulation`, solvers and PyBOP.
+Workaround: PyTES models resolve every coupled variable when they are built, before
+parameter processing, so the finished model contains none and works with a default
+:class:`pybamm.Simulation`, solvers and PyBOP, on every supported PyBaMM. This shim does not
+defer to PyBaMM's resolution until the bug above is fixed.
 
-Remove when: PyBaMM resolves coupled variables by default (in :class:`pybamm.Discretisation`
-and everything that builds one), at which point the models can keep them unresolved.
+Remove when: PyBaMM resolves coupled variables correctly by default after parameter
+processing, in every supported release (``fixed_in`` in :data:`pytes.compat.SHIMS`), at
+which point the models can keep them unresolved (a contract change: log a finding).
 """
 
 import pybamm

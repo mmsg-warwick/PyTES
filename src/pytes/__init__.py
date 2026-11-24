@@ -36,6 +36,9 @@ from .postprocessing import energy_between
 #: The installed version of PyTES
 __version__ = _version("pytes-thermal")
 
+# The references PyTES cites, so that pybamm.print_citations() includes them
+compat.add_citation_database()
+
 __all__ = [
     "__version__",
     "BaseModel",

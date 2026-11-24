@@ -532,6 +532,9 @@ chosen to stay readable with colour-vision deficiency:
     (`fixed_in`), in a registry in `compat/__init__.py`, beside the prose removal
     condition. A test reads the floor from `pyproject.toml` and fails when it has reached a
     shim's `fixed_in`, naming the shim to remove.
+    Implemented 2026-11-24 for the PyBaMM 26.11 fixes: `compat.SHIMS`, with `has_fix`
+    for each shim that detects its fix, and `tests/toolkit/test_compat.py`, which also
+    checks on a release that detection agrees with `fixed_in`.
   - **CI runs the oldest supported PyBaMM release as well as the latest**, both blocking,
     so both paths of every shim run on every pull request (issue #8, which this extends).
   - **At each PyTES release** the floor rises to the oldest PyBaMM release of the last 3
@@ -561,21 +564,29 @@ chosen to stay readable with colour-vision deficiency:
   were reduced to balance their error against the other directions (sharp front 20 by 20,
   packed bed 40 by 40; mush unchanged). It moves to PyBaMM's finite volumes when they offer
   it.
-- Known upstream items: `pybamm.upwind` inflow uses a ghost node (`2*T_bc - T_1`) and can draw
-  in fluid colder than the inlet (#5860, filed by the maintainer 2026-10-07; workaround in
-  `compat`); first-order upwinding is diffusive
-  (matters most for packed-bed thermoclines; PyTES uses its own second-order scheme until
-  PyBaMM has one, below); face boundary values (#5094, assigned to the
-  maintainer); `pybamm.Simulation` does not resolve coupled variables
-  by default (`resolve_coupled_variables=True`, or `discretisation_kwargs` in `Simulation`;
-  workaround in `compat`, F-028); `pybamm.Solution` takes no new attributes since 26.10
-  (workaround in `compat`); downstream packages cannot add citation databases.
-- No upstream issue filed yet for the coupled-variable resolution, `Solution` metadata or
-  citations (maintainer's call when to file; drafts with MWEs in the gitignored
-  `docs/upstream/`).
-- `pybamm.QuickPlot` hard-codes its default line colours, although its docstring says it
-  follows matplotlib's colour cycle; the maintainer will fix it upstream (2026-10-16). No
-  PyTES workaround; pass `colors=` meanwhile.
+- Upstream items (2026-11-24, ahead of PyBaMM 26.11; tracked in #39):
+  - `pybamm.upwind` inflow used the ghost node `2*T_bc - T_1` and could draw in fluid colder
+    than the inlet (#5860, filed by the maintainer 2026-10-07): fixed in 26.11 (PR #5861);
+    `compat/upwind.py` detects the fix by a probe and imposes `T_in` directly there.
+  - First-order upwinding is diffusive (matters most for packed-bed thermoclines): PyTES
+    uses its own second-order scheme until PyBaMM has one (`compat/advection.py`).
+  - Face boundary values (#5094, assigned to the maintainer): open.
+  - Coupled variables: from 26.11 `pybamm.Discretisation` resolves them by default, also in
+    boundary conditions (#6001, PR #6002). But it resolves them from the unprocessed
+    `model.variables` after parameter processing, which fails for a variable with a
+    parameter in its scale, as every PyTES state has (not filed yet; draft and MWE in the
+    gitignored `docs/upstream/`). So `compat/coupled.py` still resolves them when a model
+    is built, on every PyBaMM (F-028).
+  - Downstream citation databases: from 26.11 `pybamm.citations.read_citations` takes a
+    BibTeX file (#5950, PR #6003); PyTES loads `src/pytes/CITATIONS.bib` when imported
+    (`compat/citations.py`, with a fallback for older releases). The entry point in #5950
+    is still open.
+  - `pybamm.QuickPlot` follows matplotlib's colour cycle from 26.11 (#5951, PR #5953); on
+    older releases pass `colors=`. Package defaults for `QuickPlot` (#43) are not filed.
+  - Experiments on non-battery models (#6013, PR #6014) and steps with long drive cycles
+    (#6017, PR #6018) are fixed in 26.11; experiment steps driving any parameter (#6015,
+    PR #6016) are not merged yet. PyTES keeps its runner (D10) meanwhile.
+  - `pybamm.Solution` takes no new attributes since 26.10: no longer needed (F-057).
 
 ### D17. Housekeeping
 Name PyTES, BSD-3 licence, tooling `uv` + `ruff` + pre-commit, pytest with a `slow` marker.
